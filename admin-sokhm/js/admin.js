@@ -1076,6 +1076,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  let draggedRowId = null;
+  let isSavingOrder = false;
+
+  async function saveProductsOrder() {
+    if (isSavingOrder) return;
+    isSavingOrder = true;
+
+    const statusBadge = document.getElementById('reorderSaveStatus');
+    if (statusBadge) {
+      statusBadge.innerHTML = '<span class="inline-block animate-spin mr-1">✦</span> جاري حفظ الترتيب...';
+      statusBadge.classList.remove('hidden', 'text-emerald-400', 'text-red-400');
+      statusBadge.classList.add('flex', 'text-amber-400');
+    }
+
+    const orderedIds = products.map(p => p.id);
+    try {
+      const res = await fetch('/api/products/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token,
+          'x-admin-token': token
+        },
+        body: JSON.stringify({ orderedIds })
+      });
+
+      if (!res.ok) {
+        throw new Error('فشل حفظ الترتيب في السيرفر');
+      }
+
+      if (statusBadge) {
+        statusBadge.innerHTML = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i><span>تم حفظ ترتيب المنتجات بنجاح</span>';
+        statusBadge.classList.remove('text-amber-400', 'text-red-400');
+        statusBadge.classList.add('text-emerald-400');
+        setupLucide();
+        setTimeout(() => {
+          if (statusBadge) statusBadge.classList.add('hidden');
+        }, 3000);
+      }
+
+      const topProd = products[0];
+      showToast(`تم حفظ الترتيب بنجاح! القطعة "${topProd ? topProd.name : ''}" في مقدمة المتجر ★`);
+    } catch (err) {
+      console.error('Save order error:', err);
+      if (statusBadge) {
+        statusBadge.innerHTML = '<i data-lucide="alert-circle" class="w-3.5 h-3.5"></i><span>تعذر حفظ الترتيب</span>';
+        statusBadge.classList.remove('text-amber-400', 'text-emerald-400');
+        statusBadge.classList.add('text-red-400');
+        setupLucide();
+      }
+      showToast('تعذر حفظ الترتيب في السيرفر', 'error');
+    } finally {
+      isSavingOrder = false;
+    }
+  }
+
   function renderProductsTable() {
     const tbody = document.getElementById('productsTableBody');
     if (!tbody) return;
@@ -1096,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (filtered.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" class="text-center py-12 text-neutral-500 text-xs">
+          <td colspan="8" class="text-center py-12 text-neutral-500 text-xs">
             لا توجد منتجات تطابق البحث أو الفلتر المختار.
           </td>
         </tr>
@@ -1104,22 +1160,45 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    tbody.innerHTML = filtered.map(prod => {
+    tbody.innerHTML = filtered.map((prod, idx) => {
       const pPrice = typeof prod.price === 'number' ? prod.price : parseFloat(prod.price) || 0;
       const sizes = Array.isArray(prod.sizes) ? prod.sizes : (typeof prod.sizes === 'string' ? prod.sizes.split(',') : ['M', 'L']);
       const colors = Array.isArray(prod.colors) ? prod.colors : [];
       const catObj = categories.find(c => c.id === prod.category || c.slug === prod.category);
       const catName = catObj ? catObj.name : (prod.category || 'عام');
+      const isFirst = (idx === 0);
+      const isLast = (idx === filtered.length - 1);
 
       return `
-        <tr class="hover:bg-white/[0.02] transition-colors">
+        <tr class="product-draggable-row group hover:bg-white/[0.03] transition-all cursor-default" draggable="true" data-id="${prod.id}" data-index="${idx}">
+          <td class="py-3 px-3 text-center whitespace-nowrap">
+            <div class="flex items-center justify-center gap-1.5">
+              <span class="drag-handle-btn p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-white/10 cursor-grab active:cursor-grabbing transition-colors" title="اضغط واسحب لتغيير ترتيب ظهور المنتج في واجهة المتجر">
+                <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+              </span>
+              <span class="font-mono font-bold text-[11px] px-2 py-0.5 rounded-full ${isFirst ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm' : 'bg-[#141414] text-neutral-300 border border-[#222]'}" title="${isFirst ? 'المنتج الأول في مقدمة واجهة المتجر' : `الترتيب رقم ${idx + 1}`}">
+                ${isFirst ? '★ #1' : `#${idx + 1}`}
+              </span>
+              <div class="flex flex-col gap-0.5">
+                <button type="button" class="move-prod-btn move-prod-up p-0.5 rounded text-neutral-500 hover:text-white hover:bg-white/10 transition-colors ${isFirst ? 'opacity-20 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}" data-id="${prod.id}" data-dir="up" title="تقديم للأعلى (يظهر قبل المنتج السابق)">
+                  <i data-lucide="chevron-up" class="w-3 h-3"></i>
+                </button>
+                <button type="button" class="move-prod-btn move-prod-down p-0.5 rounded text-neutral-500 hover:text-white hover:bg-white/10 transition-colors ${isLast ? 'opacity-20 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}" data-id="${prod.id}" data-dir="down" title="تأخير للأسفل (يظهر بعد المنتج التالي)">
+                  <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </div>
+          </td>
           <td class="py-3 px-4">
             <div class="flex items-center gap-3">
               <div class="w-12 h-14 rounded-lg bg-[#070707] border border-[#222] overflow-hidden flex-shrink-0">
                 <img src="${prod.image ? '../' + prod.image.replace(/^\.\.\//, '') : '../assets/sokhm-card-1.jpg'}" alt="${prod.name}" class="w-full h-full object-cover">
               </div>
               <div>
-                <h4 class="font-bold text-white text-xs truncate max-w-[180px]">${prod.name}</h4>
+                <div class="flex items-center gap-1.5">
+                  <h4 class="font-bold text-white text-xs truncate max-w-[180px]">${prod.name}</h4>
+                  ${isFirst ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-bold border border-amber-500/30">في المقدمة</span>' : ''}
+                </div>
                 <span class="text-[10px] text-neutral-500 font-mono block mt-0.5">#${prod.id}</span>
               </div>
             </div>
@@ -1170,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function attachProductRowEvents() {
+    // 1. Edit buttons
     document.querySelectorAll('.edit-product-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -1178,6 +1258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
+    // 2. Delete buttons
     document.querySelectorAll('.delete-product-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
@@ -1191,7 +1272,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
           });
           if (!res.ok && res.status === 404) {
-            // Fallback to query param delete
             res = await fetch(`/api/products?id=${encodeURIComponent(id)}`, {
               method: 'DELETE',
               headers: { 
@@ -1212,6 +1292,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (err) {
           alert('تعذر الاتصال بالسيرفر لحذف المنتج: ' + err.message);
         }
+      });
+    });
+
+    // 3. Move Up / Down Arrow buttons
+    document.querySelectorAll('.move-prod-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        const dir = btn.getAttribute('data-dir');
+        const currentIdx = products.findIndex(p => p.id === id);
+        if (currentIdx === -1) return;
+
+        if (dir === 'up' && currentIdx > 0) {
+          const item = products.splice(currentIdx, 1)[0];
+          products.splice(currentIdx - 1, 0, item);
+          renderProductsTable();
+          await saveProductsOrder();
+        } else if (dir === 'down' && currentIdx < products.length - 1) {
+          const item = products.splice(currentIdx, 1)[0];
+          products.splice(currentIdx + 1, 0, item);
+          renderProductsTable();
+          await saveProductsOrder();
+        }
+      });
+    });
+
+    // 4. HTML5 Drag & Drop on Rows
+    const tbody = document.getElementById('productsTableBody');
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('.product-draggable-row');
+    rows.forEach(row => {
+      row.addEventListener('dragstart', (e) => {
+        draggedRowId = row.getAttribute('data-id');
+        row.classList.add('opacity-40', 'bg-amber-500/10');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedRowId);
+      });
+
+      row.addEventListener('dragend', () => {
+        row.classList.remove('opacity-40', 'bg-amber-500/10');
+        rows.forEach(r => r.classList.remove('border-t-2', 'border-b-2', 'border-amber-400', 'bg-white/[0.04]'));
+        draggedRowId = null;
+      });
+
+      row.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const targetId = row.getAttribute('data-id');
+        if (targetId === draggedRowId) return;
+
+        const rect = row.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+          row.classList.add('border-t-2', 'border-amber-400');
+          row.classList.remove('border-b-2');
+        } else {
+          row.classList.add('border-b-2', 'border-amber-400');
+          row.classList.remove('border-t-2');
+        }
+      });
+
+      row.addEventListener('dragleave', () => {
+        row.classList.remove('border-t-2', 'border-b-2', 'border-amber-400', 'bg-white/[0.04]');
+      });
+
+      row.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        row.classList.remove('border-t-2', 'border-b-2', 'border-amber-400', 'bg-white/[0.04]');
+        const targetId = row.getAttribute('data-id');
+        if (!draggedRowId || draggedRowId === targetId) return;
+
+        const fromIdx = products.findIndex(p => p.id === draggedRowId);
+        let toIdx = products.findIndex(p => p.id === targetId);
+        if (fromIdx === -1 || toIdx === -1) return;
+
+        const rect = row.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY >= midY && toIdx < products.length - 1) {
+          toIdx++;
+        }
+
+        const [movedProd] = products.splice(fromIdx, 1);
+        products.splice(toIdx, 0, movedProd);
+
+        renderProductsTable();
+        await saveProductsOrder();
       });
     });
   }

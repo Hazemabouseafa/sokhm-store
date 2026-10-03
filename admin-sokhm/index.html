@@ -390,12 +390,25 @@
         </div>
       </div>
 
+      <!-- Drag & Drop Order Helper Banner -->
+      <div class="p-3 bg-[#080808] border border-[#1A1A1A] rounded-xl flex items-center justify-between flex-wrap gap-2 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-white font-medium text-[11px]">
+            <i data-lucide="move" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>ترتيب ظهور المنتجات في المتجر:</span>
+          </span>
+          <span class="text-neutral-400 text-[11px]">اسحب أي صف (⠿) للأعلى أو للأسفل لتحديد القطعة التي تظهر أولاً في واجهة المتجر ومن بعدها، أو استخدم أسهم الترتيب (↑ / ↓).</span>
+        </div>
+        <span id="reorderSaveStatus" class="hidden text-[11px] font-bold text-amber-400 items-center gap-1"></span>
+      </div>
+
       <!-- Products Grid / Table -->
       <div class="cms-card overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-right text-xs">
             <thead class="bg-[#0A0A0A] border-b border-[#1A1A1A] text-neutral-400 font-bold uppercase tracking-wider text-[11px]">
               <tr>
+                <th class="py-3.5 px-3 text-center w-24"># الترتيب</th>
                 <th class="py-3.5 px-4">القطعة</th>
                 <th class="py-3.5 px-4">التصنيف</th>
                 <th class="py-3.5 px-4 font-mono">السعر (EGP)</th>

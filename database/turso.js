@@ -254,6 +254,12 @@ async function initTursoSchema() {
       await c.execute("INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES ('_products_seeded', '{\"seeded\":true}')");
     }
 
+    try {
+      await c.execute('ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0');
+    } catch (e) {
+      // Column already exists
+    }
+
     initialized = true;
   } catch (err) {
     console.error('Turso schema initialization error:', err.message);
@@ -292,6 +298,8 @@ function parseProductRow(row) {
     modelInfo: row.model_info || row.modelInfo || '',
     stock_status: row.stock_status || row.stockStatus || 'in_stock',
     stockStatus: row.stock_status || row.stockStatus || 'in_stock',
+    sort_order: row.sort_order !== undefined ? Number(row.sort_order) : 0,
+    sortOrder: row.sort_order !== undefined ? Number(row.sort_order) : 0,
     created_at: normalizeUtcDate(row.created_at),
     createdAt: normalizeUtcDate(row.created_at),
     updated_at: normalizeUtcDate(row.updated_at),
@@ -411,19 +419,50 @@ async function saveSiteContent(content) {
 async function getProducts() {
   loadFallbackData();
   const c = getClient();
+  let list = [];
   if (c) {
     try {
       await initTursoSchema();
-      const res = await c.execute('SELECT * FROM products ORDER BY created_at DESC');
+      let res;
+      try {
+        res = await c.execute('SELECT * FROM products ORDER BY sort_order ASC, created_at DESC');
+      } catch (e) {
+        res = await c.execute('SELECT * FROM products ORDER BY created_at DESC');
+      }
       if (res && Array.isArray(res.rows)) {
-        return res.rows.map(parseProductRow);
+        list = res.rows.map(parseProductRow);
       }
     } catch (err) {
       console.error('Turso getProducts error, falling back to local data:', err.message);
+      list = fallbackProducts.map(parseProductRow);
     }
+  } else {
+    list = fallbackProducts.map(parseProductRow);
   }
 
-  return fallbackProducts.map(parseProductRow);
+  // Secondary check: if custom order is in site_content, enforce it
+  if (c && list.length > 1) {
+    try {
+      const orderRes = await c.execute("SELECT content_json FROM site_content WHERE section_key = 'products_order' LIMIT 1");
+      if (orderRes && orderRes.rows && orderRes.rows[0]?.content_json) {
+        const orderIds = JSON.parse(orderRes.rows[0].content_json);
+        if (Array.isArray(orderIds) && orderIds.length > 0) {
+          const orderMap = new Map();
+          orderIds.forEach((id, idx) => orderMap.set(String(id).toLowerCase(), idx));
+          list.sort((a, b) => {
+            const idA = String(a.id || a.slug || '').toLowerCase();
+            const idB = String(b.id || b.slug || '').toLowerCase();
+            const posA = orderMap.has(idA) ? orderMap.get(idA) : 999999;
+            const posB = orderMap.has(idB) ? orderMap.get(idB) : 999999;
+            if (posA !== posB) return posA - posB;
+            return (a.sort_order || 0) - (b.sort_order || 0);
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
+  return list;
 }
 
 async function getProductById(id) {
@@ -543,6 +582,43 @@ async function saveProducts(productsList) {
       await upsertProduct(p);
     }
   }
+  return getProducts();
+}
+
+async function reorderProducts(orderedIds) {
+  loadFallbackData();
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) return getProducts();
+
+  const c = getClient();
+  if (c) {
+    try {
+      await initTursoSchema();
+      const stmts = orderedIds.map((id, index) => ({
+        sql: 'UPDATE products SET sort_order = ? WHERE id = ? OR slug = ?',
+        args: [index, String(id), String(id)]
+      }));
+      stmts.push({
+        sql: "INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('products_order', ?, CURRENT_TIMESTAMP)",
+        args: [JSON.stringify(orderedIds)]
+      });
+      await c.batch(stmts, 'write');
+    } catch (err) {
+      console.error('Turso reorderProducts error:', err.message);
+    }
+  }
+
+  // Also update fallbackProducts array in memory
+  const orderMap = new Map();
+  orderedIds.forEach((id, idx) => orderMap.set(String(id).toLowerCase(), idx));
+  fallbackProducts.sort((a, b) => {
+    const idA = String(a.id || a.slug || '').toLowerCase();
+    const idB = String(b.id || b.slug || '').toLowerCase();
+    const posA = orderMap.has(idA) ? orderMap.get(idA) : 999999;
+    const posB = orderMap.has(idB) ? orderMap.get(idB) : 999999;
+    return posA - posB;
+  });
+  saveFallbackProducts();
+
   return getProducts();
 }
 
@@ -1051,6 +1127,7 @@ module.exports = {
   getProducts,
   getProductById,
   saveProducts,
+  reorderProducts,
   upsertProduct,
   deleteProduct,
   getCategories,

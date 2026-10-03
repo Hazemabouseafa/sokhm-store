@@ -193,6 +193,21 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 3.1 Reorder Products: POST or PUT /api/products/reorder
+    if (pathname === '/api/products/reorder' && (req.method === 'POST' || req.method === 'PUT')) {
+      try {
+        const body = await readBody(req);
+        const orderedIds = Array.isArray(body) ? body : (body.orderedIds || body.ids || []);
+        if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+          return sendJson(res, 400, { error: 'Missing orderedIds array' });
+        }
+        const updated = await (db.reorderProducts ? db.reorderProducts(orderedIds) : db.getProducts());
+        return sendJson(res, 200, { success: true, count: updated.length, products: updated });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
     // 4. POST /api/products
     if (pathname === '/api/products' && req.method === 'POST') {
       try {

@@ -153,6 +153,16 @@ module.exports = async (req, res) => {
     }
 
     // 3. Products
+    if (pathname === '/api/products/reorder' && (req.method === 'POST' || req.method === 'PUT')) {
+      const body = await parseBody(req);
+      const orderedIds = Array.isArray(body) ? body : (body.orderedIds || body.ids || []);
+      if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+        return sendJson(res, 400, { error: 'Missing orderedIds array' });
+      }
+      const prods = await (db.reorderProducts ? db.reorderProducts(orderedIds) : db.getProducts());
+      return sendJson(res, 200, { success: true, count: prods.length, products: prods });
+    }
+
     if (pathname === '/api/products') {
       if (req.method === 'GET') {
         const prods = await db.getProducts();

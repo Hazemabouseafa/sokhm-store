@@ -131,6 +131,12 @@ function initSchema() {
   } catch (e) {
     // Column already exists
   }
+
+  try {
+    db.exec('ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0;');
+  } catch (e) {
+    // Column already exists
+  }
 }
 
 /**
@@ -435,8 +441,14 @@ function saveSiteContent(content) {
  * Products: Get all products
  */
 function getProducts() {
-  const rows = db.prepare("SELECT * FROM products ORDER BY created_at DESC").all();
-  return rows.map(r => {
+  let rows = [];
+  try {
+    rows = db.prepare("SELECT * FROM products ORDER BY sort_order ASC, created_at DESC").all();
+  } catch (e) {
+    rows = db.prepare("SELECT * FROM products ORDER BY created_at DESC").all();
+  }
+
+  const list = rows.map(r => {
     const images = JSON.parse(r.images_json || '[]');
     const mainImage = images[0] || 'assets/sokhm-card-1.jpg';
     const sizes = JSON.parse(r.sizes_json || '[]');
@@ -466,12 +478,36 @@ function getProducts() {
       model_info: r.model_info || '',
       stockStatus: r.stock_status || 'in_stock',
       stock_status: r.stock_status || 'in_stock',
+      sortOrder: r.sort_order !== undefined ? r.sort_order : 0,
+      sort_order: r.sort_order !== undefined ? r.sort_order : 0,
       createdAt: r.created_at,
       created_at: r.created_at,
       updatedAt: r.updated_at,
       updated_at: r.updated_at
     };
   });
+
+  // Secondary check: if custom order is saved in site_content, enforce it
+  try {
+    const orderRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'products_order'").get();
+    if (orderRow && orderRow.content_json) {
+      const orderIds = JSON.parse(orderRow.content_json);
+      if (Array.isArray(orderIds) && orderIds.length > 0) {
+        const orderMap = new Map();
+        orderIds.forEach((id, idx) => orderMap.set(String(id).toLowerCase(), idx));
+        list.sort((a, b) => {
+          const idA = String(a.id || a.slug || '').toLowerCase();
+          const idB = String(b.id || b.slug || '').toLowerCase();
+          const posA = orderMap.has(idA) ? orderMap.get(idA) : 999999;
+          const posB = orderMap.has(idB) ? orderMap.get(idB) : 999999;
+          if (posA !== posB) return posA - posB;
+          return (a.sort_order || 0) - (b.sort_order || 0);
+        });
+      }
+    }
+  } catch (e) {}
+
+  return list;
 }
 
 /**
@@ -559,6 +595,38 @@ function saveProducts(productsList) {
   } catch (err) {
     db.exec('ROLLBACK;');
     throw err;
+  }
+
+  const updated = getProducts();
+  syncJsonBackups(null, updated);
+  return updated;
+}
+
+/**
+ * Products: Reorder products
+ */
+function reorderProducts(orderedIds) {
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) return getProducts();
+
+  try {
+    const stmt = db.prepare('UPDATE products SET sort_order = ? WHERE id = ? OR slug = ?');
+    const updateMany = db.transaction((ids) => {
+      ids.forEach((id, index) => {
+        stmt.run(index, String(id), String(id));
+      });
+    });
+    updateMany(orderedIds);
+  } catch (e) {
+    console.warn('Direct sort_order update failed, will rely on site_content:', e.message);
+  }
+
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
+      VALUES ('products_order', ?, CURRENT_TIMESTAMP)
+    `).run(JSON.stringify(orderedIds));
+  } catch (e) {
+    console.warn('Failed to save products_order to site_content:', e.message);
   }
 
   const updated = getProducts();
@@ -967,6 +1035,7 @@ module.exports = {
   getProducts,
   getProductById,
   saveProducts,
+  reorderProducts,
   upsertProduct,
   deleteProduct,
   getCategories,
