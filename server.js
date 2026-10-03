@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const db = require('./database/db.js');
+const db = process.env.TURSO_DATABASE_URL ? require('./database/turso.js') : require('./database/db.js');
 
 const PORT = 3000;
 const MIME_TYPES = {
@@ -90,12 +90,12 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { success: false, error: 'يرجى إدخال اسم المستخدم وكلمة المرور' });
         }
 
-        const verified = db.verifyAdminCredentials(username, password);
+        const verified = await db.verifyAdminCredentials(username, password);
         if (!verified) {
           return sendJson(res, 401, { success: false, error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
         }
 
-        const session = db.createSession(username);
+        const session = await db.createSession(username);
         return sendJson(res, 200, {
           success: true,
           message: 'تم تسجيل الدخول بنجاح',
@@ -112,7 +112,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/admin/verify' && req.method === 'GET') {
       try {
         const token = getBearerToken(req);
-        const session = db.validateSession(token);
+        const session = await db.validateSession(token);
         if (!session) {
           return sendJson(res, 401, { authenticated: false, error: 'انتهت صلاحية الجلسة أو غير مسجل' });
         }
@@ -130,7 +130,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/admin/change-password' && req.method === 'POST') {
       try {
         const token = getBearerToken(req);
-        const session = db.validateSession(token);
+        const session = await db.validateSession(token);
         if (!session) {
           return sendJson(res, 401, { success: false, error: 'غير مصرح: يجب تسجيل الدخول أولاً' });
         }
@@ -141,7 +141,7 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { success: false, error: 'يرجى تقديم كلمة المرور الحالية والجديدة' });
         }
 
-        db.updateAdminPassword(session.username, currentPassword, newPassword);
+        await db.updateAdminPassword(session.username, currentPassword, newPassword);
         return sendJson(res, 200, { success: true, message: 'تم تحديث كلمة المرور بنجاح في قاعدة البيانات' });
       } catch (err) {
         return sendJson(res, 400, { success: false, error: err.message });
@@ -152,7 +152,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/admin/logout' && req.method === 'POST') {
       try {
         const token = getBearerToken(req);
-        if (token) db.revokeSession(token);
+        if (token) await db.revokeSession(token);
         return sendJson(res, 200, { success: true, message: 'تم تسجيل الخروج بنجاح' });
       } catch (err) {
         return sendJson(res, 500, { success: false, error: err.message });
@@ -162,7 +162,7 @@ const server = http.createServer(async (req, res) => {
     // 1. GET /api/site-content
     if (pathname === '/api/site-content' && req.method === 'GET') {
       try {
-        const content = db.getSiteContent();
+        const content = await db.getSiteContent();
         return sendJson(res, 200, content);
       } catch (e) {
         return sendJson(res, 500, { error: 'Failed to read site content from database: ' + e.message });
@@ -173,7 +173,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/site-content' && req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const updated = db.saveSiteContent(body);
+        const updated = await db.saveSiteContent(body);
         return sendJson(res, 200, { success: true, message: 'Site content updated in database successfully', data: updated });
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
@@ -183,7 +183,7 @@ const server = http.createServer(async (req, res) => {
     // 3. GET /api/products
     if (pathname === '/api/products' && req.method === 'GET') {
       try {
-        const products = db.getProducts();
+        const products = await db.getProducts();
         return sendJson(res, 200, products);
       } catch (e) {
         return sendJson(res, 500, { error: 'Failed to read products from database: ' + e.message });
@@ -194,17 +194,55 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/products' && req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const updated = db.saveProducts(body);
-        return sendJson(res, 200, { success: true, message: 'Products updated in database successfully', count: updated.length });
+        if (Array.isArray(body)) {
+          const updated = await (db.saveProducts ? db.saveProducts(body) : db.getProducts());
+          return sendJson(res, 200, { success: true, count: updated.length, data: updated });
+        }
+        const created = await db.upsertProduct(body);
+        return sendJson(res, 201, { success: true, product: created });
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 4.1 REST: /api/products/:id
+    const prodMatch = pathname.match(/^\/api\/products\/([^\/]+)$/);
+    if (prodMatch) {
+      const pid = prodMatch[1];
+      if (req.method === 'GET') {
+        try {
+          const prod = await db.getProductById(pid);
+          if (!prod) return sendJson(res, 404, { error: 'Product not found' });
+          return sendJson(res, 200, prod);
+        } catch (e) {
+          return sendJson(res, 500, { error: e.message });
+        }
+      }
+      if (req.method === 'PUT') {
+        try {
+          const body = await readBody(req);
+          body.id = pid;
+          const updated = await db.upsertProduct(body);
+          return sendJson(res, 200, { success: true, product: updated });
+        } catch (e) {
+          return sendJson(res, 500, { error: e.message });
+        }
+      }
+      if (req.method === 'DELETE') {
+        try {
+          await db.deleteProduct(pid);
+          return sendJson(res, 200, { success: true, message: 'Product deleted successfully', id: pid });
+        } catch (e) {
+          return sendJson(res, 500, { error: e.message });
+        }
       }
     }
 
     // 5. GET /api/categories
     if (pathname === '/api/categories' && req.method === 'GET') {
       try {
-        return sendJson(res, 200, db.getCategories());
+        const cats = await db.getCategories();
+        return sendJson(res, 200, cats);
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
       }
@@ -214,19 +252,20 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/categories' && req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const cats = db.addCategory(body);
+        const cats = await db.addCategory(body);
         return sendJson(res, 200, { success: true, categories: cats });
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
       }
     }
 
-    // 7. DELETE /api/categories
-    if (pathname === '/api/categories' && req.method === 'DELETE') {
+    // 7. DELETE /api/categories & REST /api/categories/:id
+    const catMatch = pathname.match(/^\/api\/categories\/([^\/]+)$/);
+    if ((pathname === '/api/categories' || catMatch) && req.method === 'DELETE') {
       try {
-        const slug = parsedUrl.searchParams.get('slug');
+        const slug = catMatch ? catMatch[1] : parsedUrl.searchParams.get('slug');
         if (!slug) return sendJson(res, 400, { error: 'Missing slug parameter' });
-        const cats = db.deleteCategory(slug);
+        const cats = await db.deleteCategory(slug);
         return sendJson(res, 200, { success: true, categories: cats });
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
@@ -236,7 +275,8 @@ const server = http.createServer(async (req, res) => {
     // 8. GET /api/stats (Database Health & Counts)
     if (pathname === '/api/stats' && req.method === 'GET') {
       try {
-        return sendJson(res, 200, db.getStats());
+        const stats = await db.getStats();
+        return sendJson(res, 200, stats);
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
       }
@@ -246,7 +286,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/orders' && req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const order = db.createOrder(body);
+        const order = await db.createOrder(body);
         return sendJson(res, 201, { success: true, orderId: order.id, order });
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
@@ -255,31 +295,34 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/orders' && req.method === 'GET') {
       try {
         const statusFilter = parsedUrl.searchParams.get('status') || 'all';
-        return sendJson(res, 200, db.getOrders(statusFilter));
+        const orders = await db.getOrders(statusFilter);
+        return sendJson(res, 200, orders);
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
       }
     }
 
-    // 10. Orders: Status Update POST /api/orders/status
-    if (pathname === '/api/orders/status' && req.method === 'POST') {
+    // 10. Orders: Status Update POST /api/orders/status or PATCH /api/orders/:id
+    const orderMatch = pathname.match(/^\/api\/orders\/([^\/]+)$/);
+    if ((pathname === '/api/orders/status' && req.method === 'POST') || (orderMatch && req.method === 'PATCH')) {
       try {
         const body = await readBody(req);
-        const { id, status } = body;
+        const id = orderMatch ? orderMatch[1] : body.id;
+        const status = body.status;
         if (!id || !status) return sendJson(res, 400, { error: 'Missing order id or status' });
-        const updated = db.updateOrderStatus(id, status);
+        const updated = await db.updateOrderStatus(id, status);
         return sendJson(res, 200, { success: true, order: updated });
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
       }
     }
 
-    // 11. Orders: DELETE /api/orders
-    if (pathname === '/api/orders' && req.method === 'DELETE') {
+    // 11. Orders: DELETE /api/orders or DELETE /api/orders/:id
+    if ((pathname === '/api/orders' || orderMatch) && req.method === 'DELETE') {
       try {
-        const id = parsedUrl.searchParams.get('id');
+        const id = orderMatch ? orderMatch[1] : parsedUrl.searchParams.get('id');
         if (!id) return sendJson(res, 400, { error: 'Missing order id' });
-        db.deleteOrder(id);
+        await db.deleteOrder(id);
         return sendJson(res, 200, { success: true, message: 'Order deleted successfully' });
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
@@ -289,7 +332,8 @@ const server = http.createServer(async (req, res) => {
     // 12. Orders: GET /api/orders/stats
     if (pathname === '/api/orders/stats' && req.method === 'GET') {
       try {
-        return sendJson(res, 200, db.getOrderStats());
+        const stats = await db.getOrderStats();
+        return sendJson(res, 200, stats);
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
       }
