@@ -1025,7 +1025,7 @@
           <div>
             <label class="cms-label">حد الشحن المجاني (بالجنيه المصري EGP)</label>
             <div class="relative">
-              <input type="number" id="chk_freeThreshold" min="0" step="50" class="cms-input w-full font-mono pl-14 font-bold" placeholder="2500">
+              <input type="number" id="chk_freeThreshold" min="0" step="any" class="cms-input w-full font-mono pl-14 font-bold" placeholder="2500">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-neutral-400 font-bold">ج.م</span>
             </div>
             <span class="text-[10px] text-neutral-500 block mt-1">الطلبات بهذا المبلغ أو أكثر تحصل على شحن مجاني تلقائياً.</span>
@@ -1035,7 +1035,7 @@
           <div>
             <label class="cms-label">مصاريف الشحن القياسي (بالجنيه المصري EGP)</label>
             <div class="relative">
-              <input type="number" id="chk_standardFee" min="0" step="5" class="cms-input w-full font-mono pl-14 font-bold" placeholder="75">
+              <input type="number" id="chk_standardFee" min="0" step="any" class="cms-input w-full font-mono pl-14 font-bold" placeholder="75">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-neutral-400 font-bold">ج.م</span>
             </div>
             <span class="text-[10px] text-neutral-500 block mt-1">تطبق إذا كان إجمالي الطلب أقل من حد الشحن المجاني.</span>
@@ -1472,7 +1472,7 @@
         <div>
           <label class="cms-label">السعر بالجنيه المصري (EGP) *</label>
           <div class="relative">
-            <input type="number" id="pm_price" required min="1" step="10" placeholder="1850" class="cms-input w-full font-mono pl-14 font-bold">
+            <input type="number" id="pm_price" required min="0" step="any" placeholder="1850" class="cms-input w-full font-mono pl-14 font-bold">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-neutral-400 font-bold">ج.م</span>
           </div>
         </div>

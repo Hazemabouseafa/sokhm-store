@@ -1188,9 +1188,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Populate category dropdown
+    const activeCats = (categories && categories.length > 0)
+      ? categories
+      : [
+          { id: 'hoodies', name: 'Hoodies // هوديز فاخر', slug: 'hoodies' },
+          { id: 't-shirts', name: 'T-Shirts // تيشيرتات أوفر سايز', slug: 't-shirts' },
+          { id: 'pants', name: 'Pants // بناطيل كارجو وسويت بانتس', slug: 'pants' },
+          { id: 'jackets', name: 'Jackets // جواكت فاخرة', slug: 'jackets' },
+          { id: 'caps', name: 'Caps & Accessories // كابات وإكسسوارات', slug: 'caps' }
+        ];
     const catSelect = document.getElementById('pm_category');
     if (catSelect) {
-      catSelect.innerHTML = categories.map(c => `<option value="${c.slug || c.id}">${c.name}</option>`).join('');
+      catSelect.innerHTML = activeCats.map(c => `<option value="${c.slug || c.id}">${c.name}</option>`).join('');
     }
 
     if (prod) {
@@ -1198,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       setVal('pm_name', prod.name);
       setVal('pm_slug', prod.slug || prod.id);
       setVal('pm_price', prod.price);
-      if (catSelect) catSelect.value = prod.category || (categories[0] && (categories[0].slug || categories[0].id));
+      if (catSelect) catSelect.value = prod.category || (activeCats[0] && (activeCats[0].slug || activeCats[0].id));
       setVal('pm_image', prod.image);
       setVal('pm_description', prod.description);
 
@@ -1224,8 +1233,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       form.reset();
       setVal('pm_id', '');
+      setVal('pm_name', '');
       setVal('pm_slug', 'sokhm-garment-' + Math.floor(100 + Math.random() * 900));
+      setVal('pm_price', '1850');
       setVal('pm_image', 'assets/sokhm-card-1.jpg');
+      setVal('pm_description', 'تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.');
+      if (catSelect && activeCats.length > 0) catSelect.value = activeCats[0].slug || activeCats[0].id;
       modalColorsList = [
         { name: 'Onyx Black', hex: '#0B0B0B' },
         { name: 'Sand Cream', hex: '#D6CDBF' }
@@ -1371,7 +1384,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const id = getVal('pm_id') || getVal('pm_slug');
         const name = getVal('pm_name');
         const slug = getVal('pm_slug') || id;
-        const price = parseFloat(getVal('pm_price')) || 0;
+        const rawPrice = getVal('pm_price').toString().replace(/[^0-9.]/g, '');
+        const price = parseFloat(rawPrice) || 0;
         const category = getVal('pm_category');
         const image = getVal('pm_image');
         const description = getVal('pm_description');
