@@ -75,7 +75,8 @@
     "breadcrumbs": {
       "home": "HOME",
       "collection": "BEST SELLERS",
-      "backLink": "Back to Collection"
+      "backLink": "Back to Collection",
+      "back": "Back to Collection"
     },
     "kickerPrefix": "✦ SOKHM ATELIER //",
     "sizeGuideButtonText": "Size Guide (CM)",
@@ -105,7 +106,7 @@
       },
       {
         "id": "acc-2",
-        "title": "Fabric & Care (500 GSM)"
+        "title": "-"
       },
       {
         "id": "acc-3",
@@ -120,6 +121,17 @@
       "emptySubtitle": "Explore SOKHM Best Sellers.",
       "subtotalLabel": "SUBTOTAL",
       "checkoutButton": "CHECKOUT"
+    },
+    "buttons": {
+      "sizeGuide": "Size Guide (CM)",
+      "addToBag": "ADD TO BAG",
+      "expressCheckout": "EXPRESS CHECKOUT"
+    },
+    "cart": {
+      "title": "SHOPPING BAG",
+      "emptyTitle": "YOUR BAG IS EMPTY",
+      "subtotal": "SUBTOTAL",
+      "checkout": "CHECKOUT"
     }
   },
   "categories": [

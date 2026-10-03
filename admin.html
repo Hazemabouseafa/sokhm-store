@@ -679,6 +679,7 @@
                 <th class="py-3.5 px-4">القسم</th>
                 <th class="py-3.5 px-4">السعر (ج.م)</th>
                 <th class="py-3.5 px-4">الشارة</th>
+                <th class="py-3.5 px-4">الألوان المتوفرة</th>
                 <th class="py-3.5 px-4">المقاسات</th>
                 <th class="py-3.5 px-6 text-left">الإجراءات</th>
               </tr>
@@ -1041,6 +1042,57 @@
             <input type="checkbox" name="sizes" value="XXL" class="hidden peer">
             <span class="inline-block px-3 py-1.5 rounded-lg border border-[#222] bg-[#0A0A0A] peer-checked:bg-white peer-checked:text-black peer-checked:border-white font-bold transition-all">XXL</span>
           </label>
+        </div>
+      </div>
+
+      <!-- إدارة الألوان والدرجات اللونية (Product Colors & Swatches) -->
+      <div class="p-4 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <label class="cms-label !mb-0 flex items-center gap-1.5">
+              <i data-lucide="palette" class="w-3.5 h-3.5 text-neutral-400"></i>
+              <span>الألوان المتوفرة للقطعة (Colors & Swatches) *</span>
+            </label>
+            <p class="text-[10px] text-neutral-400 mt-0.5">
+              حدد درجات الألوان المتاحة واسم كل لون ودرجته (Hex)، وصورته المخصصة التي تتبدل عند اختيار العميل للون.
+            </p>
+          </div>
+          <button 
+            type="button" 
+            id="addNewColorBtn" 
+            class="px-3.5 py-1.5 rounded-lg border border-[#333] hover:border-white bg-[#141414] hover:bg-white hover:text-black text-white font-bold text-[11px] flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+          >
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>إضافة لون جديد</span>
+          </button>
+        </div>
+
+        <!-- باليتات ألوان جاهزة سريعة للإضافة -->
+        <div class="flex items-center gap-1.5 flex-wrap text-[11px] pt-1 border-t border-[#141414]">
+          <span class="text-neutral-500 font-bold text-[10px]">باليتات سريعة:</span>
+          <button type="button" class="color-preset-pill px-2.5 py-1 rounded bg-[#121212] hover:bg-white hover:text-black border border-[#222] text-neutral-300 text-[10px] flex items-center gap-1.5 cursor-pointer transition-colors" data-name="Onyx Black" data-hex="#0E0E0E">
+            <span class="w-2.5 h-2.5 rounded-full inline-block border border-neutral-600" style="background:#0E0E0E"></span> أسود فاخر
+          </button>
+          <button type="button" class="color-preset-pill px-2.5 py-1 rounded bg-[#121212] hover:bg-white hover:text-black border border-[#222] text-neutral-300 text-[10px] flex items-center gap-1.5 cursor-pointer transition-colors" data-name="Sand Cream" data-hex="#D6D1C4">
+            <span class="w-2.5 h-2.5 rounded-full inline-block border border-neutral-600" style="background:#D6D1C4"></span> بيج كريمي
+          </button>
+          <button type="button" class="color-preset-pill px-2.5 py-1 rounded bg-[#121212] hover:bg-white hover:text-black border border-[#222] text-neutral-300 text-[10px] flex items-center gap-1.5 cursor-pointer transition-colors" data-name="Tactical Olive" data-hex="#373E32">
+            <span class="w-2.5 h-2.5 rounded-full inline-block border border-neutral-600" style="background:#373E32"></span> زيتي تكتيكي
+          </button>
+          <button type="button" class="color-preset-pill px-2.5 py-1 rounded bg-[#121212] hover:bg-white hover:text-black border border-[#222] text-neutral-300 text-[10px] flex items-center gap-1.5 cursor-pointer transition-colors" data-name="Charcoal Grey" data-hex="#262626">
+            <span class="w-2.5 h-2.5 rounded-full inline-block border border-neutral-600" style="background:#262626"></span> رمادي فحمي
+          </button>
+          <button type="button" class="color-preset-pill px-2.5 py-1 rounded bg-[#121212] hover:bg-white hover:text-black border border-[#222] text-neutral-300 text-[10px] flex items-center gap-1.5 cursor-pointer transition-colors" data-name="Pure White" data-hex="#FFFFFF">
+            <span class="w-2.5 h-2.5 rounded-full inline-block border border-neutral-400" style="background:#FFFFFF"></span> أبيض ناصع
+          </button>
+          <button type="button" class="color-preset-pill px-2.5 py-1 rounded bg-[#121212] hover:bg-white hover:text-black border border-[#222] text-neutral-300 text-[10px] flex items-center gap-1.5 cursor-pointer transition-colors" data-name="Midnight Navy" data-hex="#111827">
+            <span class="w-2.5 h-2.5 rounded-full inline-block border border-neutral-600" style="background:#111827"></span> كحلي ليلي
+          </button>
+        </div>
+
+        <!-- حاوية قائمة الألوان الحية -->
+        <div id="modalColorsList" class="space-y-2 pt-1 max-h-56 overflow-y-auto pr-1">
+          <!-- يتم توليد درجات الألوان ديناميكياً بواسطة js/admin.js -->
         </div>
       </div>
 

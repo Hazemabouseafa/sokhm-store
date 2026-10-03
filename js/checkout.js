@@ -379,6 +379,7 @@
           <h5 class="font-bold text-white truncate text-[11px]">${item.name}</h5>
           <div class="flex items-center gap-1.5 text-[10px] text-neutral-400 mt-0.5">
             <span class="px-1.5 py-0.2 rounded bg-[#161616] text-white border border-[#222] font-mono">${item.size || 'M'}</span>
+            ${item.color ? `<span class="px-1.5 py-0.2 rounded bg-[#161616] text-neutral-300 border border-[#222]">${item.color}</span>` : ''}
             <span>•</span>
             <span>الكمية: ${qty}</span>
           </div>

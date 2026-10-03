@@ -84,7 +84,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Set active default color & size
-  selectedColor = currentProduct.colors && currentProduct.colors.length > 0 ? currentProduct.colors[0] : null;
+  const productColors = Array.isArray(currentProduct.colors) && currentProduct.colors.length > 0
+    ? currentProduct.colors
+    : [{ name: 'Onyx Black', hex: '#0E0E0E', image: currentProduct.images?.[0] || 'assets/sokhm-card-1.jpg' }];
+  selectedColor = productColors[0];
 
   // ================= 2. POPULATE PRODUCT METADATA =================
   if (pageTitle) pageTitle.textContent = `✦ SOKHM | ${currentProduct.name}`;
@@ -133,10 +136,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     colorSwatchesContainer.innerHTML = '';
     selectedColorLabel.textContent = selectedColor ? selectedColor.name : 'Onyx Black';
 
-    (currentProduct.colors || []).forEach((col, idx) => {
+    productColors.forEach((col, idx) => {
       const swBtn = document.createElement('button');
       swBtn.className = `swatch-dot-dark ${idx === 0 ? 'active' : ''}`;
-      swBtn.style.backgroundColor = col.hex;
+      swBtn.style.backgroundColor = col.hex || '#000000';
       swBtn.title = col.name;
 
       swBtn.addEventListener('click', () => {
@@ -219,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         size: selectedSize,
         color: selectedColor?.name || 'Standard',
         quantity: quantity,
-        image: currentProduct.images?.[0] || 'assets/sokhm-card-1.jpg'
+        image: (selectedColor && selectedColor.image) || currentProduct.images?.[0] || 'assets/sokhm-card-1.jpg'
       };
       if (typeof window.openCheckoutModal === 'function') {
         window.openCheckoutModal([expressItem]);
@@ -324,7 +327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         name: product.name,
         price: product.price,
         formattedPrice: product.formattedPrice || `${product.price.toLocaleString()} EGP`,
-        image: product.images[0] || 'assets/sokhm-card-1.jpg',
+        image: (selectedColor && selectedColor.image) || product.images?.[0] || 'assets/sokhm-card-1.jpg',
         size: size,
         color: colorName,
         quantity: qty

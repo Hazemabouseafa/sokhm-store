@@ -1,55 +1,13 @@
 [
   {
-    "id": "sokhm-noir-01",
-    "name": "SIGNATURE HOODIE",
-    "subtitle": "HOODIE",
-    "category": "hoodies",
-    "price": 1850,
-    "badge": "SIGNATURE",
-    "images": [
-      "assets/sokhm-card-1.jpg",
-      "assets/sokhm-hoodie-back.jpg",
-      "assets/sokhm-hoodie-detail.jpg",
-      "assets/sokhm-noir-model.jpg"
-    ],
-    "sizes": [
-      "S",
-      "M",
-      "L",
-      "XL",
-      "XXL"
-    ],
-    "shortDesc": "The emblem piece in jet-black combed cotton.",
-    "description": "The emblem piece. Oversized architectural silhouette in jet-black combed cotton featuring the metallic silver SOKHM 4-pointed star emblem embroidered across the back.",
-    "fabric": "500 GSM Heavyweight French Terry, 100% Long-Staple Egyptian Cotton",
-    "fitAdvice": "Sculpted drop-shoulder oversized boxy drape",
-    "careAdvice": "Machine wash cold inside-out, hang dry.",
-    "colors": [
-      {
-        "name": "Onyx Black",
-        "hex": "#0E0E0E",
-        "image": "assets/sokhm-card-1.jpg"
-      },
-      {
-        "name": "Slate Grey",
-        "hex": "#3E4143",
-        "image": "assets/sokhm-card-4.jpg"
-      }
-    ],
-    "modelInfo": "",
-    "stockStatus": "in_stock",
-    "createdAt": "2026-10-03 16:13:11",
-    "updatedAt": "2026-10-03 16:13:11"
-  },
-  {
     "id": "sokhm-noir-02",
     "name": "ESSENTIAL HOODIE",
     "subtitle": "HOODIE",
     "category": "hoodies",
-    "price": 1850,
+    "price": 1851,
     "badge": "CORE",
     "images": [
-      "assets/sokhm-card-2.jpg",
+      "assets/whatsapp_image_2026-10-02_at_10_50_13_1791051937239.jpg",
       "assets/sokhm-hoodie-back.jpg",
       "assets/sokhm-hoodie-detail.jpg",
       "assets/sokhm-card-1.jpg"
@@ -61,32 +19,32 @@
       "L",
       "XL"
     ],
-    "shortDesc": "",
+    "shortDesc": "Built for raw everyday presence. Crafted in unbleached sand cream fleece with bold high-density black SOKHM typographic branding emblazoned across the shoulders.",
     "description": "Built for raw everyday presence. Crafted in unbleached sand cream fleece with bold high-density black SOKHM typographic branding emblazoned across the shoulders.",
     "fabric": "480 GSM Heavy Combed Cotton Fleece",
-    "fitAdvice": "",
-    "careAdvice": "",
+    "fitAdvice": "Oversized boxy drape",
+    "careAdvice": "Cold machine wash",
     "colors": [
+      {
+        "name": "Onyx Noir",
+        "hex": "#0B0B0B",
+        "image": "assets/sokhm-card-1.jpg"
+      },
       {
         "name": "Sand Cream",
         "hex": "#D6D1C4",
         "image": "assets/sokhm-card-2.jpg"
       },
       {
-        "name": "Onyx Black",
-        "hex": "#0E0E0E",
-        "image": "assets/sokhm-card-1.jpg"
-      },
-      {
-        "name": "Tactical Olive",
-        "hex": "#373E32",
+        "name": "Royal Cobalt",
+        "hex": "#1A365D",
         "image": "assets/sokhm-card-3.jpg"
       }
     ],
     "modelInfo": "",
     "stockStatus": "in_stock",
-    "createdAt": "2026-10-03 16:13:11",
-    "updatedAt": "2026-10-03 16:13:11"
+    "createdAt": "2026-10-03 18:34:18",
+    "updatedAt": "2026-10-03 18:34:18"
   },
   {
     "id": "sokhm-noir-03",
@@ -126,8 +84,8 @@
     ],
     "modelInfo": "",
     "stockStatus": "in_stock",
-    "createdAt": "2026-10-03 16:13:11",
-    "updatedAt": "2026-10-03 16:13:11"
+    "createdAt": "2026-10-03 18:34:18",
+    "updatedAt": "2026-10-03 18:34:18"
   },
   {
     "id": "sokhm-noir-04",
@@ -169,7 +127,7 @@
     ],
     "modelInfo": "",
     "stockStatus": "in_stock",
-    "createdAt": "2026-10-03 16:13:11",
-    "updatedAt": "2026-10-03 16:13:11"
+    "createdAt": "2026-10-03 18:34:18",
+    "updatedAt": "2026-10-03 18:34:18"
   }
 ]

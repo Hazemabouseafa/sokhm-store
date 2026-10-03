@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let productCategoryFilterValue = 'all';
   let orderSearchTerm = '';
   let orderStatusFilterValue = 'all';
+  let modalColorsList = [];
 
   // عناصر النوافذ المنبثقة
   const productModal = document.getElementById('productEditModal');
@@ -175,6 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <img src="${item.image || 'assets/sokhm-card-1.jpg'}" class="w-6 h-7 rounded object-cover border border-[#222]">
           <span class="font-bold text-white text-[11px] truncate max-w-[120px]">${escapeHtml(item.name || 'هودي')}</span>
           <span class="px-1 py-0.2 rounded bg-[#161616] text-[9px] font-mono text-neutral-300 border border-[#262626]">${escapeHtml(item.size || 'M')}</span>
+          ${item.color ? `<span class="px-1 py-0.2 rounded bg-[#161616] text-[9px] text-neutral-300 border border-[#262626]">${escapeHtml(item.color)}</span>` : ''}
           <span class="text-[10px] text-neutral-400">×${item.quantity || 1}</span>
         </div>
       `).join('');
@@ -418,6 +420,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h5 class="font-bold text-white text-xs">${escapeHtml(item.name || 'قطعة ملابس')}</h5>
             <div class="text-[10px] text-neutral-400 mt-0.5">
               <span>المقاس: <strong class="text-white">${escapeHtml(item.size || 'M')}</strong></span>
+              ${item.color ? `<span>•</span> <span>اللون: <strong class="text-white">${escapeHtml(item.color)}</strong></span>` : ''}
               <span>•</span>
               <span>الكمية: <strong class="text-white">${qty}</strong></span>
             </div>
@@ -980,6 +983,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           ` : '<span class="text-neutral-600 text-[11px]">—</span>'}
         </td>
 
+        <!-- الألوان المتوفرة -->
+        <td class="py-4 px-4">
+          <div class="flex items-center gap-1.5 flex-wrap max-w-[130px]">
+            ${(prod.colors && prod.colors.length > 0) ? prod.colors.map(c => `
+              <span class="w-3.5 h-3.5 rounded-full border border-neutral-600 inline-block shadow-sm transition-transform hover:scale-125 cursor-help" style="background-color: ${escapeHtml(c.hex || '#000000')}" title="${escapeHtml(c.name || '')} (${escapeHtml(c.hex || '')})"></span>
+            `).join('') : '<span class="text-neutral-600 text-[10px]">لون قياسي</span>'}
+          </div>
+        </td>
+
         <!-- المقاسات -->
         <td class="py-4 px-4 text-[11px] text-neutral-400 font-mono">
           ${escapeHtml(sizesList)}
@@ -1148,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // أزرار النماذج الجاهزة
+    // أزرار النماذج الجاهزة للصور
     document.querySelectorAll('.preset-pill').forEach(pill => {
       pill.addEventListener('click', () => {
         const img = pill.getAttribute('data-img');
@@ -1159,7 +1171,38 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    // إرسال وحفظ النموذج
+    // زر إضافة لون جديد
+    const addColorBtn = document.getElementById('addNewColorBtn');
+    if (addColorBtn) {
+      addColorBtn.addEventListener('click', () => {
+        syncModalColorsFromDOM();
+        modalColorsList.push({
+          name: 'لون جديد',
+          hex: '#1E1E1E',
+          image: ''
+        });
+        renderModalColorsList();
+      });
+    }
+
+    // باليتات الألوان السريعة
+    document.querySelectorAll('.color-preset-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        syncModalColorsFromDOM();
+        const name = pill.getAttribute('data-name') || 'لون';
+        const hex = pill.getAttribute('data-hex') || '#0E0E0E';
+        const exists = modalColorsList.some(c => (c.hex || '').toLowerCase() === hex.toLowerCase());
+        if (!exists) {
+          modalColorsList.push({ name, hex, image: '' });
+          renderModalColorsList();
+          showToast(`تمت إضافة باليتة: ${name}`);
+        } else {
+          showToast(`اللون ${name} موجود بالفعل في قائمة درجات القطعة!`, 'error');
+        }
+      });
+    });
+
+    // إرسال وحفظ نموذج المنتج في قاعدة البيانات
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1181,6 +1224,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           selectedSizes.push(cb.value);
         });
 
+        // الألوان المحددة والمعدلة
+        const finalColors = syncModalColorsFromDOM();
+        const productColors = finalColors.length > 0 ? finalColors : [
+          { name: 'Onyx Black', hex: '#0E0E0E', image: image }
+        ];
+
         if (editingProductId) {
           // تعديل قطعة قائمة
           const index = products.findIndex(p => p.id === editingProductId);
@@ -1195,6 +1244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               badge,
               images: [image, ...(current.images?.slice(1) || [])],
               sizes: selectedSizes.length > 0 ? selectedSizes : ['S', 'M', 'L', 'XL'],
+              colors: productColors,
               shortDesc: desc || current.shortDesc || '',
               description: desc || current.description || '',
               fabric: fabric || current.fabric || '500 GSM French Terry',
@@ -1214,15 +1264,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             badge: badge || 'NEW',
             images: [image],
             sizes: selectedSizes.length > 0 ? selectedSizes : ['S', 'M', 'L', 'XL'],
+            colors: productColors,
             shortDesc: desc || 'Architectural luxury garment crafted from premium combed cotton.',
             description: desc || 'Architectural luxury garment crafted from premium combed cotton.',
             fabric: fabric || '500 GSM Ultra-Dense French Terry',
             fitAdvice: fit || 'Relaxed dropped-shoulder boxy drape',
             careAdvice: care || 'Cold hand or machine wash inside out',
-            colors: [
-              { name: 'Onyx Noir', hex: '#0B0B0B' },
-              { name: 'Smoke Grey', hex: '#525252' }
-            ],
             modelInfo: 'Model is 186cm wearing size L.'
           };
           products.unshift(newProduct);
@@ -1232,9 +1279,222 @@ document.addEventListener('DOMContentLoaded', async () => {
         productModal.close();
         renderProductsTable();
         renderCategoriesList();
-        showToast(editingProductId ? `تم تحديث بيانات "${name}" في قاعدة البيانات!` : `تمت إضافة القطعة "${name}" بنجاح!`);
+        showToast(editingProductId ? `تم تحديث بيانات وألوان "${name}" في قاعدة البيانات!` : `تمت إضافة القطعة "${name}" بنجاح!`);
       });
     }
+  }
+
+  // ================= 11. إدارة درجات الألوان للقطعة (COLORS & SWATCHES) =================
+  function renderModalColorsList() {
+    const container = document.getElementById('modalColorsList');
+    if (!container) return;
+
+    if (!modalColorsList || modalColorsList.length === 0) {
+      modalColorsList = [{ name: 'Onyx Black', hex: '#0E0E0E', image: '' }];
+    }
+
+    container.innerHTML = '';
+
+    modalColorsList.forEach((col, idx) => {
+      const row = document.createElement('div');
+      row.className = 'color-item-row p-2.5 rounded-xl bg-[#0C0C0C] border border-[#222] flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 group hover:border-[#383838] transition-all';
+      row.dataset.index = idx;
+
+      const hexVal = col.hex || '#000000';
+      const nameVal = col.name || '';
+      const imgVal = col.image || '';
+
+      row.innerHTML = `
+        <!-- دائرة اللون ومحدد الألوان والـ Hex -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <label class="color-swatch-circle relative w-8 h-8 rounded-full border-2 border-[#333] shadow-inner cursor-pointer flex items-center justify-center transition-all hover:scale-105 hover:border-white" style="background-color: ${escapeHtml(hexVal)}" title="انقر لفتح باليتة اختيار اللون">
+            <input type="color" value="${escapeHtml(hexVal)}" class="color-picker-input absolute inset-0 opacity-0 w-full h-full cursor-pointer">
+          </label>
+          <input type="text" value="${escapeHtml(hexVal)}" maxlength="7" placeholder="#000000" class="color-hex-input cms-input font-mono !py-1 !px-2 w-20 text-[11px] uppercase text-center" title="كود اللون Hex">
+        </div>
+
+        <!-- اسم اللون -->
+        <div class="flex-grow">
+          <input type="text" value="${escapeHtml(nameVal)}" placeholder="اسم اللون (مثال: Onyx Black / أسود فاحم)" class="color-name-input cms-input w-full !py-1 text-xs" required title="اسم اللون الذي يظهر للمشتري">
+        </div>
+
+        <!-- صورة مخصصة لهذا اللون (اختياري) -->
+        <div class="flex items-center gap-1.5 flex-grow sm:max-w-[220px]">
+          <div class="w-7 h-7 rounded bg-[#161616] border border-[#222] overflow-hidden flex-shrink-0 flex items-center justify-center">
+            <img src="${escapeHtml(imgVal)}" alt="Color" class="color-thumb-img w-full h-full object-cover ${imgVal ? '' : 'hidden'}">
+            <i data-lucide="image" class="color-thumb-placeholder w-3.5 h-3.5 text-neutral-600 ${imgVal ? 'hidden' : ''}"></i>
+          </div>
+          <input type="text" value="${escapeHtml(imgVal)}" placeholder="صورة اللون (اختياري)" class="color-img-input cms-input !py-1 text-[10px] flex-grow font-mono" title="صورة القطعة بهذا اللون تحديداً">
+          <label class="p-1.5 rounded-lg border border-[#282828] bg-[#161616] hover:bg-white hover:text-black text-neutral-400 cursor-pointer transition-colors" title="رفع صورة لهذا اللون من جهازك">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <input type="file" accept="image/*" class="color-file-input hidden">
+          </label>
+        </div>
+
+        <!-- زر حذف اللون -->
+        <div class="flex-shrink-0 flex items-center justify-end">
+          <button type="button" class="delete-color-btn p-1.5 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer" title="حذف هذا اللون" ${modalColorsList.length <= 1 ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      `;
+
+      container.appendChild(row);
+    });
+
+    attachColorItemEvents();
+    setupLucide();
+  }
+
+  function attachColorItemEvents() {
+    const rows = document.querySelectorAll('.color-item-row');
+    rows.forEach(row => {
+      const idx = parseInt(row.dataset.index, 10);
+      const swatchCircle = row.querySelector('.color-swatch-circle');
+      const picker = row.querySelector('.color-picker-input');
+      const hexInput = row.querySelector('.color-hex-input');
+      const nameInput = row.querySelector('.color-name-input');
+      const imgInput = row.querySelector('.color-img-input');
+      const fileInput = row.querySelector('.color-file-input');
+      const thumbImg = row.querySelector('.color-thumb-img');
+      const thumbPlaceholder = row.querySelector('.color-thumb-placeholder');
+      const deleteBtn = row.querySelector('.delete-color-btn');
+
+      // تفاعل محدد الألوان (Color Picker)
+      if (picker && hexInput && swatchCircle) {
+        picker.addEventListener('input', (e) => {
+          const val = e.target.value;
+          hexInput.value = val.toUpperCase();
+          swatchCircle.style.backgroundColor = val;
+          if (modalColorsList[idx]) modalColorsList[idx].hex = val;
+        });
+      }
+
+      // تفاعل كتابة كود Hex يدوياً
+      if (hexInput && picker && swatchCircle) {
+        hexInput.addEventListener('input', (e) => {
+          let val = e.target.value.trim();
+          if (!val.startsWith('#') && val.length > 0) val = '#' + val;
+          if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+            picker.value = val;
+            swatchCircle.style.backgroundColor = val;
+            if (modalColorsList[idx]) modalColorsList[idx].hex = val;
+          }
+        });
+      }
+
+      // تفاعل تغيير اسم اللون
+      if (nameInput) {
+        nameInput.addEventListener('input', (e) => {
+          if (modalColorsList[idx]) modalColorsList[idx].name = e.target.value;
+        });
+      }
+
+      // تفاعل كتابة رابط الصورة
+      if (imgInput) {
+        imgInput.addEventListener('input', (e) => {
+          const val = e.target.value.trim();
+          if (modalColorsList[idx]) modalColorsList[idx].image = val;
+          if (val) {
+            thumbImg.src = val;
+            thumbImg.classList.remove('hidden');
+            thumbPlaceholder.classList.add('hidden');
+          } else {
+            thumbImg.src = '';
+            thumbImg.classList.add('hidden');
+            thumbPlaceholder.classList.remove('hidden');
+          }
+        });
+      }
+
+      // تفاعل رفع ملف صورة للون مباشرة
+      if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+
+          showToast(`جاري رفع صورة اللون (${file.name})...`);
+
+          const reader = new FileReader();
+          reader.onload = async (evt) => {
+            const base64Data = evt.target.result;
+            try {
+              const res = await fetch('/api/upload-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  image: base64Data,
+                  base64: base64Data,
+                  filename: file.name
+                })
+              });
+
+              if (res.ok) {
+                const data = await res.json();
+                const uploadedPath = data.url || data.path;
+                if (uploadedPath) {
+                  imgInput.value = uploadedPath;
+                  if (modalColorsList[idx]) modalColorsList[idx].image = uploadedPath;
+                  thumbImg.src = uploadedPath;
+                  thumbImg.classList.remove('hidden');
+                  thumbPlaceholder.classList.add('hidden');
+                  showToast('تم رفع وتعيين صورة اللون بنجاح!');
+                  return;
+                }
+              }
+            } catch (err) {
+              console.warn('Error uploading color image:', err);
+            }
+
+            // Fallback
+            imgInput.value = base64Data;
+            if (modalColorsList[idx]) modalColorsList[idx].image = base64Data;
+            thumbImg.src = base64Data;
+            thumbImg.classList.remove('hidden');
+            thumbPlaceholder.classList.add('hidden');
+            showToast('تم حفظ صورة اللون!');
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // تفاعل حذف اللون
+      if (deleteBtn && modalColorsList.length > 1) {
+        deleteBtn.addEventListener('click', () => {
+          syncModalColorsFromDOM();
+          modalColorsList.splice(idx, 1);
+          renderModalColorsList();
+        });
+      }
+    });
+  }
+
+  function syncModalColorsFromDOM() {
+    const rows = document.querySelectorAll('.color-item-row');
+    const synced = [];
+    rows.forEach(row => {
+      const hexInput = row.querySelector('.color-hex-input');
+      const nameInput = row.querySelector('.color-name-input');
+      const imgInput = row.querySelector('.color-img-input');
+
+      let hex = hexInput ? hexInput.value.trim() : '#0E0E0E';
+      if (!hex.startsWith('#')) hex = '#' + hex;
+      const name = nameInput ? nameInput.value.trim() : 'لون';
+      const image = imgInput ? imgInput.value.trim() : '';
+
+      if (name || hex) {
+        synced.push({
+          name: name || 'لون مخصص',
+          hex: hex || '#0E0E0E',
+          image: image
+        });
+      }
+    });
+
+    if (synced.length > 0) {
+      modalColorsList = synced;
+    }
+    return modalColorsList;
   }
 
   function updateModalImagePreview(url) {
@@ -1272,6 +1532,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     updateModalImagePreview('');
     populateCategoryDropdowns();
+
+    // درجات الألوان الافتراضية
+    modalColorsList = [
+      { name: 'Onyx Black', hex: '#0E0E0E', image: '' },
+      { name: 'Sand Cream', hex: '#D6D1C4', image: '' }
+    ];
+    renderModalColorsList();
+
     productModal.showModal();
     setupLucide();
   }
@@ -1299,6 +1567,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('#modalSizesCheckboxes input[name="sizes"]').forEach(cb => {
       cb.checked = Array.isArray(prod.sizes) && prod.sizes.includes(cb.value);
     });
+
+    // درجات الألوان للقطعة
+    modalColorsList = Array.isArray(prod.colors) && prod.colors.length > 0
+      ? JSON.parse(JSON.stringify(prod.colors))
+      : [{ name: 'Onyx Black', hex: '#0E0E0E', image: mainImg }];
+    renderModalColorsList();
 
     document.getElementById('modalProdDesc').value = prod.shortDesc || prod.description || '';
     document.getElementById('modalProdFabric').value = prod.fabric || '';
