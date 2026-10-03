@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✦ SOKHM | BUILT DIFFERENT — Premium Streetwear</title>
+  <meta name="description" content="✦ SOKHM — More than clothing. Built different. Premium streetwear for those who move different. Timeless designs, superior quality. A mindset, not just a brand.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            noirBg: '#070707',
+            noirCard: '#0E0E0E',
+            noirBar: '#0C0C0C',
+            noirBorder: '#1A1A1A',
+            noirMuted: '#8E8E8E'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            gothic: ['Cinzel', 'Space Grotesk', 'serif'],
+            heading: ['Space Grotesk', 'sans-serif'],
+            mono: ['Space Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-[#070707] text-white antialiased selection:bg-white selection:text-black min-h-screen flex flex-col justify-between">
+
+  <!-- ================= 1. HEADER & NAVIGATION ================= -->
+  <header class="w-full bg-[#070707]/95 backdrop-blur-md border-b border-[#1A1A1A] sticky top-0 z-40 transition-all">
+    <div class="max-w-[1280px] mx-auto px-6 sm:px-12 h-16 sm:h-20 flex items-center justify-between">
+      
+      <!-- Brand Logo: ✦ SOKHM -->
+      <a href="index.html" class="flex items-center gap-2 group cursor-pointer">
+        <svg viewBox="0 0 100 120" class="w-5 h-6 text-white fill-current transform group-hover:rotate-45 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
+        </svg>
+        <span class="font-gothic font-bold text-lg sm:text-xl tracking-[0.2em] text-white uppercase">
+          SOKHM
+        </span>
+      </a>
+
+      <!-- Center Navigation Links -->
+      <nav class="hidden md:flex items-center space-x-10 text-[11px] font-semibold tracking-[0.16em] uppercase text-neutral-400">
+        <a href="#hero" class="sokhm-nav-link active">HOME</a>
+        <a href="#collection" class="sokhm-nav-link">SHOP</a>
+        <a href="#story" class="sokhm-nav-link">ABOUT</a>
+        <a href="#journal" class="sokhm-nav-link">JOURNAL</a>
+      </nav>
+
+      <!-- Right Action Icons -->
+      <div class="flex items-center space-x-6 text-white">
+        
+        <!-- Search Trigger -->
+        <button id="searchBtn" class="p-1 hover:text-neutral-400 transition-colors cursor-pointer" aria-label="Search">
+          <i data-lucide="search" class="w-4 h-4 stroke-[1.8]"></i>
+        </button>
+
+        <!-- User / Account Trigger -->
+        <button id="accountBtn" class="p-1 hover:text-neutral-400 transition-colors cursor-pointer" aria-label="Account">
+          <i data-lucide="user" class="w-4 h-4 stroke-[1.8]"></i>
+        </button>
+
+        <!-- Shopping Bag Trigger -->
+        <button id="cartBtn" class="relative p-1 hover:text-neutral-400 transition-colors cursor-pointer" aria-label="Shopping Bag">
+          <i data-lucide="shopping-bag" class="w-4 h-4 stroke-[1.8]"></i>
+          <span id="navCartBadge" class="absolute -top-1.5 -right-2 text-[9px] font-mono font-bold bg-white text-black w-3.5 h-3.5 rounded-full flex items-center justify-center">0</span>
+        </button>
+
+      </div>
+
+    </div>
+  </header>
+
+  <main class="flex-grow">
+    
+    <!-- ================= 2. HERO: SOKHM BUILT DIFFERENT ================= -->
+    <section id="hero" class="hero-sokhm-noir flex items-center">
+      <div class="hero-noir-overlay"></div>
+
+      <div class="relative z-10 max-w-[1280px] w-full mx-auto px-6 sm:px-12 py-16 sm:py-24 flex items-center justify-between">
+        
+        <!-- Left Text Content with Vertical Line Accent -->
+        <div class="max-w-xl space-y-6 text-white hero-accent-line-wrapper">
+          <div class="hero-accent-line"></div>
+          <div class="hero-accent-star">✦</div>
+
+          <span class="text-[10px] sm:text-[11px] font-mono font-semibold tracking-[0.25em] text-neutral-400 uppercase block">
+            MORE THAN CLOTHING
+          </span>
+
+          <div class="space-y-1">
+            <h1 class="font-gothic font-bold text-4xl sm:text-6xl xl:text-7xl uppercase tracking-wider text-white leading-none">
+              SOKHM
+            </h1>
+            <h2 class="font-heading font-extrabold text-3xl sm:text-5xl xl:text-6xl uppercase tracking-tight text-white leading-none">
+              BUILT DIFFERENT
+            </h2>
+          </div>
+
+          <p class="text-xs sm:text-sm text-neutral-400 font-light leading-relaxed max-w-md">
+            Premium streetwear for those who move different. Timeless designs. Superior quality. A mindset, not just a brand.
+          </p>
+
+          <div class="pt-2">
+            <a 
+              href="#collection" 
+              class="inline-flex items-center gap-2 border border-white/40 hover:border-white text-white bg-black/40 hover:bg-white hover:text-black font-semibold text-[11px] tracking-[0.18em] uppercase rounded-full px-7 py-3 transition-all shadow-sm cursor-pointer"
+            >
+              <span>SHOP NOW</span>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Right Scroll Indicator -->
+        <div class="hidden lg:flex flex-col items-center space-y-3 text-white text-[10px] font-mono tracking-[0.25em]">
+          <span class="opacity-70">SCROLL</span>
+          <div class="scroll-indicator-line"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= 3. VALUE PROPOSITIONS 4-COLUMN BAR (DARK) ================= -->
+    <section class="value-bar-dark">
+      <div class="max-w-[1280px] mx-auto px-6 sm:px-12">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          
+          <!-- Col 1: Premium Quality -->
+          <div class="value-bar-dark-item flex items-center gap-4">
+            <div class="text-white flex-shrink-0 text-xl font-serif">
+              ✦
+            </div>
+            <div>
+              <h4 class="text-[11px] font-bold uppercase tracking-wider text-white">PREMIUM QUALITY</h4>
+              <p class="text-[10px] text-noirMuted font-normal mt-0.5">Built to last.</p>
+            </div>
+          </div>
+
+          <!-- Col 2: Free Shipping -->
+          <div class="value-bar-dark-item flex items-center gap-4">
+            <div class="text-white flex-shrink-0">
+              <i data-lucide="truck" class="w-6 h-6 stroke-[1.6]"></i>
+            </div>
+            <div>
+              <h4 class="text-[11px] font-bold uppercase tracking-wider text-white">FREE SHIPPING</h4>
+              <p class="text-[10px] text-noirMuted font-normal mt-0.5">On orders over 2,500 EGP.</p>
+            </div>
+          </div>
+
+          <!-- Col 3: Secure Payments -->
+          <div class="value-bar-dark-item flex items-center gap-4">
+            <div class="text-white flex-shrink-0">
+              <i data-lucide="shield-check" class="w-6 h-6 stroke-[1.6]"></i>
+            </div>
+            <div>
+              <h4 class="text-[11px] font-bold uppercase tracking-wider text-white">SECURE PAYMENTS</h4>
+              <p class="text-[10px] text-noirMuted font-normal mt-0.5">Shop with confidence.</p>
+            </div>
+          </div>
+
+          <!-- Col 4: Sustainable Approach -->
+          <div class="value-bar-dark-item flex items-center gap-4">
+            <div class="text-white flex-shrink-0">
+              <i data-lucide="leaf" class="w-6 h-6 stroke-[1.6]"></i>
+            </div>
+            <div>
+              <h4 class="text-[11px] font-bold uppercase tracking-wider text-white">SUSTAINABLE APPROACH</h4>
+              <p class="text-[10px] text-noirMuted font-normal mt-0.5">Better for tomorrow.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 4. FEATURED COLLECTION: BEST SELLERS (DARK) ================= -->
+    <section id="collection" class="max-w-[1280px] mx-auto px-6 sm:px-12 py-16 sm:py-20">
+      
+      <!-- Section Header -->
+      <div class="flex items-end justify-between mb-8 pb-3 border-b border-[#1A1A1A]">
+        <div>
+          <span class="text-[10px] font-semibold text-noirMuted uppercase tracking-[0.2em] block">
+            FEATURED COLLECTION
+          </span>
+          <h2 class="font-heading font-extrabold text-2xl sm:text-3xl text-white uppercase tracking-tight mt-1">
+            BEST SELLERS
+          </h2>
+        </div>
+
+        <a href="#collection" class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer">
+          <span>VIEW ALL</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </a>
+      </div>
+
+      <!-- 4-Card Products Grid -->
+      <div id="noirBestSellersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Injected via JavaScript from data/products.json -->
+      </div>
+
+    </section>
+
+    <!-- ================= 5. "FOR THE ONES WHO KEEP GOING" BOTTOM BANNER ================= -->
+    <section id="story" class="max-w-[1280px] mx-auto px-6 sm:px-12 pb-20">
+      <div class="sokhm-bottom-banner p-6 sm:p-10 relative shadow-2xl">
+        <div class="sokhm-bottom-banner-overlay"></div>
+
+        <div class="relative z-10 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div class="flex items-center gap-3 text-white">
+            <span class="font-gothic font-bold text-lg tracking-widest">✦ SOKHM</span>
+            <span class="text-neutral-500">|</span>
+            <h3 class="font-heading font-bold text-base sm:text-xl uppercase tracking-tight">
+              FOR THE ONES WHO KEEP GOING
+            </h3>
+          </div>
+
+          <div>
+            <a 
+              href="#collection" 
+              class="text-[11px] font-bold uppercase tracking-wider text-neutral-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <span>OUR STORY</span>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= 6. MINIMAL DARK FOOTER ================= -->
+  <footer class="w-full bg-[#050505] border-t border-[#1A1A1A] py-12 text-xs text-neutral-500 font-sans">
+    <div class="max-w-[1280px] mx-auto px-6 sm:px-12 space-y-8">
+      
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pb-6 border-b border-[#141414]">
+        <div class="flex items-center gap-2">
+          <span class="font-gothic font-bold text-base text-white uppercase tracking-wider">✦ SOKHM</span>
+          <span class="text-neutral-600">|</span>
+          <span class="text-neutral-400">BUILT DIFFERENT</span>
+        </div>
+
+        <div class="flex items-center space-x-8 font-medium text-neutral-400 text-xs">
+          <a href="#hero" class="hover:text-white">HOME</a>
+          <a href="#collection" class="hover:text-white">SHOP</a>
+          <a href="#story" class="hover:text-white">ABOUT</a>
+          <a href="admin.html" class="text-neutral-500 hover:text-white font-mono">ADMIN PANEL ↗</a>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-4 font-mono">
+        <p>&copy; 2026 SOKHM ATELIER. All rights reserved.</p>
+        <div class="flex items-center gap-6">
+          <span>PRIVACY POLICY</span>
+          <span>TERMS OF SALE</span>
+          <span>DOORSTEP EXPRESS DELIVERY</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ================= 7. PRODUCT DETAIL MODAL (DARK NOIR) ================= -->
+  <dialog id="productModal" class="bg-transparent p-0 max-w-3xl w-[92%] border border-[#222222] rounded-[14px] shadow-2xl overflow-hidden">
+    <div class="bg-[#0E0E0E] text-white p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto">
+      <button id="closeProductModalBtn" class="absolute top-4 right-4 p-2 text-neutral-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        <div class="aspect-[1.25/1] rounded-[10px] overflow-hidden bg-neutral-900 border border-[#222]">
+          <img id="modalImg" src="" alt="Product Photo" class="w-full h-full object-cover">
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <span id="modalKicker" class="text-[10px] font-mono font-semibold text-neutral-400 uppercase tracking-widest block"></span>
+            <h3 id="modalTitle" class="font-heading font-bold text-2xl text-white uppercase mt-0.5"></h3>
+            <p id="modalPrice" class="text-lg font-bold text-white mt-1"></p>
+          </div>
+
+          <p id="modalDesc" class="text-xs text-neutral-400 leading-relaxed font-light"></p>
+
+          <div class="space-y-2">
+            <span class="text-xs font-semibold text-neutral-300 block uppercase tracking-wider">SELECT SIZE:</span>
+            <div id="modalSizePicker" class="flex items-center gap-2 text-xs font-bold font-mono">
+              <button class="px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400" data-size="S">S</button>
+              <button class="px-3.5 py-2 rounded-lg border border-white bg-white text-black font-bold" data-size="M">M</button>
+              <button class="px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400" data-size="L">L</button>
+              <button class="px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400" data-size="XL">XL</button>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button id="modalAddToCartBtn" class="w-full py-3.5 bg-white text-black font-semibold text-xs uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md">
+              <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+              <span>ADD TO BAG</span>
+            </button>
+          </div>
+
+          <div class="pt-3 border-t border-[#1C1C1C] text-[11px] text-neutral-500 font-mono space-y-1">
+            <p>✓ 500 GSM Heavyweight Combed Cotton</p>
+            <p>✓ Express Doorstep Courier Dispatch</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ================= 8. SLIDE-OUT CART DRAWER (DARK NOIR) ================= -->
+  <div id="cartBackdrop" class="cart-backdrop fixed inset-0 z-50"></div>
+  
+  <aside id="cartDrawer" class="cart-drawer-dark fixed top-0 right-0 h-full w-full sm:w-[380px] z-50 flex flex-col shadow-2xl">
+    <div class="p-5 border-b border-[#1A1A1A] flex items-center justify-between bg-[#080808]">
+      <div class="flex items-center gap-2">
+        <i data-lucide="shopping-bag" class="w-4 h-4 text-white"></i>
+        <h3 class="font-bold text-xs uppercase tracking-wider text-white">YOUR BAG</h3>
+        <span id="drawerCount" class="text-xs px-2 py-0.5 bg-white text-black rounded-full font-bold">0</span>
+      </div>
+      <button id="closeCartBtn" class="p-1 text-neutral-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div id="cartItemsList" class="flex-grow overflow-y-auto p-5 space-y-4"></div>
+
+    <div id="cartEmptyPlaceholder" class="hidden flex-col items-center justify-center flex-grow p-8 text-center text-neutral-500 font-mono">
+      <i data-lucide="shopping-bag" class="w-8 h-8 mb-2 stroke-[1.4] text-neutral-400"></i>
+      <p class="text-xs font-bold uppercase text-white">YOUR BAG IS EMPTY</p>
+      <p class="text-[11px] text-neutral-500 mt-1">Explore SOKHM Best Sellers.</p>
+    </div>
+
+    <div id="cartFooter" class="p-5 border-t border-[#1A1A1A] bg-[#0A0A0A] space-y-3 font-mono">
+      <div class="flex justify-between text-xs font-semibold">
+        <span class="text-neutral-400 uppercase">SUBTOTAL</span>
+        <span id="cartSubtotal" class="text-white">0 EGP</span>
+      </div>
+      <button id="checkoutBtn" class="w-full py-3.5 bg-white text-black text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors cursor-pointer shadow-md">
+        CHECKOUT
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= 9. SEARCH MODAL (DARK NOIR) ================= -->
+  <dialog id="searchDialog" class="bg-transparent p-0 max-w-lg w-[90%] border border-[#222] rounded-[14px] shadow-2xl overflow-hidden">
+    <div class="bg-[#0E0E0E] text-white p-6 font-mono">
+      <div class="flex items-center justify-between pb-3 border-b border-[#1A1A1A] mb-4">
+        <h4 class="text-xs font-bold uppercase tracking-wider">SEARCH ✦ SOKHM</h4>
+        <button id="closeSearchBtn" class="p-1 text-neutral-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <input id="searchInput" type="text" placeholder="Type to search (signature, combat, essential)..." class="w-full px-4 py-2.5 bg-neutral-900 rounded-lg border border-[#222] text-xs text-white focus:outline-none focus:border-white">
+      <div id="searchResults" class="mt-4 space-y-2 max-h-60 overflow-y-auto"></div>
+    </div>
+  </dialog>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none font-mono"></div>
+
+  <!-- SCRIPTS -->
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

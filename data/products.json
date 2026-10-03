@@ -1,0 +1,183 @@
+[
+  {
+    "id": "sokhm-noir-01",
+    "name": "SIGNATURE HOODIE",
+    "subtitle": "HOODIE",
+    "slug": "signature-hoodie",
+    "category": "hoodies",
+    "categoryLabel": "SIGNATURE",
+    "price": 1850,
+    "formattedPrice": "1,850 EGP",
+    "badge": "SIGNATURE",
+    "isNew": true,
+    "rating": 4.98,
+    "reviewCount": 164,
+    "description": "The emblem piece. Oversized architectural silhouette in jet-black combed cotton featuring the metallic silver SOKHM 4-pointed star emblem embroidered across the back.",
+    "fabric": "500 GSM Heavyweight French Terry, 100% Long-Staple Egyptian Cotton",
+    "fit": "Sculpted drop-shoulder oversized boxy drape",
+    "care": "Machine wash cold inside-out, hang dry.",
+    "images": [
+      "assets/sokhm-card-1.jpg",
+      "assets/sokhm-hoodie-back.jpg",
+      "assets/sokhm-hoodie-detail.jpg",
+      "assets/sokhm-noir-model.jpg"
+    ],
+    "colors": [
+      {
+        "name": "Onyx Black",
+        "hex": "#0E0E0E",
+        "image": "assets/sokhm-card-1.jpg"
+      },
+      {
+        "name": "Slate Grey",
+        "hex": "#3E4143",
+        "image": "assets/sokhm-card-4.jpg"
+      }
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "inStock": true
+  },
+  {
+    "id": "sokhm-noir-02",
+    "name": "ESSENTIAL HOODIE",
+    "subtitle": "HOODIE",
+    "slug": "essential-hoodie",
+    "category": "hoodies",
+    "categoryLabel": "ESSENTIAL",
+    "price": 1850,
+    "formattedPrice": "1,850 EGP",
+    "badge": "CORE",
+    "isNew": false,
+    "rating": 4.95,
+    "reviewCount": 210,
+    "description": "Built for raw everyday presence. Crafted in unbleached sand cream fleece with bold high-density black SOKHM typographic branding emblazoned across the shoulders.",
+    "fabric": "480 GSM Heavy Combed Cotton Fleece",
+    "fit": "Relaxed tailored streetwear cut with structured cuffs",
+    "care": "Wash with like colors in cold water, line dry.",
+    "images": [
+      "assets/sokhm-card-2.jpg",
+      "assets/sokhm-hoodie-back.jpg",
+      "assets/sokhm-hoodie-detail.jpg",
+      "assets/sokhm-card-1.jpg"
+    ],
+    "colors": [
+      {
+        "name": "Sand Cream",
+        "hex": "#D6D1C4",
+        "image": "assets/sokhm-card-2.jpg"
+      },
+      {
+        "name": "Onyx Black",
+        "hex": "#0E0E0E",
+        "image": "assets/sokhm-card-1.jpg"
+      },
+      {
+        "name": "Tactical Olive",
+        "hex": "#373E32",
+        "image": "assets/sokhm-card-3.jpg"
+      }
+    ],
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "inStock": true
+  },
+  {
+    "id": "sokhm-noir-03",
+    "name": "COMBAT HOODIE",
+    "subtitle": "HOODIE",
+    "slug": "combat-hoodie",
+    "category": "hoodies",
+    "categoryLabel": "COMBAT",
+    "price": 1850,
+    "formattedPrice": "1,850 EGP",
+    "badge": "LIMITED",
+    "isNew": true,
+    "rating": 4.92,
+    "reviewCount": 88,
+    "description": "Engineered for stealth and motion. Dyed in tactical military dark olive with micro-embroidered silver SOKHM chest star and ergonomic articulated raglan sleeves.",
+    "fabric": "500 GSM Heavyweight Terry Fleece with water-repellent treatment",
+    "fit": "Athletic drop-shoulder silhouette",
+    "care": "Delicate cycle in cold water, iron low inside-out.",
+    "images": [
+      "assets/sokhm-card-3.jpg",
+      "assets/sokhm-hoodie-back.jpg",
+      "assets/sokhm-hoodie-detail.jpg",
+      "assets/sokhm-card-1.jpg"
+    ],
+    "colors": [
+      {
+        "name": "Tactical Olive",
+        "hex": "#373E32",
+        "image": "assets/sokhm-card-3.jpg"
+      },
+      {
+        "name": "Onyx Black",
+        "hex": "#0E0E0E",
+        "image": "assets/sokhm-card-1.jpg"
+      }
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "inStock": true
+  },
+  {
+    "id": "sokhm-noir-04",
+    "name": "CORE HOODIE",
+    "subtitle": "HOODIE",
+    "slug": "core-hoodie",
+    "category": "hoodies",
+    "categoryLabel": "ARCHIVE",
+    "price": 1850,
+    "formattedPrice": "1,850 EGP",
+    "badge": "RESTOCKED",
+    "isNew": false,
+    "rating": 4.99,
+    "reviewCount": 340,
+    "description": "The definitive daily uniform. Ultra-dense jet-black loopback cotton with antique gunmetal hardware eyelets, thick cotton drawstrings, and center chest ✦ SOKHM embroidery.",
+    "fabric": "520 GSM Brushed Egyptian Cotton Fleece",
+    "fit": "Classic boxy fit with heavy 2x2 ribbing",
+    "care": "Machine wash cold, lay flat to dry.",
+    "images": [
+      "assets/sokhm-card-4.jpg",
+      "assets/sokhm-hoodie-back.jpg",
+      "assets/sokhm-hoodie-detail.jpg",
+      "assets/sokhm-card-1.jpg"
+    ],
+    "colors": [
+      {
+        "name": "Slate Charcoal",
+        "hex": "#3E4143",
+        "image": "assets/sokhm-card-4.jpg"
+      },
+      {
+        "name": "Pitch Black",
+        "hex": "#0E0E0E",
+        "image": "assets/sokhm-card-1.jpg"
+      }
+    ],
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "inStock": true
+  }
+]

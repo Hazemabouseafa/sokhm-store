@@ -1,0 +1,304 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg-noir: #070707;
+  --bg-card: #0E0E0E;
+  --bg-bar: #0C0C0C;
+  --text-pure: #FFFFFF;
+  --text-muted: #8E8E8E;
+  --border-dark: #1A1A1A;
+  --border-light: #2A2A2A;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-gothic: 'Cinzel', 'Space Grotesk', serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--bg-noir);
+  color: var(--text-pure);
+  scroll-behavior: smooth;
+  font-family: var(--font-sans);
+}
+
+body {
+  background-color: var(--bg-noir);
+  color: var(--text-pure);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  image-rendering: auto;
+  image-rendering: -webkit-optimize-contrast;
+  content-visibility: auto;
+}
+
+/* ================= TYPOGRAPHY ================= */
+.font-gothic {
+  font-family: var(--font-gothic);
+  letter-spacing: 0.04em;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* ================= HEADER ================= */
+.sokhm-nav-link {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8E8E8E;
+  padding-bottom: 3px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.sokhm-nav-link:hover {
+  color: #FFFFFF;
+}
+
+.sokhm-nav-link.active {
+  color: #FFFFFF;
+  border-bottom: 1.5px solid #FFFFFF;
+}
+
+/* ================= HERO SECTION ================= */
+.hero-sokhm-noir {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+  background-color: #070707;
+  background-image: url('../assets/sokhm-noir-hero.jpg');
+  background-size: cover;
+  background-position: center right;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .hero-sokhm-noir {
+    min-height: 580px;
+  }
+}
+
+.hero-noir-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(7,7,7,0.85) 0%, rgba(7,7,7,0.65) 45%, rgba(7,7,7,0.2) 80%, rgba(7,7,7,0.05) 100%);
+}
+
+/* Vertical decorative line with intersecting 4-star icon */
+.hero-accent-line-wrapper {
+  position: relative;
+  padding-left: 20px;
+}
+
+.hero-accent-line {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hero-accent-star {
+  position: absolute;
+  left: -5.5px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Scroll indicator */
+.scroll-indicator-line {
+  width: 1px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-indicator-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 40%;
+  background: #FFFFFF;
+  animation: scrollDrop 2s infinite ease-in-out;
+}
+
+@keyframes scrollDrop {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(250%); }
+}
+
+/* ================= VALUE BAR ================= */
+.value-bar-dark {
+  background-color: var(--bg-bar);
+  border-top: 1px solid var(--border-dark);
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.value-bar-dark-item {
+  padding: 22px 18px;
+  transition: background-color 0.2s ease;
+}
+
+@media (min-width: 768px) {
+  .value-bar-dark-item:not(:last-child) {
+    border-right: 1px solid var(--border-dark);
+  }
+}
+
+/* ================= PRODUCT CARDS ================= */
+.sokhm-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-dark);
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 8px;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sokhm-card:hover {
+  transform: translateY(-3px);
+  border-color: #333333;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+
+.sokhm-card-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #0E0E0E;
+}
+
+.sokhm-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.4s ease;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.sokhm-card:hover .sokhm-card-media img {
+  transform: scale(1.03);
+}
+
+.wishlist-btn-dark {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wishlist-btn-dark:hover,
+.wishlist-btn-dark.active {
+  background: #FFFFFF;
+  color: #E50000;
+}
+
+/* Swatch Dots */
+.swatch-dot-dark {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease, outline 0.15s ease;
+}
+
+.swatch-dot-dark.active {
+  outline: 1.5px solid #FFFFFF;
+  outline-offset: 2px;
+}
+
+/* ================= BOTTOM MOUNTAIN BANNER ================= */
+.sokhm-bottom-banner {
+  position: relative;
+  width: 100%;
+  min-height: 110px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-image: url('../assets/sokhm-bottom-banner.jpg');
+  background-size: cover;
+  background-position: center 30%;
+  border: 1px solid var(--border-dark);
+  display: flex;
+  align-items: center;
+}
+
+.sokhm-bottom-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(7,7,7,0.85) 0%, rgba(7,7,7,0.45) 50%, rgba(7,7,7,0.7) 100%);
+}
+
+/* ================= SLIDE-OUT CART DRAWER ================= */
+.cart-backdrop {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.cart-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cart-drawer-dark {
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: #0A0A0A;
+  border-left: 1px solid var(--border-dark);
+  color: #FFFFFF;
+}
+
+.cart-drawer-dark.open {
+  transform: translateX(0);
+}
+
+/* Dark Modals */
+dialog {
+  opacity: 0;
+  transform: scale(0.96) translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+dialog[open] {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+}

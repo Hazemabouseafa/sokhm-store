@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="pageTitle">✦ SOKHM | Product Details</title>
+  <meta name="description" content="✦ SOKHM — Premium heavyweight streetwear hoodies. 500 GSM Egyptian combed cotton. Built different.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            noirBg: '#070707',
+            noirCard: '#0E0E0E',
+            noirBar: '#0C0C0C',
+            noirBorder: '#1A1A1A',
+            noirMuted: '#8E8E8E'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            gothic: ['Cinzel', 'Space Grotesk', 'serif'],
+            heading: ['Space Grotesk', 'sans-serif'],
+            mono: ['Space Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-[#070707] text-white antialiased selection:bg-white selection:text-black min-h-screen flex flex-col justify-between">
+
+  <!-- ================= 1. HEADER ================= -->
+  <header class="w-full bg-[#070707]/95 backdrop-blur-md border-b border-[#1A1A1A] sticky top-0 z-40 transition-all">
+    <div class="max-w-[1280px] mx-auto px-6 sm:px-12 h-16 sm:h-20 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <a href="index.html" class="flex items-center gap-2 group cursor-pointer">
+        <svg viewBox="0 0 100 120" class="w-5 h-6 text-white fill-current transform group-hover:rotate-45 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
+        </svg>
+        <span class="font-gothic font-bold text-lg sm:text-xl tracking-[0.2em] text-white uppercase">
+          SOKHM
+        </span>
+      </a>
+
+      <!-- Center Nav Links -->
+      <nav class="hidden md:flex items-center space-x-10 text-[11px] font-semibold tracking-[0.16em] uppercase text-neutral-400">
+        <a href="index.html" class="sokhm-nav-link">HOME</a>
+        <a href="index.html#collection" class="sokhm-nav-link active">SHOP</a>
+        <a href="index.html#story" class="sokhm-nav-link">ABOUT</a>
+        <a href="index.html#journal" class="sokhm-nav-link">JOURNAL</a>
+      </nav>
+
+      <!-- Right Action Icons -->
+      <div class="flex items-center space-x-6 text-white">
+        <button id="searchBtn" class="p-1 hover:text-neutral-400 transition-colors cursor-pointer" aria-label="Search">
+          <i data-lucide="search" class="w-4 h-4 stroke-[1.8]"></i>
+        </button>
+
+        <button id="accountBtn" class="p-1 hover:text-neutral-400 transition-colors cursor-pointer" aria-label="Account">
+          <i data-lucide="user" class="w-4 h-4 stroke-[1.8]"></i>
+        </button>
+
+        <button id="cartBtn" class="relative p-1 hover:text-neutral-400 transition-colors cursor-pointer" aria-label="Shopping Bag">
+          <i data-lucide="shopping-bag" class="w-4 h-4 stroke-[1.8]"></i>
+          <span id="navCartBadge" class="absolute -top-1.5 -right-2 text-[9px] font-mono font-bold bg-white text-black w-3.5 h-3.5 rounded-full flex items-center justify-center">0</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-[1280px] w-full mx-auto px-6 sm:px-12 py-8 sm:py-12">
+    
+    <!-- Breadcrumbs & Back Link -->
+    <div class="flex items-center justify-between pb-6 mb-8 border-b border-[#1A1A1A] font-mono text-xs">
+      <div class="flex items-center gap-2 text-neutral-400">
+        <a href="index.html" class="hover:text-white transition-colors">HOME</a>
+        <span class="text-neutral-600">/</span>
+        <a href="index.html#collection" class="hover:text-white transition-colors">BEST SELLERS</a>
+        <span class="text-neutral-600">/</span>
+        <span id="breadcrumbCurrent" class="text-white font-bold uppercase">SIGNATURE HOODIE</span>
+      </div>
+
+      <a href="index.html#collection" class="text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 font-bold uppercase">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+        <span>Back to Collection</span>
+      </a>
+    </div>
+
+    <!-- 2-COLUMN PRODUCT DETAIL STAGE -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+      
+      <!-- LEFT: IMAGE GALLERY (7 Cols) -->
+      <div class="lg:col-span-7 space-y-4">
+        
+        <!-- Main Image with Zoom Wrapper -->
+        <div class="relative w-full aspect-[3/4] max-h-[640px] mx-auto rounded-[14px] overflow-hidden bg-[#0E0E0E] border border-[#1A1A1A] shadow-2xl group">
+          <img 
+            id="mainGalleryImg" 
+            src="assets/sokhm-card-1.jpg" 
+            alt="Product Photo" 
+            class="w-full h-full object-cover object-center transition-opacity duration-300"
+          >
+
+          <!-- Floating Badges -->
+          <div class="absolute top-4 left-4 flex items-center gap-2">
+            <span id="productBadge" class="bg-white text-black text-[9px] font-mono font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md">
+              ✦ SIGNATURE
+            </span>
+            <span class="bg-[#141414]/80 backdrop-blur-md text-neutral-300 text-[9px] font-mono uppercase tracking-wider px-2 py-1 rounded-full border border-neutral-700">
+              500 GSM FLEECE
+            </span>
+          </div>
+
+          <button id="galleryWishlistBtn" class="wishlist-btn-dark absolute top-4 right-4" title="Save to Wishlist">
+            <i data-lucide="heart" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Thumbnails Strip -->
+        <div id="galleryThumbnails" class="grid grid-cols-4 gap-3">
+          <!-- Populated dynamically via JavaScript -->
+        </div>
+
+      </div>
+
+      <!-- RIGHT: CONFIGURATOR & DESCRIPTION (5 Cols) -->
+      <div class="lg:col-span-5 space-y-6 font-mono">
+        
+        <!-- Product Header -->
+        <div class="space-y-2 pb-5 border-b border-[#1A1A1A]">
+          <span id="productCategoryKicker" class="text-[10px] text-neutral-400 uppercase tracking-[0.25em] font-semibold block">
+            ✦ SOKHM ATELIER // DROP 01
+          </span>
+
+          <h1 id="productTitle" class="font-heading font-extrabold text-3xl sm:text-4xl text-white uppercase tracking-tight leading-tight">
+            SIGNATURE HOODIE
+          </h1>
+
+          <div class="flex items-center justify-between pt-1">
+            <span id="productPrice" class="font-heading font-bold text-2xl text-white">
+              1,850 EGP
+            </span>
+
+            <div class="flex items-center gap-1.5 text-xs text-neutral-400">
+              <span class="text-white">★★★★★</span>
+              <span id="productRatingText" class="font-bold text-neutral-300">4.98</span>
+              <span class="text-neutral-500">(164 Reviews)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Narrative Description -->
+        <div class="space-y-2">
+          <span class="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider block">Description:</span>
+          <p id="productDescription" class="text-xs text-neutral-300 font-sans leading-relaxed font-light">
+            The emblem piece. Oversized architectural silhouette in jet-black combed cotton featuring the metallic silver SOKHM 4-pointed star emblem embroidered across the back.
+          </p>
+        </div>
+
+        <!-- Color Selection -->
+        <div class="space-y-2.5 pt-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-neutral-400 uppercase tracking-wider">Color:</span>
+            <span id="selectedColorLabel" class="font-bold text-white uppercase">Onyx Black</span>
+          </div>
+
+          <div id="colorSwatchesContainer" class="flex items-center gap-2.5">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Size Selection -->
+        <div class="space-y-2.5 pt-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-neutral-400 uppercase tracking-wider">Select Size:</span>
+            <button id="openSizeGuideTrigger" class="text-neutral-400 hover:text-white underline cursor-pointer text-[11px]">
+              Size Guide (CM)
+            </button>
+          </div>
+
+          <div id="sizeButtonsContainer" class="grid grid-cols-5 gap-2 text-xs font-bold">
+            <button class="size-btn py-3 rounded-lg border border-[#222] hover:border-white text-neutral-400 transition-all uppercase" data-size="S">S</button>
+            <button class="size-btn py-3 rounded-lg border border-white bg-white text-black font-bold transition-all uppercase active" data-size="M">M</button>
+            <button class="size-btn py-3 rounded-lg border border-[#222] hover:border-white text-neutral-400 transition-all uppercase" data-size="L">L</button>
+            <button class="size-btn py-3 rounded-lg border border-[#222] hover:border-white text-neutral-400 transition-all uppercase" data-size="XL">XL</button>
+            <button class="size-btn py-3 rounded-lg border border-[#222] hover:border-white text-neutral-400 transition-all uppercase" data-size="XXL">XXL</button>
+          </div>
+
+          <span id="sizeStockStatus" class="text-[10px] text-emerald-400 font-bold block pt-0.5">
+            ● In Stock • Ready for Next-Day Dispatch
+          </span>
+        </div>
+
+        <!-- Quantity & Purchasing CTAs -->
+        <div class="space-y-3 pt-4">
+          <div class="flex items-center gap-3">
+            <!-- Stepper -->
+            <div class="flex items-center border border-[#222] bg-[#111] rounded-full px-2 py-1">
+              <button id="qtyMinus" class="w-8 h-8 flex items-center justify-center font-bold text-neutral-400 hover:text-white cursor-pointer">-</button>
+              <span id="qtyDisplay" class="w-8 text-center text-xs font-bold text-white">1</span>
+              <button id="qtyPlus" class="w-8 h-8 flex items-center justify-center font-bold text-neutral-400 hover:text-white cursor-pointer">+</button>
+            </div>
+
+            <!-- Add to Bag -->
+            <button 
+              id="addToBagBtn" 
+              class="flex-grow py-4 px-6 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg"
+            >
+              <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+              <span id="addToBagLabel">ADD TO BAG — 1,850 EGP</span>
+            </button>
+          </div>
+
+          <!-- Express Buy Button -->
+          <button 
+            id="buyNowBtn" 
+            class="w-full py-3.5 rounded-full border border-white/40 hover:border-white bg-black/40 text-white font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <span>EXPRESS CHECKOUT</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Highlights Checklist -->
+        <div class="p-4 bg-[#0E0E0E] rounded-[10px] border border-[#1A1A1A] text-[11px] text-neutral-400 space-y-1.5 font-sans">
+          <div class="flex items-center gap-2 text-white font-semibold">
+            <i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>
+            <span>500 GSM Ultra-Dense Egyptian Combed Cotton</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <i data-lucide="truck" class="w-3.5 h-3.5 text-neutral-400"></i>
+            <span>Free Express Courier Delivery on Orders Over 2,500 EGP</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-neutral-400"></i>
+            <span>30-Day Hassle-Free Exchange Policy</span>
+          </div>
+        </div>
+
+        <!-- Accordions -->
+        <div class="pt-4 border-t border-[#1A1A1A] divide-y divide-[#1A1A1A] text-xs">
+          
+          <details class="accordion-item py-3 group" open>
+            <summary class="flex items-center justify-between font-bold uppercase cursor-pointer text-white">
+              <span>Details & Architectural Fit</span>
+              <i data-lucide="chevron-down" class="accordion-chevron w-4 h-4 text-neutral-400"></i>
+            </summary>
+            <p id="accordionFitText" class="pt-2 text-neutral-400 font-sans leading-relaxed font-light">
+              Sculpted drop-shoulder oversized boxy drape. Forward-rotated sleeves and articulated 2x2 ribbing designed to retain boxy silhouette without sagging.
+            </p>
+          </details>
+
+          <details class="accordion-item py-3 group">
+            <summary class="flex items-center justify-between font-bold uppercase cursor-pointer text-white">
+              <span>Fabric & Care (500 GSM)</span>
+              <i data-lucide="chevron-down" class="accordion-chevron w-4 h-4 text-neutral-400"></i>
+            </summary>
+            <div class="pt-2 text-neutral-400 font-sans leading-relaxed font-light space-y-1">
+              <p id="accordionFabricText">500 GSM Heavyweight French Terry, 100% Long-Staple Egyptian Cotton.</p>
+              <p id="accordionCareText" class="text-[11px] text-neutral-500">Machine wash cold inside-out, hang dry.</p>
+            </div>
+          </details>
+
+          <details class="accordion-item py-3 group">
+            <summary class="flex items-center justify-between font-bold uppercase cursor-pointer text-white">
+              <span>Shipping & Doorstep Logistics</span>
+              <i data-lucide="chevron-down" class="accordion-chevron w-4 h-4 text-neutral-400"></i>
+            </summary>
+            <p class="pt-2 text-neutral-400 font-sans leading-relaxed font-light">
+              Orders are dispatched within 24-48 hours. Express doorstep courier across all Egyptian governorates and worldwide shipping with tracking provided via SMS and WhatsApp.
+            </p>
+          </details>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= RELATED PRODUCTS ("YOU MAY ALSO LIKE") ================= -->
+    <section class="mt-20 pt-10 border-t border-[#1A1A1A]">
+      <div class="flex items-end justify-between mb-8">
+        <div>
+          <span class="text-[10px] font-mono font-semibold text-neutral-500 uppercase tracking-widest block">CURATED PIECES</span>
+          <h3 class="font-heading font-extrabold text-2xl uppercase tracking-tight text-white mt-1">
+            YOU MAY ALSO LIKE
+          </h3>
+        </div>
+        <a href="index.html#collection" class="text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-white transition-colors">
+          View All Hoodies →
+        </a>
+      </div>
+
+      <div id="relatedHoodiesGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="w-full bg-[#050505] border-t border-[#1A1A1A] py-12 text-xs text-neutral-500 font-sans">
+    <div class="max-w-[1280px] mx-auto px-6 sm:px-12 space-y-8">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pb-6 border-b border-[#141414]">
+        <div class="flex items-center gap-2">
+          <span class="font-gothic font-bold text-base text-white uppercase tracking-wider">✦ SOKHM</span>
+          <span class="text-neutral-600">|</span>
+          <span class="text-neutral-400">BUILT DIFFERENT</span>
+        </div>
+
+        <div class="flex items-center space-x-8 font-medium text-neutral-400 text-xs">
+          <a href="index.html" class="hover:text-white">HOME</a>
+          <a href="index.html#collection" class="hover:text-white">SHOP</a>
+          <a href="index.html#story" class="hover:text-white">ABOUT</a>
+          <a href="admin.html" class="text-neutral-500 hover:text-white font-mono">ADMIN PANEL ↗</a>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-4 font-mono">
+        <p>&copy; 2026 SOKHM ATELIER. All rights reserved.</p>
+        <div class="flex items-center gap-6">
+          <span>PRIVACY POLICY</span>
+          <span>TERMS OF SALE</span>
+          <span>DOORSTEP EXPRESS DELIVERY</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= SIZE GUIDE MODAL ================= -->
+  <dialog id="sizeGuideModal" class="bg-transparent p-0 max-w-lg w-[92%] border border-[#222] rounded-[14px] shadow-2xl overflow-hidden">
+    <div class="bg-[#0E0E0E] text-white p-6 sm:p-8 font-mono">
+      <div class="flex items-center justify-between pb-3 border-b border-[#1A1A1A] mb-4">
+        <div>
+          <span class="text-[10px] uppercase font-bold text-neutral-400 tracking-widest block">✦ SOKHM MEASUREMENTS</span>
+          <h3 class="font-heading font-bold text-xl uppercase">Hoodie Sizing Chart (CM)</h3>
+        </div>
+        <button id="closeSizeGuideBtn" class="p-1 text-neutral-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="overflow-x-auto text-xs">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-[#222] font-bold uppercase text-neutral-400 bg-neutral-900/60">
+              <th class="p-2.5">Size</th>
+              <th class="p-2.5">Chest</th>
+              <th class="p-2.5">Length</th>
+              <th class="p-2.5">Sleeve</th>
+              <th class="p-2.5">Fit Recommendation</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#1A1A1A] text-neutral-300">
+            <tr><td class="p-2.5 font-bold text-white">XS</td><td class="p-2.5">58 cm</td><td class="p-2.5">66 cm</td><td class="p-2.5">60 cm</td><td class="p-2.5 text-neutral-500">Under 168 cm</td></tr>
+            <tr><td class="p-2.5 font-bold text-white">S</td><td class="p-2.5">61 cm</td><td class="p-2.5">68 cm</td><td class="p-2.5">62 cm</td><td class="p-2.5 text-neutral-500">168 - 174 cm</td></tr>
+            <tr class="bg-white/5"><td class="p-2.5 font-bold text-white">M</td><td class="p-2.5">64 cm</td><td class="p-2.5">70 cm</td><td class="p-2.5">63 cm</td><td class="p-2.5 text-white font-semibold">174 - 180 cm (Core)</td></tr>
+            <tr><td class="p-2.5 font-bold text-white">L</td><td class="p-2.5">67 cm</td><td class="p-2.5">72 cm</td><td class="p-2.5">65 cm</td><td class="p-2.5 text-neutral-500">180 - 186 cm</td></tr>
+            <tr><td class="p-2.5 font-bold text-white">XL</td><td class="p-2.5">70 cm</td><td class="p-2.5">74 cm</td><td class="p-2.5">66 cm</td><td class="p-2.5 text-neutral-500">186 - 192 cm</td></tr>
+            <tr><td class="p-2.5 font-bold text-white">XXL</td><td class="p-2.5">73 cm</td><td class="p-2.5">76 cm</td><td class="p-2.5">67 cm</td><td class="p-2.5 text-neutral-500">192 cm+ / Mega Boxy</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="mt-4 text-[11px] text-neutral-400 font-sans">
+        * Our architectural hoodies feature an oversized drop shoulder fit. Order true to size for the intended drape, or size down for a slimmer silhouette.
+      </p>
+    </div>
+  </dialog>
+
+  <!-- ================= SLIDE-OUT CART DRAWER ================= -->
+  <div id="cartBackdrop" class="cart-backdrop fixed inset-0 z-50"></div>
+  
+  <aside id="cartDrawer" class="cart-drawer-dark fixed top-0 right-0 h-full w-full sm:w-[380px] z-50 flex flex-col shadow-2xl">
+    <div class="p-5 border-b border-[#1A1A1A] flex items-center justify-between bg-[#080808]">
+      <div class="flex items-center gap-2">
+        <i data-lucide="shopping-bag" class="w-4 h-4 text-white"></i>
+        <h3 class="font-bold text-xs uppercase tracking-wider text-white">YOUR BAG</h3>
+        <span id="drawerCount" class="text-xs px-2 py-0.5 bg-white text-black rounded-full font-bold">0</span>
+      </div>
+      <button id="closeCartBtn" class="p-1 text-neutral-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div id="cartItemsList" class="flex-grow overflow-y-auto p-5 space-y-4"></div>
+
+    <div id="cartEmptyPlaceholder" class="hidden flex-col items-center justify-center flex-grow p-8 text-center text-neutral-500 font-mono">
+      <i data-lucide="shopping-bag" class="w-8 h-8 mb-2 stroke-[1.4] text-neutral-400"></i>
+      <p class="text-xs font-bold uppercase text-white">YOUR BAG IS EMPTY</p>
+      <p class="text-[11px] text-neutral-500 mt-1">Explore SOKHM Best Sellers.</p>
+    </div>
+
+    <div id="cartFooter" class="p-5 border-t border-[#1A1A1A] bg-[#0A0A0A] space-y-3 font-mono">
+      <div class="flex justify-between text-xs font-semibold">
+        <span class="text-neutral-400 uppercase">SUBTOTAL</span>
+        <span id="cartSubtotal" class="text-white">0 EGP</span>
+      </div>
+      <button id="checkoutBtn" class="w-full py-3.5 bg-white text-black text-xs font-bold uppercase tracking-wider rounded-full hover:bg-neutral-200 transition-colors cursor-pointer shadow-md">
+        CHECKOUT
+      </button>
+    </div>
+  </aside>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none font-mono"></div>
+
+  <!-- SCRIPTS -->
+  <script src="js/store.js"></script>
+  <script src="js/product.js"></script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOKHM | Admin Management Console</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              black: '#111111',
+              charcoal: '#1d1d1f',
+              gray: '#a3a3a3',
+              lightGray: '#f7f7f7',
+              border: '#e8e8e8'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            title: ['Space Grotesk', 'sans-serif'],
+            mono: ['Space Mono', 'monospace'],
+            brand: ['Syne', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-[#f7f7f7] text-[#111111] antialiased selection:bg-black selection:text-white min-h-screen flex flex-col justify-between p-4 sm:p-8">
+
+  <div class="w-full max-w-7xl mx-auto flex-grow flex flex-col space-y-8">
+    
+    <!-- ADMIN HEADER -->
+    <header class="w-full pb-6 flex items-center justify-between border-b border-neutral-200">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-2 group">
+          <svg viewBox="0 0 100 120" class="w-5 h-6 text-black fill-current transform group-hover:rotate-45 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
+          </svg>
+          <div class="flex flex-col leading-none">
+            <span class="font-brand font-extrabold text-lg tracking-[0.14em] text-black">SOKHM</span>
+            <span class="font-mono text-[9px] tracking-[0.25em] text-neutral-400">admin console</span>
+          </div>
+        </a>
+        <div class="h-5 w-px bg-neutral-200 hidden sm:block"></div>
+        <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-neutral-300 font-mono text-[10px] uppercase tracking-wider text-black">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Live Sync Active
+        </span>
+      </div>
+
+      <div class="flex items-center gap-3 font-mono">
+        <button id="resetDefaultsBtn" class="px-3.5 py-1.5 rounded-full border border-neutral-300 hover:border-black bg-white text-neutral-700 text-xs transition-colors flex items-center gap-1.5 shadow-xs">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Reset Defaults</span>
+        </button>
+
+        <a href="index.html" class="px-4 py-1.5 rounded-full bg-black text-white hover:bg-neutral-800 text-xs uppercase tracking-wider font-semibold transition-all flex items-center gap-1.5 shadow-sm">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          <span>Live Store ↗</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- METRICS -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs font-mono">
+        <div class="flex items-center justify-between text-neutral-400 mb-1 text-xs">
+          <span>PIECES</span>
+          <i data-lucide="shirt" class="w-4 h-4 text-black"></i>
+        </div>
+        <p id="metricTotalProducts" class="font-title font-bold text-2xl sm:text-3xl text-black">0</p>
+        <p class="text-[10px] text-neutral-400 mt-1 uppercase">Active in catalog</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs font-mono">
+        <div class="flex items-center justify-between text-neutral-400 mb-1 text-xs">
+          <span>CATEGORIES</span>
+          <i data-lucide="layers" class="w-4 h-4 text-black"></i>
+        </div>
+        <p id="metricTotalCategories" class="font-title font-bold text-2xl sm:text-3xl text-black">0</p>
+        <p class="text-[10px] text-neutral-400 mt-1 uppercase">Filter categories</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs font-mono">
+        <div class="flex items-center justify-between text-neutral-400 mb-1 text-xs">
+          <span>CATALOG SUM</span>
+          <i data-lucide="banknote" class="w-4 h-4 text-black"></i>
+        </div>
+        <p id="metricCatalogValue" class="font-bold text-xl sm:text-2xl text-black">0 EGP</p>
+        <p class="text-[10px] text-neutral-400 mt-1 uppercase">Aggregate value</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs font-mono">
+        <div class="flex items-center justify-between text-neutral-400 mb-1 text-xs">
+          <span>AVG PRICE</span>
+          <i data-lucide="tag" class="w-4 h-4 text-black"></i>
+        </div>
+        <p id="metricAvgPrice" class="font-bold text-xl sm:text-2xl text-black">0 EGP</p>
+        <p class="text-[10px] text-neutral-400 mt-1 uppercase">Per garment</p>
+      </div>
+    </div>
+
+    <!-- FORMS: CATEGORY & PRODUCT -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 font-mono">
+      
+      <!-- ADD CATEGORY -->
+      <div class="lg:col-span-4">
+        <div class="bg-white p-6 rounded-2xl border border-neutral-200 shadow-xs space-y-4">
+          <div class="flex items-center gap-2 pb-3 border-b border-neutral-200">
+            <i data-lucide="folder-plus" class="w-4 h-4 text-black"></i>
+            <h3 class="font-title font-bold text-sm uppercase text-black">Add Category</h3>
+          </div>
+
+          <form id="addCategoryForm" class="space-y-3">
+            <div>
+              <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1">Name *</label>
+              <input 
+                type="text" 
+                id="catNameInput" 
+                required 
+                placeholder="e.g. Leather, Knitwear" 
+                class="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black"
+              >
+            </div>
+
+            <div>
+              <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1">Slug</label>
+              <input 
+                type="text" 
+                id="catSlugInput" 
+                placeholder="auto-generated" 
+                class="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black"
+              >
+            </div>
+
+            <button 
+              type="submit" 
+              class="w-full py-2.5 bg-black text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-neutral-800 transition-colors"
+            >
+              + Create Category
+            </button>
+          </form>
+
+          <div class="pt-4 border-t border-neutral-200">
+            <h4 class="text-[11px] uppercase tracking-wider font-semibold text-neutral-500 mb-2">Active Categories</h4>
+            <div id="adminCategoryList" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD PRODUCT -->
+      <div class="lg:col-span-8">
+        <div class="bg-white p-6 rounded-2xl border border-neutral-200 shadow-xs space-y-5">
+          <div class="flex items-center justify-between pb-3 border-b border-neutral-200">
+            <div class="flex items-center gap-2">
+              <i data-lucide="package-plus" class="w-4 h-4 text-black"></i>
+              <h3 class="font-title font-bold text-sm uppercase text-black">Publish Garment Piece</h3>
+            </div>
+            <span class="text-[11px] text-neutral-400">Currency: EGP</span>
+          </div>
+
+          <form id="addProductForm" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1">Garment Title *</label>
+                <input 
+                  type="text" 
+                  id="prodNameInput" 
+                  required 
+                  placeholder="e.g. Borg Bomber Jacket In Black" 
+                  class="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black"
+                >
+              </div>
+
+              <div>
+                <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1">Category *</label>
+                <select 
+                  id="prodCategorySelect" 
+                  required 
+                  class="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black"
+                ></select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1">Price in EGP *</label>
+                <input 
+                  type="number" 
+                  id="prodPriceInput" 
+                  required 
+                  min="1" 
+                  step="10" 
+                  placeholder="e.g. 2850" 
+                  class="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black"
+                >
+              </div>
+
+              <div>
+                <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1">Badge Tag</label>
+                <input 
+                  type="text" 
+                  id="prodBadgeInput" 
+                  placeholder="NEW, SHOWCASE, LIMITED" 
+                  class="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black"
+                >
+              </div>
+            </div>
+
+            <!-- Technical Garment Specs (Lining, Wearing, Height) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+              <div>
+                <label class="block text-[10px] uppercase tracking-wider text-neutral-500 mb-1 font-semibold">Lining</label>
+                <input 
+                  type="text" 
+                  id="prodLiningInput" 
+                  placeholder="100% Polyester / Silk" 
+                  class="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-black focus:outline-none focus:border-black"
+                >
+              </div>
+
+              <div>
+                <label class="block text-[10px] uppercase tracking-wider text-neutral-500 mb-1 font-semibold">Wearing Size</label>
+                <input 
+                  type="text" 
+                  id="prodWearingInput" 
+                  placeholder="Size Medium" 
+                  class="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-black focus:outline-none focus:border-black"
+                >
+              </div>
+
+              <div>
+                <label class="block text-[10px] uppercase tracking-wider text-neutral-500 mb-1 font-semibold">Model Height</label>
+                <input 
+                  type="text" 
+                  id="prodHeightInput" 
+                  placeholder="6'3&quot; / 191 cm" 
+                  class="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-black focus:outline-none focus:border-black"
+                >
+              </div>
+            </div>
+
+            <!-- Image & Presets -->
+            <div>
+              <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1">Image URL *</label>
+              <input 
+                type="url" 
+                id="prodImageInput" 
+                required 
+                placeholder="https://images.unsplash.com/..." 
+                class="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black"
+              >
+
+              <div class="mt-2 flex items-center gap-1.5 flex-wrap text-[10px]">
+                <span class="text-neutral-500 uppercase tracking-wider">Presets:</span>
+                <button type="button" class="preset-img-btn px-2 py-0.5 rounded bg-black text-white hover:bg-neutral-800 border border-black font-semibold" data-url="assets/black-hoodie-front.jpg">Black Hoodie (Front)</button>
+                <button type="button" class="preset-img-btn px-2 py-0.5 rounded bg-black text-white hover:bg-neutral-800 border border-black font-semibold" data-url="assets/black-hoodie-back.jpg">Black Hoodie (Back)</button>
+                <button type="button" class="preset-img-btn px-2 py-0.5 rounded bg-neutral-100 hover:bg-neutral-200 text-black border border-neutral-300" data-url="https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1200&q=85">Borg Bomber</button>
+                <button type="button" class="preset-img-btn px-2 py-0.5 rounded bg-neutral-100 hover:bg-neutral-200 text-black border border-neutral-300" data-url="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=85">Balaclava Jacket</button>
+                <button type="button" class="preset-img-btn px-2 py-0.5 rounded bg-neutral-100 hover:bg-neutral-200 text-black border border-neutral-300" data-url="https://images.unsplash.com/photo-1548883354-7622d03aca27?auto=format&fit=crop&w=1200&q=85">Red Puffer</button>
+                <button type="button" class="preset-img-btn px-2 py-0.5 rounded bg-neutral-100 hover:bg-neutral-200 text-black border border-neutral-300" data-url="https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1200&q=85">Twill Cargo</button>
+              </div>
+
+              <div class="mt-3 flex items-center gap-3.5 p-3 bg-neutral-50 rounded-xl border border-neutral-200">
+                <div class="w-12 h-16 rounded-lg bg-white border border-neutral-300 overflow-hidden flex items-center justify-center flex-shrink-0">
+                  <img id="liveImgPreview" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                  <i id="liveImgPlaceholderIcon" data-lucide="image" class="w-4 h-4 text-neutral-400"></i>
+                </div>
+                <div class="text-[11px] text-neutral-600">
+                  <p id="liveImgStatus" class="font-bold text-black">No preview loaded</p>
+                  <p class="text-neutral-400">Live preview displays automatically.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sizes Selection -->
+            <div>
+              <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1.5">Sizes Available *</label>
+              <div id="sizeCheckboxesContainer" class="flex flex-wrap gap-2">
+                <label class="cursor-pointer select-none">
+                  <input type="checkbox" name="sizes" value="S" checked class="hidden peer">
+                  <span class="inline-block px-3 py-1 rounded-lg border border-neutral-300 bg-neutral-50 peer-checked:bg-black peer-checked:text-white peer-checked:border-black text-xs font-bold transition-all">S</span>
+                </label>
+                <label class="cursor-pointer select-none">
+                  <input type="checkbox" name="sizes" value="M" checked class="hidden peer">
+                  <span class="inline-block px-3 py-1 rounded-lg border border-neutral-300 bg-neutral-50 peer-checked:bg-black peer-checked:text-white peer-checked:border-black text-xs font-bold transition-all">M</span>
+                </label>
+                <label class="cursor-pointer select-none">
+                  <input type="checkbox" name="sizes" value="L" checked class="hidden peer">
+                  <span class="inline-block px-3 py-1 rounded-lg border border-neutral-300 bg-neutral-50 peer-checked:bg-black peer-checked:text-white peer-checked:border-black text-xs font-bold transition-all">L</span>
+                </label>
+                <label class="cursor-pointer select-none">
+                  <input type="checkbox" name="sizes" value="XL" checked class="hidden peer">
+                  <span class="inline-block px-3 py-1 rounded-lg border border-neutral-300 bg-neutral-50 peer-checked:bg-black peer-checked:text-white peer-checked:border-black text-xs font-bold transition-all">XL</span>
+                </label>
+                <label class="cursor-pointer select-none">
+                  <input type="checkbox" name="sizes" value="XXL" class="hidden peer">
+                  <span class="inline-block px-3 py-1 rounded-lg border border-neutral-300 bg-neutral-50 peer-checked:bg-black peer-checked:text-white peer-checked:border-black text-xs font-bold transition-all">XXL</span>
+                </label>
+                <label class="cursor-pointer select-none">
+                  <input type="checkbox" name="sizes" value="ONE SIZE" class="hidden peer">
+                  <span class="inline-block px-3 py-1 rounded-lg border border-neutral-300 bg-neutral-50 peer-checked:bg-black peer-checked:text-white peer-checked:border-black text-xs font-bold transition-all">ONE SIZE</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+              <label class="block text-[11px] uppercase tracking-wider text-neutral-600 mb-1">Garment Details & Narrative</label>
+              <textarea 
+                id="prodDescriptionInput" 
+                rows="2" 
+                placeholder="Textile specification, embroidery, construction..." 
+                class="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black"
+              ></textarea>
+            </div>
+
+            <button 
+              type="submit" 
+              class="w-full py-3.5 bg-black text-white font-mono font-bold text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-neutral-800 transition-colors"
+            >
+              + Publish Garment to SOKHM
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- INVENTORY TABLE -->
+    <div class="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-xs font-mono">
+      <div class="p-5 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="font-title font-bold text-sm uppercase text-black">Inventory Archive</h3>
+          <p class="text-xs text-neutral-400">All live showcase and catalog pieces.</p>
+        </div>
+
+        <div class="relative w-full sm:w-64">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input 
+            type="text" 
+            id="adminSearchInput" 
+            placeholder="Search inventory..." 
+            class="w-full bg-neutral-50 border border-neutral-300 rounded-full pl-9 pr-4 py-1.5 text-xs text-black focus:outline-none focus:border-black"
+          >
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-neutral-50 border-b border-neutral-200 text-[10px] text-neutral-500 uppercase font-semibold">
+            <tr>
+              <th class="py-3 px-6">Piece</th>
+              <th class="py-3 px-4">Category</th>
+              <th class="py-3 px-4">Price (EGP)</th>
+              <th class="py-3 px-4">Sizes</th>
+              <th class="py-3 px-6 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody" class="divide-y divide-neutral-100"></tbody>
+        </table>
+      </div>
+
+      <div id="adminEmptyState" class="hidden py-12 text-center text-xs text-neutral-500">
+        No garments found
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="adminToastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
+
+  <!-- SCRIPTS -->
+  <script src="js/store.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
