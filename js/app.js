@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const apiRes = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-cache' });
       if (apiRes.ok) {
         const data = await apiRes.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           products = data;
           renderBestSellers();
           return;

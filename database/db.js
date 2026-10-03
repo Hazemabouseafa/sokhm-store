@@ -166,43 +166,47 @@ function autoSeed() {
     }
   }
 
-  if (prodCount.count === 0 && fs.existsSync(productsFile)) {
-    try {
-      const prods = JSON.parse(fs.readFileSync(productsFile, 'utf8'));
-      if (Array.isArray(prods)) {
-        const insertProd = db.prepare(`
-          INSERT OR REPLACE INTO products (
-            id, name, subtitle, category_id, price, badge,
-            images_json, sizes_json, short_desc, description,
-            fabric, fit_advice, care_advice, colors_json, model_info, stock_status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
+  const seededCheck = db.prepare("SELECT content_json FROM site_content WHERE section_key = '_products_seeded'").get();
+  if (!seededCheck) {
+    if (prodCount.count === 0 && fs.existsSync(productsFile)) {
+      try {
+        const prods = JSON.parse(fs.readFileSync(productsFile, 'utf8'));
+        if (Array.isArray(prods) && prods.length > 0) {
+          const insertProd = db.prepare(`
+            INSERT OR REPLACE INTO products (
+              id, name, subtitle, category_id, price, badge,
+              images_json, sizes_json, short_desc, description,
+              fabric, fit_advice, care_advice, colors_json, model_info, stock_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
 
-        for (const p of prods) {
-          insertProd.run(
-            p.id,
-            p.name,
-            p.subtitle || '',
-            p.category || 'hoodies',
-            typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
-            p.badge || '',
-            JSON.stringify(p.images || []),
-            JSON.stringify(p.sizes || []),
-            p.shortDesc || '',
-            p.description || '',
-            p.fabric || '',
-            p.fitAdvice || '',
-            p.careAdvice || '',
-            JSON.stringify(p.colors || []),
-            p.modelInfo || '',
-            'in_stock'
-          );
+          for (const p of prods) {
+            insertProd.run(
+              p.id,
+              p.name,
+              p.subtitle || '',
+              p.category || 'hoodies',
+              typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+              p.badge || '',
+              JSON.stringify(p.images || []),
+              JSON.stringify(p.sizes || []),
+              p.shortDesc || '',
+              p.description || '',
+              p.fabric || '',
+              p.fitAdvice || '',
+              p.careAdvice || '',
+              JSON.stringify(p.colors || []),
+              p.modelInfo || '',
+              'in_stock'
+            );
+          }
+          console.log(`✓ Database products successfully seeded (${prods.length} garments) from products.json`);
         }
-        console.log(`✓ Database products successfully seeded (${prods.length} garments) from products.json`);
+      } catch (err) {
+        console.error('Failed to seed products:', err);
       }
-    } catch (err) {
-      console.error('Failed to seed products:', err);
     }
+    db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES ('_products_seeded', '{\"seeded\":true}')").run();
   }
 
   // Check if orders are empty and seed sample initial orders
@@ -636,8 +640,8 @@ function upsertProduct(p) {
  * Products: Delete product
  */
 function deleteProduct(id) {
-  const sid = String(id);
-  db.prepare("DELETE FROM products WHERE id = ?").run(sid);
+  const sid = String(id).trim();
+  db.prepare("DELETE FROM products WHERE id = ? OR LOWER(id) = LOWER(?)").run(sid, sid);
   const updated = getProducts();
   syncJsonBackups(null, updated);
   return true;

@@ -1047,11 +1047,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!confirm(`هل أنت متأكد من حذف القطعة "${name}" نهائياً من قاعدة البيانات؟`)) return;
 
-        products = products.filter(p => p.id !== id);
-        await saveProducts();
-        renderProductsTable();
-        renderCategoriesList();
-        showToast(`تم حذف القطعة "${name}" من قاعدة البيانات.`);
+        try {
+          const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          if (res.ok) {
+            products = products.filter(p => p.id !== id);
+            renderProductsTable();
+            renderCategoriesList();
+            showToast(`تم حذف القطعة "${name}" من قاعدة البيانات.`);
+          } else {
+            alert('تعذر حذف المنتج من السيرفر');
+          }
+        } catch (e) {
+          alert('خطأ في الاتصال بالسيرفر: ' + e.message);
+        }
       });
     });
 

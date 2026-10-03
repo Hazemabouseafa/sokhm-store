@@ -35,6 +35,9 @@ function parseBody(req) {
 function sendJson(res, statusCode, data) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token');
@@ -163,6 +166,17 @@ module.exports = async (req, res) => {
         }
         const created = await db.upsertProduct(body);
         return sendJson(res, 201, { success: true, product: created });
+      }
+      if (req.method === 'DELETE') {
+        const queryId = parsedUrl.searchParams.get('id') || parsedUrl.searchParams.get('slug');
+        let idToDelete = queryId;
+        if (!idToDelete) {
+          const body = await parseBody(req);
+          idToDelete = body.id || body.slug;
+        }
+        if (!idToDelete) return sendJson(res, 400, { error: 'Missing product id' });
+        await db.deleteProduct(idToDelete);
+        return sendJson(res, 200, { success: true, message: 'تم حذف المنتج بنجاح', id: idToDelete });
       }
     }
 

@@ -66,21 +66,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toastContainer = document.getElementById('toastContainer');
 
   // ================= 1. FETCH PRODUCTS & LOCATE TARGET =================
+  let apiLoaded = false;
   try {
-    const apiRes = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-cache' });
+    const apiRes = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-store' });
     if (apiRes.ok) {
       const data = await apiRes.json();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         products = data;
+        apiLoaded = true;
       }
     }
   } catch (apiErr) {
     console.warn('API fetch products failed, falling back to static json:', apiErr.message);
   }
 
-  if (products.length === 0) {
+  if (!apiLoaded && products.length === 0) {
     try {
-      const res = await fetch(`data/products.json?_t=${Date.now()}`, { cache: 'no-cache' });
+      const res = await fetch(`data/products.json?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         products = await res.json();
       }

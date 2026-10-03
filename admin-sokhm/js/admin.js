@@ -1067,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 9. كتالوج المنتجات (PRODUCTS) =================
   async function loadProducts() {
     try {
-      const res = await fetch('/api/products');
+      const res = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         products = await res.json();
       }
@@ -1183,28 +1183,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         const id = btn.getAttribute('data-id');
         if (!confirm(`هل أنت متأكد من حذف القطعة ${id} من قاعدة البيانات؟`)) return;
         try {
-          const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { 
+          let res = await fetch(`/api/products/${encodeURIComponent(id)}`, { 
             method: 'DELETE',
             headers: { 
               'Authorization': 'Bearer ' + token,
               'x-admin-token': token
             }
           });
+          if (!res.ok && res.status === 404) {
+            // Fallback to query param delete
+            res = await fetch(`/api/products?id=${encodeURIComponent(id)}`, {
+              method: 'DELETE',
+              headers: { 
+                'Authorization': 'Bearer ' + token,
+                'x-admin-token': token
+              }
+            });
+          }
           if (res.ok) {
-            products = products.filter(p => p.id !== id && p.slug !== id);
+            products = products.filter(p => String(p.id).trim() !== String(id).trim() && String(p.slug || '').trim() !== String(id).trim());
             renderProductsTable();
             loadDbStats();
-            showToast('تم حذف المنتج بنجاح');
+            showToast('تم حذف المنتج بنجاح من قاعدة البيانات');
           } else {
             const errData = await res.json().catch(() => ({}));
             alert(errData.error || errData.message || 'تعذر حذف المنتج من السيرفر');
           }
         } catch (err) {
-          // If network error/offline
-          products = products.filter(p => p.id !== id && p.slug !== id);
-          renderProductsTable();
-          loadDbStats();
-          showToast('تم حذف المنتج محلياً');
+          alert('تعذر الاتصال بالسيرفر لحذف المنتج: ' + err.message);
         }
       });
     });
@@ -1800,6 +1806,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (oCount) oCount.textContent = stats.ordersCount || orders.length;
         if (cCount) cCount.textContent = stats.categoriesCount || categories.length;
         if (sCount) sCount.textContent = stats.sectionsCount || 4;
+
+        const dbBadgeText = document.getElementById('dbBadgeText');
+        const dbHeaderBadge = document.getElementById('dbHeaderBadge');
+        if (dbBadgeText && stats.engine) {
+          dbBadgeText.textContent = stats.engine + ' • متصلة';
+          if (stats.engine.includes('Fallback')) {
+            dbBadgeText.textContent = '⚠️ ذاكرة محلية مؤقتة (Fallback - Turso غير متصل)';
+            if (dbHeaderBadge) {
+              dbHeaderBadge.className = 'hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-950/40 border border-amber-800/60 text-[11px] font-bold text-amber-300';
+            }
+          }
+        }
       }
     } catch (e) {}
   }

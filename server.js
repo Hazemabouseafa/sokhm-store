@@ -43,6 +43,9 @@ function readBody(req) {
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=UTF-8',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token'
@@ -200,6 +203,21 @@ const server = http.createServer(async (req, res) => {
         }
         const created = await db.upsertProduct(body);
         return sendJson(res, 201, { success: true, product: created });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+    if (pathname === '/api/products' && req.method === 'DELETE') {
+      try {
+        const queryId = parsedUrl.searchParams.get('id') || parsedUrl.searchParams.get('slug');
+        let idToDelete = queryId;
+        if (!idToDelete) {
+          const body = await readBody(req);
+          idToDelete = body.id || body.slug;
+        }
+        if (!idToDelete) return sendJson(res, 400, { error: 'Missing product id to delete' });
+        await db.deleteProduct(idToDelete);
+        return sendJson(res, 200, { success: true, message: 'Product deleted successfully', id: idToDelete });
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
       }

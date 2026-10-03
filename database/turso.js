@@ -222,30 +222,36 @@ async function initTursoSchema() {
       console.log('✓ Turso: Seeded site_content and categories');
     }
 
-    // Auto-seed products if empty
-    const prodCheck = await c.execute('SELECT COUNT(*) as count FROM products');
-    if (Number(prodCheck.rows[0].count) === 0) {
-      loadFallbackData();
-      for (const p of fallbackProducts) {
-        await c.execute({
-          sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          args: [
-            p.id,
-            p.name,
-            p.slug || p.id,
-            p.price || 1850,
-            p.category || 'hoodies',
-            p.image || (Array.isArray(p.images) && p.images[0]) || 'assets/sokhm-card-1.jpg',
-            p.description || '',
-            JSON.stringify(p.sizes || ['S', 'M', 'L', 'XL', 'XXL']),
-            JSON.stringify(p.colors || [{ name: 'Onyx Black', hex: '#0B0B0B' }]),
-            p.model_info || p.modelInfo || 'Model is 185cm wearing size L',
-            p.stock_status || p.stockStatus || 'in_stock'
-          ]
-        });
+    // Auto-seed products only once on initial setup (never re-seed if products were deleted)
+    const seedCheck = await c.execute("SELECT COUNT(*) as count FROM site_content WHERE section_key = '_products_seeded'");
+    const isAlreadySeeded = Number(seedCheck.rows[0]?.count || 0) > 0;
+
+    if (!isAlreadySeeded) {
+      const prodCheck = await c.execute('SELECT COUNT(*) as count FROM products');
+      if (Number(prodCheck.rows[0].count) === 0) {
+        loadFallbackData();
+        for (const p of fallbackProducts) {
+          await c.execute({
+            sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [
+              p.id,
+              p.name,
+              p.slug || p.id,
+              p.price || 1850,
+              p.category || 'hoodies',
+              p.image || (Array.isArray(p.images) && p.images[0]) || 'assets/sokhm-card-1.jpg',
+              p.description || '',
+              JSON.stringify(p.sizes || ['S', 'M', 'L', 'XL', 'XXL']),
+              JSON.stringify(p.colors || [{ name: 'Onyx Black', hex: '#0B0B0B' }]),
+              p.model_info || p.modelInfo || 'Model is 185cm wearing size L',
+              p.stock_status || p.stockStatus || 'in_stock'
+            ]
+          });
+        }
+        console.log(`✓ Turso: Initial seed of ${fallbackProducts.length} products completed`);
       }
-      console.log(`✓ Turso: Seeded ${fallbackProducts.length} products`);
+      await c.execute("INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES ('_products_seeded', '{\"seeded\":true}')");
     }
 
     initialized = true;
@@ -409,7 +415,7 @@ async function getProducts() {
     try {
       await initTursoSchema();
       const res = await c.execute('SELECT * FROM products ORDER BY created_at DESC');
-      if (res && res.rows && res.rows.length > 0) {
+      if (res && Array.isArray(res.rows)) {
         return res.rows.map(parseProductRow);
       }
     } catch (err) {
@@ -516,6 +522,22 @@ async function upsertProduct(p) {
 async function saveProducts(productsList) {
   loadFallbackData();
   const list = Array.isArray(productsList) ? productsList : [productsList];
+  const c = getClient();
+  if (c) {
+    try {
+      await initTursoSchema();
+      await c.execute('DELETE FROM products');
+      for (const p of list) {
+        if (p && (p.name || p.id)) {
+          await upsertProduct(p);
+        }
+      }
+      return getProducts();
+    } catch (err) {
+      console.error('Turso saveProducts error:', err.message);
+    }
+  }
+
   for (const p of list) {
     if (p && (p.name || p.id)) {
       await upsertProduct(p);
@@ -527,21 +549,32 @@ async function saveProducts(productsList) {
 async function deleteProduct(id) {
   loadFallbackData();
   const c = getClient();
-  const sid = String(id);
+  const sid = String(id).trim();
 
   if (c) {
     try {
       await initTursoSchema();
+      // 1. Delete by id
       await c.execute({
-        sql: 'DELETE FROM products WHERE id = ? OR slug = ?',
+        sql: 'DELETE FROM products WHERE id = ? OR LOWER(id) = LOWER(?)',
         args: [sid, sid]
       });
+      // 2. Also try deleting by slug if column exists
+      try {
+        await c.execute({
+          sql: 'DELETE FROM products WHERE slug = ? OR LOWER(slug) = LOWER(?)',
+          args: [sid, sid]
+        });
+      } catch (e) {
+        // Slug column might not exist in some table schemas
+      }
     } catch (err) {
       console.error('Turso deleteProduct error:', err.message);
+      throw err;
     }
   }
 
-  fallbackProducts = fallbackProducts.filter(x => String(x.id) !== sid && String(x.slug) !== sid);
+  fallbackProducts = fallbackProducts.filter(x => String(x.id).trim() !== sid && String(x.slug || '').trim() !== sid);
   saveFallbackProducts();
   return true;
 }
