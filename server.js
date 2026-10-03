@@ -2,6 +2,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
+const db = require('./database/db.js');
+
 const PORT = 3000;
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
@@ -42,7 +44,7 @@ function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=UTF-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
   });
   res.end(JSON.stringify(data));
@@ -53,7 +55,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     });
     return res.end();
@@ -62,30 +64,25 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost:3000'}`);
   const pathname = parsedUrl.pathname;
 
-  // ================= REST API ENDPOINTS =================
+  // ================= REST API ENDPOINTS (SQLITE DATABASE) =================
   if (pathname.startsWith('/api/')) {
     
     // 1. GET /api/site-content
     if (pathname === '/api/site-content' && req.method === 'GET') {
-      const contentPath = path.join(__dirname, 'data', 'site-content.json');
-      fs.readFile(contentPath, 'utf8', (err, data) => {
-        if (err) return sendJson(res, 500, { error: 'Failed to read site content' });
-        try {
-          sendJson(res, 200, JSON.parse(data));
-        } catch (e) {
-          sendJson(res, 500, { error: 'Invalid JSON in site content' });
-        }
-      });
-      return;
+      try {
+        const content = db.getSiteContent();
+        return sendJson(res, 200, content);
+      } catch (e) {
+        return sendJson(res, 500, { error: 'Failed to read site content from database: ' + e.message });
+      }
     }
 
     // 2. POST /api/site-content
     if (pathname === '/api/site-content' && req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const contentPath = path.join(__dirname, 'data', 'site-content.json');
-        fs.writeFileSync(contentPath, JSON.stringify(body, null, 2), 'utf8');
-        return sendJson(res, 200, { success: true, message: 'Site content updated successfully' });
+        const updated = db.saveSiteContent(body);
+        return sendJson(res, 200, { success: true, message: 'Site content updated in database successfully', data: updated });
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
       }
@@ -93,27 +90,81 @@ const server = http.createServer(async (req, res) => {
 
     // 3. GET /api/products
     if (pathname === '/api/products' && req.method === 'GET') {
-      const productsPath = path.join(__dirname, 'data', 'products.json');
-      fs.readFile(productsPath, 'utf8', (err, data) => {
-        if (err) return sendJson(res, 500, { error: 'Failed to read products' });
-        try {
-          sendJson(res, 200, JSON.parse(data));
-        } catch (e) {
-          sendJson(res, 500, { error: 'Invalid JSON in products' });
-        }
-      });
-      return;
+      try {
+        const products = db.getProducts();
+        return sendJson(res, 200, products);
+      } catch (e) {
+        return sendJson(res, 500, { error: 'Failed to read products from database: ' + e.message });
+      }
     }
 
     // 4. POST /api/products
     if (pathname === '/api/products' && req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const productsPath = path.join(__dirname, 'data', 'products.json');
-        fs.writeFileSync(productsPath, JSON.stringify(body, null, 2), 'utf8');
-        return sendJson(res, 200, { success: true, message: 'Products updated successfully' });
+        const updated = db.saveProducts(body);
+        return sendJson(res, 200, { success: true, message: 'Products updated in database successfully', count: updated.length });
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 5. GET /api/categories
+    if (pathname === '/api/categories' && req.method === 'GET') {
+      try {
+        return sendJson(res, 200, db.getCategories());
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 6. POST /api/categories
+    if (pathname === '/api/categories' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const cats = db.addCategory(body);
+        return sendJson(res, 200, { success: true, categories: cats });
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 7. DELETE /api/categories
+    if (pathname === '/api/categories' && req.method === 'DELETE') {
+      try {
+        const slug = parsedUrl.searchParams.get('slug');
+        if (!slug) return sendJson(res, 400, { error: 'Missing slug parameter' });
+        const cats = db.deleteCategory(slug);
+        return sendJson(res, 200, { success: true, categories: cats });
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 8. GET /api/stats (Database Health & Counts)
+    if (pathname === '/api/stats' && req.method === 'GET') {
+      try {
+        return sendJson(res, 200, db.getStats());
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 9. Orders: POST /api/orders & GET /api/orders
+    if (pathname === '/api/orders' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const order = db.createOrder(body);
+        return sendJson(res, 201, { success: true, order });
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+    if (pathname === '/api/orders' && req.method === 'GET') {
+      try {
+        return sendJson(res, 200, db.getOrders());
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
       }
     }
 

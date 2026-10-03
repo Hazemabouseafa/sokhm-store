@@ -1,0 +1,23 @@
+{
+  "name": "sokhm-store",
+  "version": "1.0.0",
+  "description": "✦ SOKHM ATELIER - Luxury Streetwear E-Commerce Platform with Native SQLite Database and Universal CMS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scratch/verify_all.js"
+  },
+  "keywords": [
+    "streetwear",
+    "ecommerce",
+    "sqlite",
+    "cms",
+    "fashion",
+    "egp"
+  ],
+  "author": "✦ SOKHM ATELIER",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

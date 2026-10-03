@@ -1,40 +1,40 @@
 /**
- * ✦ SOKHM STORE - Universal Admin & CMS Controller
- * Provides seamless control over:
- * 1. Homepage text content (Hero, Value propositions, Collections, Banner, Footer)
- * 2. Product Detail Page text content (Breadcrumbs, Buttons, Highlights, Accordions, Cart)
- * 3. Garments Catalog (Add, Edit, Delete, Photos with direct upload, Sizes, EGP pricing)
- * 4. Categories Management (Add, List, Delete, Count)
- * 5. Full Backup / Export / Factory Reset
+ * ✦ SOKHM STORE - لوحة التحكم الإدارية ونظام إدارة المحتوى (CMS Controller)
+ * تدير بالكامل:
+ * ١. نصوص الصفحة الرئيسية (الهيرو، شريط المزايا، التشكيلات، البانر، والفوتر)
+ * ٢. نصوص صفحة تفاصيل المنتج (مسار التصفح، الأزرار، شارات الثقة، القوائم المطوية، والسلة)
+ * ٣. كتالوج المنتجات (إضافة، تعديل، حذف، رفع صور بدقة 2K، المقاسات، والأسعار بالجنيه المصري)
+ * ٤. تصنيفات وأقسام المتجر (إضافة، عرض، حذف، وربط تلقائي)
+ * ٥. البنية التحتية وقاعدة بيانات SQLite العلائقية والنسخ الاحتياطي
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Application State
+  // حالة التطبيق (Application State)
   let siteContent = null;
   let products = [];
   let editingProductId = null;
   let productSearchTerm = '';
   let productCategoryFilterValue = 'all';
 
-  // Modal element
+  // عنصر النافذة المنبثقة
   const productModal = document.getElementById('productEditModal');
 
-  // ================= 1. INITIALIZATION =================
+  // ================= 1. التهيئة الأولية (INITIALIZATION) =================
   async function init() {
     setupTabNavigation();
     setupLucide();
 
-    // Load data from server API with local storage fallback
-    await Promise.all([loadSiteContent(), loadProducts()]);
+    // تحميل البيانات من قاعدة بيانات السيرفر
+    await Promise.all([loadSiteContent(), loadProducts(), loadDbStats()]);
 
-    // Populate all forms and views
+    // تعبئة النماذج والجداول
     populateHomepageForm();
     populateProductPageForm();
     populateCategoryDropdowns();
     renderCategoriesList();
     renderProductsTable();
 
-    // Attach interaction handlers
+    // تفعيل معالجات الأحداث
     setupHomepageFormHandlers();
     setupProductPageFormHandlers();
     setupCategoriesHandlers();
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ================= 2. TAB NAVIGATION =================
+  // ================= 2. التنقل بين التبويبات (TAB NAVIGATION) =================
   function setupTabNavigation() {
     const tabButtons = document.querySelectorAll('.admin-tab-btn');
     const tabPanes = document.querySelectorAll('.tab-pane');
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ================= 3. DATA FETCHING & SYNC =================
+  // ================= 3. جلب وحفظ البيانات (DATA & SQLITE SYNC) =================
   async function loadSiteContent() {
     try {
       const res = await fetch('/api/site-content');
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
     } catch (e) {
-      console.warn('API unavailable, checking localStorage / fallback...', e);
+      console.warn('تعذر جلب النصوص من API قاعدة البيانات، محاولة التخزين المحلي...', e);
     }
 
     const cached = localStorage.getItem('sokhm_site_content_v1');
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const fallbackRes = await fetch('data/site-content.json');
       siteContent = await fallbackRes.json();
     } catch (err) {
-      console.error('Failed to load fallback site-content.json', err);
+      console.error('فشل في جلب ملف البيانات الاحتياطي', err);
       siteContent = { homepage: {}, productPage: {}, categories: [] };
     }
   }
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
     } catch (e) {
-      console.warn('API unavailable for products, fallback...', e);
+      console.warn('تعذر جلب المنتجات من السيرفر، استخدام الذاكرة المحلية...', e);
     }
 
     const cached = localStorage.getItem('sokhm_products_v1');
@@ -128,8 +128,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       const fallbackRes = await fetch('data/products.json');
       products = await fallbackRes.json();
     } catch (err) {
-      console.error('Failed to load fallback products.json', err);
+      console.error('فشل في جلب المنتجات الاحتياطية', err);
       products = [];
+    }
+  }
+
+  async function loadDbStats() {
+    try {
+      const res = await fetch('/api/stats');
+      if (res.ok) {
+        const stats = await res.json();
+        const badgeEl = document.getElementById('dbBadgeText');
+        const summaryEl = document.getElementById('dbStatsSummary');
+        if (badgeEl) {
+          badgeEl.textContent = `قاعدة بيانات SQLite • ${stats.dbSizeFormatted} • ${stats.counts?.products || 0} منتجات`;
+        }
+        if (summaryEl) {
+          summaryEl.innerHTML = `المحرك: <strong>${stats.engine}</strong> • مسار الملف: <code>${stats.dbPath}</code> • الحجم: <strong>${stats.dbSizeFormatted}</strong> • إجمالي المنتجات: <strong>${stats.counts?.products}</strong> • الأقسام: <strong>${stats.counts?.categories}</strong>.`;
+        }
+      }
+    } catch (e) {
+      console.warn('تعذر جلب إحصائيات قاعدة البيانات:', e);
     }
   }
 
@@ -142,9 +161,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(siteContent)
       });
+      loadDbStats();
       return res.ok;
     } catch (err) {
-      console.warn('Could not persist to server API, saved to localStorage only.', err);
+      console.warn('تم الحفظ في المتصفح فقط بسبب خطأ اتصال بالسيرفر:', err);
       return true;
     }
   }
@@ -158,19 +178,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(products)
       });
+      loadDbStats();
       return res.ok;
     } catch (err) {
-      console.warn('Could not persist products to server API, saved locally.', err);
+      console.warn('تم حفظ المنتجات محلياً فقط:', err);
       return true;
     }
   }
 
-  // ================= 4. HOMEPAGE TAB =================
+  // ================= 4. تبويب الصفحة الرئيسية (HOMEPAGE) =================
   function populateHomepageForm() {
     if (!siteContent || !siteContent.homepage) return;
     const hp = siteContent.homepage;
 
-    // 1. Hero
+    // 1. الهيرو
     setVal('hp_hero_kicker', hp.hero?.kicker);
     setVal('hp_hero_title', hp.hero?.title);
     setVal('hp_hero_subtitle', hp.hero?.subtitle);
@@ -178,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setVal('hp_hero_desc', hp.hero?.description || hp.hero?.narrative);
     setVal('hp_hero_scroll', hp.hero?.scrollLabel || hp.hero?.scroll);
 
-    // 2. Value bar (4 items)
+    // 2. شريط المزايا (4 عناصر)
     if (Array.isArray(hp.valueBar)) {
       hp.valueBar.forEach((vb, idx) => {
         setVal(`hp_val_${idx}_title`, vb.title);
@@ -186,18 +207,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // 3. Featured Collection
+    // 3. التشكيلة المميزة
     setVal('hp_col_kicker', hp.collection?.kicker);
     setVal('hp_col_title', hp.collection?.title);
     setVal('hp_col_viewall', hp.collection?.viewAllText || hp.collection?.viewAll);
 
-    // 4. Banner
+    // 4. البانر
     const banner = hp.bottomBanner || hp.banner || {};
     setVal('hp_banner_brand', banner.brandTag || banner.brand);
     setVal('hp_banner_head', banner.headline || banner.heading);
     setVal('hp_banner_cta', banner.ctaText || banner.cta);
 
-    // 5. Footer
+    // 5. الفوتر
     setVal('hp_foot_brand', hp.footer?.brandTag || hp.footer?.brand);
     setVal('hp_foot_slogan', hp.footer?.slogan);
     setVal('hp_foot_copy', hp.footer?.copyright || hp.footer?.copy);
@@ -211,7 +232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!siteContent.homepage) siteContent.homepage = {};
       const hp = siteContent.homepage;
 
-      // 1. Hero
+      // 1. الهيرو
       hp.hero = hp.hero || {};
       hp.hero.kicker = getVal('hp_hero_kicker');
       hp.hero.title = getVal('hp_hero_title');
@@ -220,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       hp.hero.narrative = hp.hero.description = getVal('hp_hero_desc');
       hp.hero.scroll = hp.hero.scrollLabel = getVal('hp_hero_scroll');
 
-      // 2. Value Bar
+      // 2. شريط المزايا
       hp.valueBar = hp.valueBar || [];
       const iconList = ['sparkle', 'truck', 'shield-check', 'leaf'];
       for (let i = 0; i < 4; i++) {
@@ -233,13 +254,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
       }
 
-      // 3. Collection
+      // 3. التشكيلة
       hp.collection = hp.collection || {};
       hp.collection.kicker = getVal('hp_col_kicker');
       hp.collection.title = getVal('hp_col_title');
       hp.collection.viewAll = hp.collection.viewAllText = getVal('hp_col_viewall');
 
-      // 4. Banner
+      // 4. البانر
       hp.banner = hp.banner || {};
       hp.bottomBanner = hp.bottomBanner || {};
       const bBrand = getVal('hp_banner_brand');
@@ -249,7 +270,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       hp.banner.heading = hp.bottomBanner.headline = bHead;
       hp.banner.cta = hp.bottomBanner.ctaText = bCta;
 
-      // 5. Footer
+      // 5. الفوتر
       hp.footer = hp.footer || {};
       const fBrand = getVal('hp_foot_brand');
       const fSlogan = getVal('hp_foot_slogan');
@@ -260,37 +281,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const ok = await saveSiteContent();
       if (ok) {
-        showToast('Homepage texts saved and synced across all pages!');
+        showToast('تم حفظ وتحديث نصوص الصفحة الرئيسية في قاعدة البيانات بنجاح!');
       } else {
-        showToast('Error saving to server, cached locally.', 'error');
+        showToast('تم الحفظ في التخزين المؤقت، جاري المزامنة...', 'error');
       }
     });
   }
 
-  // ================= 5. PRODUCT PAGE TAB =================
+  // ================= 5. تبويب صفحة المنتج (PRODUCT PAGE) =================
   function populateProductPageForm() {
     if (!siteContent || !siteContent.productPage) return;
     const pp = siteContent.productPage;
 
-    // 1. Breadcrumbs & Kicker
+    // 1. مسار التصفح
     setVal('pp_bc_home', pp.breadcrumbs?.home);
     setVal('pp_bc_col', pp.breadcrumbs?.collection);
     setVal('pp_bc_back', pp.breadcrumbs?.backLink || pp.breadcrumbs?.back);
     setVal('pp_kicker_prefix', pp.kickerPrefix);
 
-    // 2. Buttons
+    // 2. الأزرار
     setVal('pp_btn_sizeguide', pp.sizeGuideButtonText || pp.buttons?.sizeGuide);
     setVal('pp_btn_addtobag', pp.addToBagPrefix || pp.buttons?.addToBag);
     setVal('pp_btn_express', pp.expressCheckoutText || pp.buttons?.expressCheckout);
 
-    // 3. Highlights (3 items)
+    // 3. شارات الثقة
     if (Array.isArray(pp.highlights)) {
       setVal('pp_hl_0', pp.highlights[0]?.text || pp.highlights[0]);
       setVal('pp_hl_1', pp.highlights[1]?.text || pp.highlights[1]);
       setVal('pp_hl_2', pp.highlights[2]?.text || pp.highlights[2]);
     }
 
-    // 4. Accordions
+    // 4. القوائم المطوية
     if (Array.isArray(pp.accordions)) {
       setVal('pp_acc_0_title', pp.accordions[0]?.title);
       setVal('pp_acc_1_title', pp.accordions[1]?.title);
@@ -298,7 +319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       setVal('pp_acc_2_content', pp.accordions[2]?.content);
     }
 
-    // 5. Related Title & Cart Drawer
+    // 5. المقترحات وسلة التسوق
     setVal('pp_related_title', pp.relatedTitle);
     const cart = pp.cartDrawer || pp.cart || {};
     setVal('pp_cart_title', cart.title);
@@ -315,7 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!siteContent.productPage) siteContent.productPage = {};
       const pp = siteContent.productPage;
 
-      // 1. Breadcrumbs
+      // 1. مسار التصفح
       pp.breadcrumbs = pp.breadcrumbs || {};
       const bcHome = getVal('pp_bc_home');
       const bcCol = getVal('pp_bc_col');
@@ -325,7 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       pp.breadcrumbs.back = pp.breadcrumbs.backLink = bcBack;
       pp.kickerPrefix = getVal('pp_kicker_prefix');
 
-      // 2. Buttons
+      // 2. الأزرار
       pp.buttons = pp.buttons || {};
       const sizeGuideTxt = getVal('pp_btn_sizeguide');
       const addToBagTxt = getVal('pp_btn_addtobag');
@@ -334,7 +355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       pp.addToBagPrefix = pp.buttons.addToBag = addToBagTxt;
       pp.expressCheckoutText = pp.buttons.expressCheckout = expressTxt;
 
-      // 3. Highlights
+      // 3. نقاط الثقة
       const icons = ['check', 'truck', 'rotate-ccw'];
       pp.highlights = [
         { id: 'hl-1', text: getVal('pp_hl_0'), icon: icons[0] },
@@ -342,7 +363,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: 'hl-3', text: getVal('pp_hl_2'), icon: icons[2] }
       ];
 
-      // 4. Accordions
+      // 4. القوائم المطوية
       pp.accordions = pp.accordions || [];
       pp.accordions[0] = { id: 'acc-1', title: getVal('pp_acc_0_title') };
       pp.accordions[1] = { id: 'acc-2', title: getVal('pp_acc_1_title') };
@@ -352,7 +373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         content: getVal('pp_acc_2_content')
       };
 
-      // 5. Related & Cart
+      // 5. المقترحات والسلة
       pp.relatedTitle = getVal('pp_related_title');
       pp.cart = pp.cart || {};
       pp.cartDrawer = pp.cartDrawer || {};
@@ -368,14 +389,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const ok = await saveSiteContent();
       if (ok) {
-        showToast('Product Page copy updated and synced!');
+        showToast('تم تحديث نصوص صفحة تفاصيل المنتج وحفظها في قاعدة البيانات بنجاح!');
       } else {
-        showToast('Error saving to server, cached locally.', 'error');
+        showToast('تم الحفظ في التخزين المؤقت، جاري المزامنة...', 'error');
       }
     });
   }
 
-  // ================= 6. CATEGORIES TAB =================
+  // ================= 6. تبويب الأقسام (CATEGORIES) =================
   function populateCategoryDropdowns() {
     const filterSelect = document.getElementById('productCategoryFilter');
     const modalSelect = document.getElementById('modalProdCategory');
@@ -383,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (filterSelect) {
       const currentVal = filterSelect.value || 'all';
-      filterSelect.innerHTML = '<option value="all">All Categories</option>';
+      filterSelect.innerHTML = '<option value="all">جميع الأقسام</option>';
       categories.forEach(cat => {
         const opt = document.createElement('option');
         opt.value = cat.slug || cat.id;
@@ -411,15 +432,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const categories = siteContent?.categories || [];
     if (totalBadge) {
-      totalBadge.textContent = `${categories.length} categories`;
+      totalBadge.textContent = `${categories.length} أقسام`;
     }
 
     container.innerHTML = '';
 
     if (categories.length === 0) {
       container.innerHTML = `
-        <div class="py-8 text-center text-xs text-neutral-500 font-mono">
-          No categories found. Create one using the form on the left.
+        <div class="py-8 text-center text-xs text-neutral-500 font-sans">
+          لا توجد أقسام مسجلة. يمكنك إنشاء قسم جديد عبر النموذج المقابل.
         </div>
       `;
       return;
@@ -427,7 +448,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     categories.forEach(cat => {
       const slug = cat.slug || cat.id;
-      // Count products with this category
       const count = products.filter(p => p.category === slug || p.category === cat.name).length;
 
       const item = document.createElement('div');
@@ -438,11 +458,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             <i data-lucide="tag" class="w-4 h-4"></i>
           </div>
           <div>
-            <h4 class="font-heading font-bold text-xs uppercase text-white">${escapeHtml(cat.name)}</h4>
+            <h4 class="font-bold text-xs text-white">${escapeHtml(cat.name)}</h4>
             <div class="flex items-center gap-2 text-[10px] text-neutral-400 mt-0.5">
-              <span>slug: <code class="text-neutral-300">${escapeHtml(slug)}</code></span>
+              <span>المعرف: <code class="text-neutral-300 font-mono">${escapeHtml(slug)}</code></span>
               <span>•</span>
-              <span>${count} ${count === 1 ? 'garment' : 'garments'}</span>
+              <span class="font-bold text-neutral-300">${count} ${count === 1 ? 'قطعة ملابس' : 'قطع ملابس'}</span>
             </div>
           </div>
         </div>
@@ -450,7 +470,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <button 
           data-delete-slug="${escapeHtml(slug)}" 
           class="delete-category-btn p-2 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer"
-          title="Delete Category"
+          title="حذف هذا القسم"
         >
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
@@ -458,20 +478,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.appendChild(item);
     });
 
-    // Attach delete listeners
+    // أحداث الحذف
     container.querySelectorAll('.delete-category-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', async () => {
         const slug = btn.getAttribute('data-delete-slug');
         if (!slug) return;
 
-        if (!confirm(`Are you sure you want to remove category "${slug}"?`)) return;
+        if (!confirm(`هل أنت متأكد من رغبتك في حذف القسم "${slug}"؟`)) return;
 
         siteContent.categories = siteContent.categories.filter(c => (c.slug || c.id) !== slug);
         await saveSiteContent();
         populateCategoryDropdowns();
         renderCategoriesList();
         renderProductsTable();
-        showToast(`Category "${slug}" removed.`);
+        showToast(`تم حذف القسم "${slug}" بنجاح.`);
       });
     });
 
@@ -493,13 +513,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!name) return;
 
       if (!slug) {
-        slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        slug = name.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]+/g, '-').replace(/(^-|-$)/g, '');
+        if (!slug) slug = 'cat-' + Date.now();
       }
 
       siteContent.categories = siteContent.categories || [];
       const exists = siteContent.categories.some(c => (c.slug || c.id) === slug);
       if (exists) {
-        showToast('A category with this slug already exists!', 'error');
+        showToast('يوجد قسم آخر بنفس هذا المعرف مسبقاً!', 'error');
         return;
       }
 
@@ -512,17 +533,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       populateCategoryDropdowns();
       renderCategoriesList();
       renderProductsTable();
-      showToast(`Category "${name}" created successfully!`);
+      showToast(`تم إنشاء القسم "${name}" بنجاح في قاعدة البيانات!`);
     });
   }
 
-  // ================= 7. PRODUCTS TAB & TABLE =================
+  // ================= 7. جدول كتالوج المنتجات (PRODUCTS TABLE) =================
   function renderProductsTable() {
     const tbody = document.getElementById('productsTableBody');
     const emptyState = document.getElementById('productsEmptyState');
     if (!tbody) return;
 
-    // Filter products
+    // فلترة المنتجات
     const term = productSearchTerm.toLowerCase();
     const filtered = products.filter(p => {
       const matchTerm = !term || 
@@ -559,57 +580,57 @@ document.addEventListener('DOMContentLoaded', async () => {
         : 'assets/sokhm-card-1.jpg';
 
       const sizesList = Array.isArray(prod.sizes) && prod.sizes.length > 0
-        ? prod.sizes.join(', ')
-        : 'All Sizes';
+        ? prod.sizes.join(' • ')
+        : 'كافة المقاسات';
 
       tr.innerHTML = `
-        <!-- Garment Piece -->
+        <!-- قطعة الملابس -->
         <td class="py-4 px-6">
           <div class="flex items-center gap-3">
             <div class="w-11 h-14 rounded-lg bg-[#070707] border border-[#222] overflow-hidden flex-shrink-0">
               <img src="${escapeHtml(mainImg)}" alt="${escapeHtml(prod.name)}" class="w-full h-full object-cover">
             </div>
             <div>
-              <div class="font-bold text-white text-xs tracking-wide uppercase">${escapeHtml(prod.name)}</div>
-              <div class="text-[10px] text-neutral-400 mt-0.5 tracking-wider">${escapeHtml(prod.subtitle || prod.id)}</div>
+              <div class="font-bold text-white text-xs tracking-wide">${escapeHtml(prod.name)}</div>
+              <div class="text-[10px] text-neutral-400 mt-0.5">${escapeHtml(prod.subtitle || prod.id)}</div>
             </div>
           </div>
         </td>
 
-        <!-- Category -->
+        <!-- القسم -->
         <td class="py-4 px-4">
-          <span class="inline-block px-2.5 py-1 rounded bg-[#161616] border border-[#222] text-[10px] text-neutral-300 uppercase tracking-wider">
-            ${escapeHtml(prod.category || 'Garments')}
+          <span class="inline-block px-2.5 py-1 rounded bg-[#161616] border border-[#222] text-[10px] text-neutral-300 font-bold">
+            ${escapeHtml(prod.category || 'ملابس')}
           </span>
         </td>
 
-        <!-- Price (EGP) -->
+        <!-- السعر (ج.م) -->
         <td class="py-4 px-4 font-bold text-white text-xs">
-          ${priceEgp} <span class="text-[10px] text-neutral-400 font-normal">EGP</span>
+          ${priceEgp} <span class="text-[10px] text-neutral-400 font-normal">ج.م</span>
         </td>
 
-        <!-- Badge -->
+        <!-- الشارة -->
         <td class="py-4 px-4">
           ${prod.badge ? `
-            <span class="inline-block px-2 py-0.5 rounded bg-white text-black font-extrabold text-[9px] uppercase tracking-wider">
+            <span class="inline-block px-2 py-0.5 rounded bg-white text-black font-extrabold text-[9px]">
               ${escapeHtml(prod.badge)}
             </span>
           ` : '<span class="text-neutral-600 text-[11px]">—</span>'}
         </td>
 
-        <!-- Sizes -->
-        <td class="py-4 px-4 text-[11px] text-neutral-400">
+        <!-- المقاسات -->
+        <td class="py-4 px-4 text-[11px] text-neutral-400 font-mono">
           ${escapeHtml(sizesList)}
         </td>
 
-        <!-- Actions -->
-        <td class="py-4 px-6 text-right">
-          <div class="flex items-center justify-end gap-2">
+        <!-- الإجراءات -->
+        <td class="py-4 px-6 text-left">
+          <div class="flex items-center justify-start gap-2">
             <a 
               href="product.html?id=${encodeURIComponent(prod.id)}" 
               target="_blank" 
               class="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-[#1A1A1A] transition-colors"
-              title="View on Live Store"
+              title="معاينة على المتجر الحي"
             >
               <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
             </a>
@@ -617,7 +638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button 
               data-edit-id="${escapeHtml(prod.id)}" 
               class="edit-prod-btn p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-[#1A1A1A] transition-colors cursor-pointer"
-              title="Edit Garment"
+              title="تعديل بيانات القطعة"
             >
               <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
             </button>
@@ -625,7 +646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button 
               data-delete-id="${escapeHtml(prod.id)}" 
               class="delete-prod-btn p-2 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer"
-              title="Delete Garment"
+              title="حذف القطعة"
             >
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
@@ -636,7 +657,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       tbody.appendChild(tr);
     });
 
-    // Attach Row Actions
+    // ربط أحداث الإجراءات
     tbody.querySelectorAll('.edit-prod-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-edit-id');
@@ -650,13 +671,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const prod = products.find(p => p.id === id);
         const name = prod ? prod.name : id;
 
-        if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+        if (!confirm(`هل أنت متأكد من حذف القطعة "${name}" نهائياً من قاعدة البيانات؟`)) return;
 
         products = products.filter(p => p.id !== id);
         await saveProducts();
         renderProductsTable();
         renderCategoriesList();
-        showToast(`Garment "${name}" deleted.`);
+        showToast(`تم حذف القطعة "${name}" من قاعدة البيانات.`);
       });
     });
 
@@ -689,7 +710,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ================= 8. ADD / EDIT PRODUCT MODAL =================
+  // ================= 8. نافذة إضافة / تعديل قطعة ملابس (MODAL) =================
   function setupModalHandlers() {
     const closeBtn = document.getElementById('closeProductModalBtn');
     const cancelBtn = document.getElementById('cancelModalBtn');
@@ -705,28 +726,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       cancelBtn.addEventListener('click', () => productModal.close());
     }
 
-    // Direct Image URL Typing Preview
+    // المعاينة الحية عند كتابة رابط
     if (imgUrlInput) {
       imgUrlInput.addEventListener('input', () => {
         updateModalImagePreview(imgUrlInput.value.trim());
       });
     }
 
-    // Direct Device File Upload Handler
+    // رفع الصور المباشر من جهاز المستخدم
     if (fileInput) {
       fileInput.addEventListener('change', async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         const statusEl = document.getElementById('modalImgStatus');
-        if (statusEl) statusEl.textContent = 'Uploading high-res image...';
+        if (statusEl) statusEl.textContent = 'جاري معالجة ورفع الصورة عالية الدقة...';
 
         try {
           const reader = new FileReader();
           reader.onload = async (event) => {
             const base64Data = event.target.result;
             
-            // Try uploading to server
+            // الرفع المباشر لسيرفر قاعدة البيانات
             try {
               const res = await fetch('/api/upload-image', {
                 method: 'POST',
@@ -744,28 +765,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (uploadedPath) {
                   imgUrlInput.value = uploadedPath;
                   updateModalImagePreview(uploadedPath);
-                  showToast('Photo uploaded directly to server assets!');
+                  showToast('تم رفع الصورة وحفظها في مجلد assets بنجاح!');
                   return;
                 }
               }
             } catch (netErr) {
-              console.warn('Direct upload API error, fallback to data URI', netErr);
+              console.warn('استخدام data URI كحل بديل مؤقت:', netErr);
             }
 
-            // Fallback: use data URI
+            // حل بديل
             imgUrlInput.value = base64Data;
             updateModalImagePreview(base64Data);
-            showToast('Photo loaded!');
+            showToast('تم تحميل الصورة بنجاح!');
           };
           reader.readAsDataURL(file);
         } catch (uploadErr) {
-          console.error('File reading failed', uploadErr);
-          showToast('Failed to process image file', 'error');
+          console.error('فشل في قراءة الملف:', uploadErr);
+          showToast('فشل في معالجة ملف الصورة', 'error');
         }
       });
     }
 
-    // Preset Image Pills
+    // أزرار النماذج الجاهزة
     document.querySelectorAll('.preset-pill').forEach(pill => {
       pill.addEventListener('click', () => {
         const img = pill.getAttribute('data-img');
@@ -776,12 +797,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    // Form Submit (Save / Update Product)
+    // إرسال وحفظ النموذج
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const id = document.getElementById('modalProductId').value;
         const name = document.getElementById('modalProdName').value.trim();
         const subtitle = document.getElementById('modalProdSubtitle').value.trim();
         const category = document.getElementById('modalProdCategory').value;
@@ -793,14 +813,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fit = document.getElementById('modalProdFit').value.trim();
         const care = document.getElementById('modalProdCare').value.trim();
 
-        // Selected Sizes
+        // المقاسات المحددة
         const selectedSizes = [];
         document.querySelectorAll('#modalSizesCheckboxes input[name="sizes"]:checked').forEach(cb => {
           selectedSizes.push(cb.value);
         });
 
         if (editingProductId) {
-          // Update existing product
+          // تعديل قطعة قائمة
           const index = products.findIndex(p => p.id === editingProductId);
           if (index !== -1) {
             const current = products[index];
@@ -821,7 +841,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
           }
         } else {
-          // Create new product
+          // إضافة قطعة جديدة
           const newId = 'sokhm-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.floor(Math.random() * 1000);
           const newProduct = {
             id: newId,
@@ -850,7 +870,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         productModal.close();
         renderProductsTable();
         renderCategoriesList();
-        showToast(editingProductId ? `Updated "${name}"!` : `Added new garment "${name}"!`);
+        showToast(editingProductId ? `تم تحديث بيانات "${name}" في قاعدة البيانات!` : `تمت إضافة القطعة "${name}" بنجاح!`);
       });
     }
   }
@@ -873,17 +893,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         preview.classList.add('hidden');
       }
       if (placeholder) placeholder.classList.remove('hidden');
-      if (status) status.textContent = 'No photo selected';
+      if (status) status.textContent = 'لم يتم اختيار صورة بعد';
     }
   }
 
   function openProductModalForAdd() {
     editingProductId = null;
-    document.getElementById('modalProductHeading').textContent = 'Add New Garment Piece';
+    document.getElementById('modalProductHeading').textContent = 'إضافة قطعة ملابس جديدة';
     document.getElementById('modalProductId').value = '';
     document.getElementById('productEditForm').reset();
 
-    // Default sizes check
+    // المقاسات الافتراضية
     document.querySelectorAll('#modalSizesCheckboxes input[name="sizes"]').forEach(cb => {
       cb.checked = ['S', 'M', 'L', 'XL'].includes(cb.value);
     });
@@ -901,7 +921,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     editingProductId = productId;
     populateCategoryDropdowns();
 
-    document.getElementById('modalProductHeading').textContent = `Edit Garment: ${prod.name}`;
+    document.getElementById('modalProductHeading').textContent = `تعديل القطعة: ${prod.name}`;
     document.getElementById('modalProductId').value = prod.id;
     document.getElementById('modalProdName').value = prod.name || '';
     document.getElementById('modalProdSubtitle').value = prod.subtitle || '';
@@ -913,7 +933,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('modalProdImage').value = mainImg;
     updateModalImagePreview(mainImg);
 
-    // Sizes
+    // المقاسات
     document.querySelectorAll('#modalSizesCheckboxes input[name="sizes"]').forEach(cb => {
       cb.checked = Array.isArray(prod.sizes) && prod.sizes.includes(cb.value);
     });
@@ -927,18 +947,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupLucide();
   }
 
-  // ================= 9. SETTINGS TAB (BACKUP & RESTORE) =================
+  // ================= 9. تبويب قاعدة البيانات والنسخ الاحتياطي (SETTINGS & BACKUP) =================
   function setupSettingsHandlers() {
     const exportBtn = document.getElementById('exportBackupBtn');
     const importInput = document.getElementById('importBackupInput');
     const resetBtn = document.getElementById('resetFactoryBtn');
+    const refreshDbBtn = document.getElementById('refreshDbStatsBtn');
 
-    // Export Backup JSON
+    if (refreshDbBtn) {
+      refreshDbBtn.addEventListener('click', async () => {
+        await loadDbStats();
+        showToast('تم تحديث حالة قاعدة بيانات SQLite بنجاح!');
+      });
+    }
+
+    // تصدير نسخة احتياطية
     if (exportBtn) {
       exportBtn.addEventListener('click', () => {
         const payload = {
           exportTimestamp: new Date().toISOString(),
           brand: '✦ SOKHM ATELIER',
+          databaseEngine: 'SQLite 3 (node:sqlite)',
           siteContent,
           products
         };
@@ -947,17 +976,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `sokhm-store-backup-${Date.now()}.json`;
+        a.download = `sokhm-database-backup-${Date.now()}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast('Backup JSON snapshot exported successfully!');
+        showToast('تم تصدير وحفظ النسخة الاحتياطية (JSON) بنجاح!');
       });
     }
 
-    // Import Backup JSON
+    // استيراد نسخة احتياطية
     if (importInput) {
       importInput.addEventListener('change', (e) => {
         const file = e.target.files?.[0];
@@ -981,21 +1010,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             populateCategoryDropdowns();
             renderCategoriesList();
             renderProductsTable();
+            await loadDbStats();
 
-            showToast('Backup data successfully restored!');
+            showToast('تمت استعادة كافة البيانات وحفظها في قاعدة البيانات بنجاح!');
           } catch (err) {
-            console.error('Import parse error', err);
-            showToast('Invalid backup JSON file.', 'error');
+            console.error('خطأ في معالجة ملف النسخة الاحتياطية', err);
+            showToast('ملف النسخة الاحتياطية غير صالح.', 'error');
           }
         };
         reader.readAsText(file);
       });
     }
 
-    // Reset Factory Defaults
+    // استعادة ضبط المصنع
     if (resetBtn) {
       resetBtn.addEventListener('click', async () => {
-        if (!confirm('Are you sure you want to reset all copy and catalog items to original presets? This cannot be undone.')) {
+        if (!confirm('هل أنت متأكد من رغبتك في استعادة ضبط المصنع؟ سيتم استرجاع النصوص والمنتجات الأصلية للبراند في قاعدة البيانات.')) {
           return;
         }
 
@@ -1015,17 +1045,18 @@ document.addEventListener('DOMContentLoaded', async () => {
           populateCategoryDropdowns();
           renderCategoriesList();
           renderProductsTable();
+          await loadDbStats();
 
-          showToast('Factory presets restored successfully!');
+          showToast('تمت استعادة الإعدادات والمنتجات الأصلية للبراند بنجاح!');
         } catch (err) {
-          console.error('Reset failed', err);
-          showToast('Failed to reset factory presets', 'error');
+          console.error('فشل في استرجاع الإعدادات الأصلية', err);
+          showToast('فشل في استعادة ضبط المصنع', 'error');
         }
       });
     }
   }
 
-  // ================= 10. TOAST NOTIFICATION UTILITY =================
+  // ================= 10. التنبيهات المنبثقة (TOAST NOTIFICATIONS) =================
   function showToast(message, type = 'success') {
     const container = document.getElementById('adminToastContainer');
     if (!container) return;
@@ -1040,7 +1071,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     toast.innerHTML = `
       <i data-lucide="${isError ? 'alert-triangle' : 'check'}" class="w-4 h-4 ${isError ? 'text-red-400' : 'text-emerald-400'}"></i>
-      <span class="font-bold uppercase tracking-wider">${escapeHtml(message)}</span>
+      <span class="font-bold">${escapeHtml(message)}</span>
     `;
 
     container.appendChild(toast);
@@ -1056,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 3500);
   }
 
-  // ================= 11. HELPER UTILITIES =================
+  // ================= 11. دوال مساعدة (HELPERS) =================
   function setVal(id, val) {
     const el = document.getElementById(id);
     if (el) el.value = val !== undefined && val !== null ? val : '';
@@ -1077,6 +1108,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       .replace(/'/g, '&#039;');
   }
 
-  // Kickoff Initialization
+  // انطلاق التشغيل
   init();
 });

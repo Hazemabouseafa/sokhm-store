@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>✦ SOKHM | Universal Admin Control Panel</title>
+  <title>✦ SOKHM | لوحة التحكم الإدارية ونظام إدارة المحتوى</title>
   
+  <!-- Google Fonts: Cairo, Tajawal, Space Grotesk, Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Cinzel:wght@600;700;800;900&family=Space+Grotesk:wght@500;700&family=Space+Mono:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -20,9 +25,9 @@
             noirMuted: '#8E8E8E'
           },
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            gothic: ['Cinzel', 'Space Grotesk', 'serif'],
-            heading: ['Space Grotesk', 'sans-serif'],
+            sans: ['Cairo', 'Tajawal', 'sans-serif'],
+            heading: ['Space Grotesk', 'Cairo', 'sans-serif'],
+            gothic: ['Cinzel', 'Cairo', 'serif'],
             mono: ['Space Mono', 'monospace']
           }
         }
@@ -39,6 +44,9 @@
   <script src="js/content-manager.js"></script>
 
   <style>
+    body {
+      font-family: 'Cairo', 'Tajawal', sans-serif;
+    }
     .admin-tab-btn {
       transition: all 0.2s ease;
       border-bottom: 2px solid transparent;
@@ -59,7 +67,7 @@
       border-radius: 10px;
       color: #FFFFFF;
       padding: 9px 14px;
-      font-size: 12px;
+      font-size: 13px;
       transition: border-color 0.2s;
     }
     .cms-input:focus {
@@ -68,16 +76,18 @@
     }
     .cms-label {
       display: block;
-      font-size: 10px;
-      font-family: 'Space Mono', monospace;
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      color: #8E8E8E;
+      font-size: 11px;
+      font-weight: 700;
+      color: #A3A3A3;
       margin-bottom: 6px;
+    }
+    ::selection {
+      background-color: #ffffff;
+      color: #000000;
     }
   </style>
 </head>
-<body class="bg-[#070707] text-white antialiased selection:bg-white selection:text-black min-h-screen flex flex-col justify-between">
+<body class="bg-[#070707] text-white antialiased min-h-screen flex flex-col justify-between">
 
   <!-- ================= TOP HEADER ================= -->
   <header class="w-full bg-[#080808]/95 backdrop-blur-md border-b border-[#1A1A1A] sticky top-0 z-40">
@@ -85,32 +95,33 @@
       
       <!-- Brand & Status -->
       <div class="flex items-center gap-4">
-        <a href="index.html" class="flex items-center gap-2.5 group cursor-pointer">
+        <a href="index.html" class="flex items-center gap-3 group cursor-pointer">
           <svg viewBox="0 0 100 120" class="w-5 h-6 text-white fill-current transform group-hover:rotate-45 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg">
             <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
           </svg>
           <div class="flex flex-col">
             <span class="font-gothic font-bold text-base tracking-[0.2em] text-white uppercase">✦ SOKHM</span>
-            <span class="font-mono text-[9px] text-neutral-400 tracking-widest uppercase">Admin Control Panel</span>
+            <span class="text-[10px] text-neutral-400 font-semibold tracking-wider">لوحة التحكم وإدارة المحتوى</span>
           </div>
         </a>
 
         <div class="h-5 w-px bg-[#1A1A1A] hidden sm:block"></div>
 
-        <span class="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111] border border-[#222] font-mono text-[10px] uppercase tracking-wider text-neutral-300">
+        <!-- Database Badge -->
+        <span id="dbHeaderBadge" class="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#111] border border-[#222] text-[11px] font-bold text-neutral-300">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Live Sync Active • EGP
+          <span id="dbBadgeText">قاعدة بيانات SQLite مفعلة • متصلة</span>
         </span>
       </div>
 
       <!-- Quick Actions -->
-      <div class="flex items-center gap-3 font-mono">
+      <div class="flex items-center gap-3 font-sans">
         <a 
           href="index.html" 
           target="_blank" 
-          class="px-4 py-2 rounded-full border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm"
+          class="px-4 py-2 rounded-full border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black text-white text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
         >
-          <span>Live Store</span>
+          <span>معاينة المتجر الحي</span>
           <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
         </a>
       </div>
@@ -119,31 +130,31 @@
 
     <!-- ================= SUB-NAVIGATION TABS ================= -->
     <div class="border-t border-[#141414] bg-[#070707] px-6 sm:px-10 overflow-x-auto">
-      <div class="max-w-[1400px] mx-auto flex items-center gap-2 sm:gap-6 font-mono text-xs">
+      <div class="max-w-[1400px] mx-auto flex items-center gap-2 sm:gap-6 text-xs font-bold">
         
         <button class="admin-tab-btn active px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-homepage">
           <i data-lucide="home" class="w-4 h-4"></i>
-          <span>Homepage Texts (الرئيسية)</span>
+          <span>نصوص الرئيسية (Homepage Texts)</span>
         </button>
 
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-product-page">
           <i data-lucide="file-text" class="w-4 h-4"></i>
-          <span>Product Page Texts (صفحة المنتج)</span>
+          <span>نصوص صفحة المنتج (Product Page)</span>
         </button>
 
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-products">
           <i data-lucide="shirt" class="w-4 h-4"></i>
-          <span>Products Catalog (المنتجات)</span>
+          <span>كتالوج المنتجات (Products Catalog)</span>
         </button>
 
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-categories">
           <i data-lucide="layers" class="w-4 h-4"></i>
-          <span>Categories (الأقسام)</span>
+          <span>الأقسام والتصنيفات (Categories)</span>
         </button>
 
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-settings">
-          <i data-lucide="settings" class="w-4 h-4"></i>
-          <span>Settings & Backup (الإعدادات)</span>
+          <i data-lucide="database" class="w-4 h-4"></i>
+          <span>قاعدة البيانات والنظام (Database & System)</span>
         </button>
 
       </div>
@@ -154,165 +165,165 @@
   <main class="flex-grow max-w-[1400px] w-full mx-auto px-6 sm:px-10 py-8">
 
     <!-- ========================================================
-         TAB 1: HOMEPAGE TEXTS (التحكم في نصوص الصفحة الرئيسية)
+         التبويب 1: نصوص الصفحة الرئيسية (HOMEPAGE TEXTS)
          ======================================================== -->
     <section id="tab-homepage" class="tab-pane space-y-8">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#1A1A1A] gap-4">
         <div>
-          <span class="text-[10px] font-mono text-neutral-400 uppercase tracking-[0.25em] block">HOMEPAGE CONTENT MANAGER</span>
-          <h2 class="font-heading font-extrabold text-2xl text-white uppercase tracking-tight mt-1">
-            Homepage Texts & Copy
+          <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">إدارة محتوى المتجر</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1">
+            نصوص وعبارات الصفحة الرئيسية
           </h2>
-          <p class="text-xs text-neutral-400 font-sans mt-0.5">
-            Modify any headline, paragraph, value proposition, banner, or footer text on the homepage.
+          <p class="text-xs text-neutral-400 mt-1">
+            تحكم كامل وسلس في كل عنوان، فقرة سردية، شريط المزايا الأربعة، البانر الإعلاني، ومعلومات الفوتر.
           </p>
         </div>
 
-        <button id="saveHomepageBtn" class="px-6 py-3 rounded-full bg-white text-black font-mono font-bold text-xs uppercase tracking-wider hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer shadow-lg">
+        <button id="saveHomepageBtn" class="px-6 py-3 rounded-full bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer shadow-lg whitespace-nowrap">
           <i data-lucide="check" class="w-4 h-4"></i>
-          <span>Save Homepage Changes</span>
+          <span>حفظ تغييرات الرئيسية</span>
         </button>
       </div>
 
-      <!-- 1. Hero Section -->
+      <!-- 1. قسم الهيرو (Hero Section) -->
       <div class="cms-card p-6 space-y-5">
         <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
           <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
-          <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">1. Hero Section Texts</h3>
+          <h3 class="font-bold text-sm text-white">١. نصوص واجهة الهيرو الرئيسية (Hero Section)</h3>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="cms-label">Kicker / Top Subtitle</label>
-            <input type="text" id="hp_hero_kicker" class="cms-input w-full" placeholder="MORE THAN CLOTHING">
+            <label class="cms-label">البادئة العلوية (Kicker / Subtitle)</label>
+            <input type="text" id="hp_hero_kicker" class="cms-input w-full" placeholder="مثال: MORE THAN CLOTHING">
           </div>
           <div>
-            <label class="cms-label">Brand Title</label>
-            <input type="text" id="hp_hero_title" class="cms-input w-full" placeholder="SOKHM">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="cms-label">Main Headline</label>
-            <input type="text" id="hp_hero_subtitle" class="cms-input w-full" placeholder="BUILT DIFFERENT">
-          </div>
-          <div>
-            <label class="cms-label">CTA Button Label</label>
-            <input type="text" id="hp_hero_cta" class="cms-input w-full" placeholder="SHOP NOW">
+            <label class="cms-label">اسم البراند الرئيسي (Brand Title)</label>
+            <input type="text" id="hp_hero_title" class="cms-input w-full" placeholder="مثال: SOKHM">
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="cms-label">Hero Narrative Paragraph</label>
-            <textarea id="hp_hero_desc" rows="2" class="cms-input w-full" placeholder="Brand story and manifesto..."></textarea>
+            <label class="cms-label">العنوان التسويقي الرئيسي (Headline)</label>
+            <input type="text" id="hp_hero_subtitle" class="cms-input w-full" placeholder="مثال: BUILT DIFFERENT">
           </div>
           <div>
-            <label class="cms-label">Scroll Label</label>
-            <input type="text" id="hp_hero_scroll" class="cms-input w-full" placeholder="SCROLL">
+            <label class="cms-label">نص زر الشراء الرئيسي (CTA Button)</label>
+            <input type="text" id="hp_hero_cta" class="cms-input w-full" placeholder="مثال: SHOP NOW أو تسوق الآن">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="cms-label">الفقرة الوصفية والمانفيستو (Narrative)</label>
+            <textarea id="hp_hero_desc" rows="2" class="cms-input w-full" placeholder="القصة والمانفيستو الخاص بالبراند..."></textarea>
+          </div>
+          <div>
+            <label class="cms-label">مؤشر التمرير للأسفل (Scroll Label)</label>
+            <input type="text" id="hp_hero_scroll" class="cms-input w-full" placeholder="مثال: SCROLL أو مرر للأسفل">
           </div>
         </div>
       </div>
 
-      <!-- 2. Value Bar (4 items) -->
+      <!-- 2. شريط المزايا الأربعة (Value Bar) -->
       <div class="cms-card p-6 space-y-5">
         <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
           <i data-lucide="shield-check" class="w-4 h-4 text-white"></i>
-          <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">2. 4-Column Value Bar</h3>
+          <h3 class="font-bold text-sm text-white">٢. شريط المزايا الأربعة (4-Column Value Bar)</h3>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <!-- Item 1 -->
+          <!-- الميزة 1 -->
           <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-2">
-            <span class="text-[9px] font-mono text-neutral-400 uppercase">Item 1 (Quality)</span>
+            <span class="text-[10px] font-bold text-neutral-400">الميزة الأولى (الجودة الفائقة)</span>
             <input type="text" id="hp_val_0_title" class="cms-input w-full font-bold" placeholder="PREMIUM QUALITY">
             <input type="text" id="hp_val_0_sub" class="cms-input w-full" placeholder="Built to last.">
           </div>
 
-          <!-- Item 2 -->
+          <!-- الميزة 2 -->
           <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-2">
-            <span class="text-[9px] font-mono text-neutral-400 uppercase">Item 2 (Shipping)</span>
+            <span class="text-[10px] font-bold text-neutral-400">الميزة الثانية (الشحن بالجنيه المصري)</span>
             <input type="text" id="hp_val_1_title" class="cms-input w-full font-bold" placeholder="FREE SHIPPING">
             <input type="text" id="hp_val_1_sub" class="cms-input w-full" placeholder="On orders over 2,500 EGP.">
           </div>
 
-          <!-- Item 3 -->
+          <!-- الميزة 3 -->
           <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-2">
-            <span class="text-[9px] font-mono text-neutral-400 uppercase">Item 3 (Security)</span>
+            <span class="text-[10px] font-bold text-neutral-400">الميزة الثالثة (أمان المدفوعات)</span>
             <input type="text" id="hp_val_2_title" class="cms-input w-full font-bold" placeholder="SECURE PAYMENTS">
             <input type="text" id="hp_val_2_sub" class="cms-input w-full" placeholder="Shop with confidence.">
           </div>
 
-          <!-- Item 4 -->
+          <!-- الميزة 4 -->
           <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-2">
-            <span class="text-[9px] font-mono text-neutral-400 uppercase">Item 4 (Sustainability)</span>
+            <span class="text-[10px] font-bold text-neutral-400">الميزة الرابعة (الاستدامة والبيئة)</span>
             <input type="text" id="hp_val_3_title" class="cms-input w-full font-bold" placeholder="SUSTAINABLE APPROACH">
             <input type="text" id="hp_val_3_sub" class="cms-input w-full" placeholder="Better for tomorrow.">
           </div>
         </div>
       </div>
 
-      <!-- 3. Featured Collection & Bottom Banner -->
+      <!-- 3. عناوين المجموعة والبانر السفلي -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Collection Section -->
+        <!-- قسم المجموعة المميزة -->
         <div class="cms-card p-6 space-y-4">
           <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
             <i data-lucide="tag" class="w-4 h-4 text-white"></i>
-            <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">3. Featured Collection Headers</h3>
+            <h3 class="font-bold text-sm text-white">٣. عناوين تشكيلة المنتجات المميزة (Featured Collection)</h3>
           </div>
           <div>
-            <label class="cms-label">Section Kicker</label>
+            <label class="cms-label">بادئة عنوان التشكيلة (Kicker)</label>
             <input type="text" id="hp_col_kicker" class="cms-input w-full" placeholder="FEATURED COLLECTION">
           </div>
           <div>
-            <label class="cms-label">Section Title</label>
-            <input type="text" id="hp_col_title" class="cms-input w-full" placeholder="BEST SELLERS">
+            <label class="cms-label">عنوان التشكيلة الرئيسي</label>
+            <input type="text" id="hp_col_title" class="cms-input w-full" placeholder="BEST SELLERS أو الأكثر مبيعاً">
           </div>
           <div>
-            <label class="cms-label">Action Link Text</label>
-            <input type="text" id="hp_col_viewall" class="cms-input w-full" placeholder="VIEW ALL">
+            <label class="cms-label">نص زر مشاهدة الكل</label>
+            <input type="text" id="hp_col_viewall" class="cms-input w-full" placeholder="VIEW ALL أو عرض الكل">
           </div>
         </div>
 
-        <!-- Bottom Banner -->
+        <!-- البانر السينمائي السفلي -->
         <div class="cms-card p-6 space-y-4">
           <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
             <i data-lucide="mountain" class="w-4 h-4 text-white"></i>
-            <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">4. Bottom Statement Banner</h3>
+            <h3 class="font-bold text-sm text-white">٤. البانر الإعلاني السفلي (Bottom Statement Banner)</h3>
           </div>
           <div>
-            <label class="cms-label">Brand Tag</label>
+            <label class="cms-label">وسم البراند (Brand Tag)</label>
             <input type="text" id="hp_banner_brand" class="cms-input w-full" placeholder="✦ SOKHM">
           </div>
           <div>
-            <label class="cms-label">Banner Headline</label>
+            <label class="cms-label">العنوان العريض للبانر</label>
             <input type="text" id="hp_banner_head" class="cms-input w-full" placeholder="FOR THE ONES WHO KEEP GOING">
           </div>
           <div>
-            <label class="cms-label">Button CTA Text</label>
-            <input type="text" id="hp_banner_cta" class="cms-input w-full" placeholder="OUR STORY">
+            <label class="cms-label">نص زر قصة البراند (CTA)</label>
+            <input type="text" id="hp_banner_cta" class="cms-input w-full" placeholder="OUR STORY أو قصتنا">
           </div>
         </div>
       </div>
 
-      <!-- 4. Footer Texts -->
+      <!-- 4. نصوص الفوتر -->
       <div class="cms-card p-6 space-y-4">
         <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
           <i data-lucide="info" class="w-4 h-4 text-white"></i>
-          <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">5. Footer Information</h3>
+          <h3 class="font-bold text-sm text-white">٥. نصوص تذييل الصفحة (Footer Information)</h3>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="cms-label">Footer Brand Wordmark</label>
+            <label class="cms-label">اسم البراند في الفوتر</label>
             <input type="text" id="hp_foot_brand" class="cms-input w-full" placeholder="✦ SOKHM">
           </div>
           <div>
-            <label class="cms-label">Footer Brand Slogan</label>
+            <label class="cms-label">شعار البراند (Slogan)</label>
             <input type="text" id="hp_foot_slogan" class="cms-input w-full" placeholder="BUILT DIFFERENT">
           </div>
           <div>
-            <label class="cms-label">Copyright Notice</label>
+            <label class="cms-label">حقوق النشر والملكية (Copyright)</label>
             <input type="text" id="hp_foot_copy" class="cms-input w-full" placeholder="© 2026 SOKHM ATELIER. All rights reserved.">
           </div>
         </div>
@@ -320,156 +331,156 @@
     </section>
 
     <!-- ========================================================
-         TAB 2: PRODUCT PAGE TEXTS (التحكم في نصوص صفحة المنتج)
+         التبويب 2: نصوص صفحة المنتج (PRODUCT PAGE TEXTS)
          ======================================================== -->
     <section id="tab-product-page" class="tab-pane hidden space-y-8">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#1A1A1A] gap-4">
         <div>
-          <span class="text-[10px] font-mono text-neutral-400 uppercase tracking-[0.25em] block">PRODUCT PAGE CONTENT MANAGER</span>
-          <h2 class="font-heading font-extrabold text-2xl text-white uppercase tracking-tight mt-1">
-            Product Detail Page Texts
+          <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">إدارة تفاصيل المنتج</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1">
+            نصوص صفحة تفاصيل المنتج
           </h2>
-          <p class="text-xs text-neutral-400 font-sans mt-0.5">
-            Configure labels, guarantees, accordion headers, size guide text, and shopping bag labels.
+          <p class="text-xs text-neutral-400 mt-1">
+            التحكم في عبارات مسار التصفح، الأزرار، الضمانات وشارات الثقة، القوائم المطوية، وسلة المشتريات.
           </p>
         </div>
 
-        <button id="saveProductPageBtn" class="px-6 py-3 rounded-full bg-white text-black font-mono font-bold text-xs uppercase tracking-wider hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer shadow-lg">
+        <button id="saveProductPageBtn" class="px-6 py-3 rounded-full bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer shadow-lg whitespace-nowrap">
           <i data-lucide="check" class="w-4 h-4"></i>
-          <span>Save Product Page Changes</span>
+          <span>حفظ تغييرات صفحة المنتج</span>
         </button>
       </div>
 
-      <!-- 1. Breadcrumbs & Kicker -->
+      <!-- 1. مسار التصفح والبادئة -->
       <div class="cms-card p-6 space-y-4">
         <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
           <i data-lucide="navigation" class="w-4 h-4 text-white"></i>
-          <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">1. Breadcrumbs & Kicker</h3>
+          <h3 class="font-bold text-sm text-white">١. مسار التصفح والبادئة (Breadcrumbs & Kicker)</h3>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="cms-label">Home Breadcrumb</label>
-            <input type="text" id="pp_bc_home" class="cms-input w-full" placeholder="HOME">
+            <label class="cms-label">رابط الرئيسية (Home)</label>
+            <input type="text" id="pp_bc_home" class="cms-input w-full" placeholder="HOME أو الرئيسية">
           </div>
           <div>
-            <label class="cms-label">Collection Breadcrumb</label>
+            <label class="cms-label">رابط التشكيلة (Collection)</label>
             <input type="text" id="pp_bc_col" class="cms-input w-full" placeholder="BEST SELLERS">
           </div>
           <div>
-            <label class="cms-label">Back Link Text</label>
+            <label class="cms-label">نص زر الرجوع للتشكيلة</label>
             <input type="text" id="pp_bc_back" class="cms-input w-full" placeholder="Back to Collection">
           </div>
         </div>
         <div>
-          <label class="cms-label">Product Kicker Prefix</label>
+          <label class="cms-label">بادئة اسم القطعة (Kicker Prefix)</label>
           <input type="text" id="pp_kicker_prefix" class="cms-input w-full" placeholder="✦ SOKHM ATELIER //">
         </div>
       </div>
 
-      <!-- 2. Buttons & Purchasing Labels -->
+      <!-- 2. أزرار الشراء والطلب -->
       <div class="cms-card p-6 space-y-4">
         <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
           <i data-lucide="shopping-bag" class="w-4 h-4 text-white"></i>
-          <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">2. Button & Checkout Labels</h3>
+          <h3 class="font-bold text-sm text-white">٢. نصوص أزرار الطلب والشراء السريع</h3>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="cms-label">Size Guide Button Text</label>
-            <input type="text" id="pp_btn_sizeguide" class="cms-input w-full" placeholder="Size Guide (CM)">
+            <label class="cms-label">نص زر دليل المقاسات</label>
+            <input type="text" id="pp_btn_sizeguide" class="cms-input w-full" placeholder="Size Guide (CM) أو دليل المقاسات">
           </div>
           <div>
-            <label class="cms-label">Add To Bag Button Prefix</label>
-            <input type="text" id="pp_btn_addtobag" class="cms-input w-full" placeholder="ADD TO BAG">
+            <label class="cms-label">بادئة زر الإضافة للسلة</label>
+            <input type="text" id="pp_btn_addtobag" class="cms-input w-full" placeholder="ADD TO BAG أو أضف للسلة">
           </div>
           <div>
-            <label class="cms-label">Express Checkout Button</label>
-            <input type="text" id="pp_btn_express" class="cms-input w-full" placeholder="EXPRESS CHECKOUT">
+            <label class="cms-label">نص زر الشراء السريع المباشر</label>
+            <input type="text" id="pp_btn_express" class="cms-input w-full" placeholder="EXPRESS CHECKOUT أو شراء سريع">
           </div>
         </div>
       </div>
 
-      <!-- 3. Highlights & Guarantees (3 items) -->
+      <!-- 3. شارات الثقة والضمانات -->
       <div class="cms-card p-6 space-y-4">
         <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
           <i data-lucide="check-circle" class="w-4 h-4 text-white"></i>
-          <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">3. Trust Badges & Guarantee Checklist</h3>
+          <h3 class="font-bold text-sm text-white">٣. شارات الثقة والضمانات (3 نقاط)</h3>
         </div>
         <div class="space-y-3">
           <div>
-            <label class="cms-label">Highlight 1 (Fabric & Density)</label>
+            <label class="cms-label">الضمان الأول (خامة القماش وكثافته)</label>
             <input type="text" id="pp_hl_0" class="cms-input w-full" placeholder="500 GSM Ultra-Dense Egyptian Combed Cotton">
           </div>
           <div>
-            <label class="cms-label">Highlight 2 (Shipping & Delivery Promise)</label>
+            <label class="cms-label">الضمان الثاني (وعد وتكلفة الشحن السريع بالجنيه)</label>
             <input type="text" id="pp_hl_1" class="cms-input w-full" placeholder="Free Express Courier Delivery on Orders Over 2,500 EGP">
           </div>
           <div>
-            <label class="cms-label">Highlight 3 (Exchange Policy)</label>
+            <label class="cms-label">الضمان الثالث (سياسة الاستبدال السلسة)</label>
             <input type="text" id="pp_hl_2" class="cms-input w-full" placeholder="30-Day Hassle-Free Exchange Policy">
           </div>
         </div>
       </div>
 
-      <!-- 4. Accordions & Logistics -->
+      <!-- 4. القوائم المطوية الهندسية والشحن -->
       <div class="cms-card p-6 space-y-4">
         <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
           <i data-lucide="list" class="w-4 h-4 text-white"></i>
-          <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">4. Technical Accordions & Shipping</h3>
+          <h3 class="font-bold text-sm text-white">٤. القوائم المطوية الهندسية وتفاصيل الشحن</h3>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="cms-label">Accordion 1 Title</label>
+            <label class="cms-label">عنوان القائمة الأولى</label>
             <input type="text" id="pp_acc_0_title" class="cms-input w-full" placeholder="Details & Architectural Fit">
           </div>
           <div>
-            <label class="cms-label">Accordion 2 Title</label>
+            <label class="cms-label">عنوان القائمة الثانية</label>
             <input type="text" id="pp_acc_1_title" class="cms-input w-full" placeholder="Fabric & Care (500 GSM)">
           </div>
           <div>
-            <label class="cms-label">Accordion 3 Title</label>
+            <label class="cms-label">عنوان القائمة الثالثة (الشحن)</label>
             <input type="text" id="pp_acc_2_title" class="cms-input w-full" placeholder="Shipping & Doorstep Logistics">
           </div>
         </div>
         <div>
-          <label class="cms-label">Accordion 3 Content (Shipping Policy)</label>
-          <textarea id="pp_acc_2_content" rows="2" class="cms-input w-full" placeholder="Shipping timeline across Egyptian governorates..."></textarea>
+          <label class="cms-label">محتوى تفاصيل وسياسة الشحن لكافة المحافظات المصرية</label>
+          <textarea id="pp_acc_2_content" rows="2" class="cms-input w-full" placeholder="تفاصيل مواعيد الشحن السريع للمحافظات المصرية..."></textarea>
         </div>
       </div>
 
-      <!-- 5. Related Title & Cart Drawer -->
+      <!-- 5. الترشيحات المقترحة ودرج السلة -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="cms-card p-6 space-y-4">
           <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
             <i data-lucide="sparkle" class="w-4 h-4 text-white"></i>
-            <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">5. Curated Recommendations Header</h3>
+            <h3 class="font-bold text-sm text-white">٥. عنوان القطع المقترحة (Recommendations)</h3>
           </div>
           <div>
-            <label class="cms-label">Related Section Heading</label>
-            <input type="text" id="pp_related_title" class="cms-input w-full" placeholder="YOU MAY ALSO LIKE">
+            <label class="cms-label">عنوان قسم المقترحات</label>
+            <input type="text" id="pp_related_title" class="cms-input w-full" placeholder="YOU MAY ALSO LIKE أو قد يعجبك أيضاً">
           </div>
         </div>
 
         <div class="cms-card p-6 space-y-4">
           <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
             <i data-lucide="shopping-bag" class="w-4 h-4 text-white"></i>
-            <h3 class="font-heading font-bold text-sm uppercase text-white tracking-wider">6. Cart Drawer Labels</h3>
+            <h3 class="font-bold text-sm text-white">٦. نصوص درج سلة التسوق (Cart Drawer)</h3>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="cms-label">Bag Drawer Title</label>
-              <input type="text" id="pp_cart_title" class="cms-input w-full" placeholder="SHOPPING BAG">
+              <label class="cms-label">عنوان السلة</label>
+              <input type="text" id="pp_cart_title" class="cms-input w-full" placeholder="SHOPPING BAG أو سلة التسوق">
             </div>
             <div>
-              <label class="cms-label">Empty Heading</label>
+              <label class="cms-label">رسالة السلة الفارغة</label>
               <input type="text" id="pp_cart_empty_title" class="cms-input w-full" placeholder="YOUR BAG IS EMPTY">
             </div>
             <div>
-              <label class="cms-label">Subtotal Label</label>
-              <input type="text" id="pp_cart_subtotal" class="cms-input w-full" placeholder="SUBTOTAL">
+              <label class="cms-label">نص المجموع الفرعي</label>
+              <input type="text" id="pp_cart_subtotal" class="cms-input w-full" placeholder="SUBTOTAL أو المجموع">
             </div>
             <div>
-              <label class="cms-label">Checkout Button</label>
-              <input type="text" id="pp_cart_checkout" class="cms-input w-full" placeholder="CHECKOUT">
+              <label class="cms-label">نص زر إتمام الشراء</label>
+              <input type="text" id="pp_cart_checkout" class="cms-input w-full" placeholder="CHECKOUT أو إتمام الطلب">
             </div>
           </div>
         </div>
@@ -477,44 +488,44 @@
     </section>
 
     <!-- ========================================================
-         TAB 3: PRODUCTS CATALOG (إدارة المنتجات الكاملة)
+         التبويب 3: كتالوج المنتجات الكامل (PRODUCTS CATALOG)
          ======================================================== -->
     <section id="tab-products" class="tab-pane hidden space-y-6">
       
       <!-- Top Bar: Metrics & Add Button -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1A1A1A]">
         <div>
-          <span class="text-[10px] font-mono text-neutral-400 uppercase tracking-[0.25em] block">CATALOG INVENTORY ARCHIVE</span>
-          <h2 class="font-heading font-extrabold text-2xl text-white uppercase tracking-tight mt-1">
-            Products & Garment Pieces
+          <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">أرشيف مخزون الملابس الفاخرة</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1">
+            قطع وملابس البراند (المنتجات)
           </h2>
-          <p class="text-xs text-neutral-400 font-sans mt-0.5">
-            Manage your streetwear lineup, photos, EGP prices, colorways, and sizes.
+          <p class="text-xs text-neutral-400 mt-1">
+            إدارة كاملة لقطع الستريت وير، الأسعار بالجنيه المصري (EGP)، رفع الصور بجودة 2K، الألوان، والمقاسات.
           </p>
         </div>
 
-        <button id="openAddProductModalBtn" class="px-5 py-3 rounded-full bg-white text-black font-mono font-bold text-xs uppercase tracking-wider hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer shadow-lg whitespace-nowrap">
+        <button id="openAddProductModalBtn" class="px-5 py-3 rounded-full bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer shadow-lg whitespace-nowrap">
           <i data-lucide="plus" class="w-4 h-4"></i>
-          <span>+ Add New Garment</span>
+          <span>+ إضافة قطعة ملابس جديدة</span>
         </button>
       </div>
 
       <!-- Search & Filters -->
-      <div class="cms-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs">
+      <div class="cms-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-sans">
         <div class="relative w-full sm:w-80">
-          <i data-lucide="search" class="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <i data-lucide="search" class="w-4 h-4 text-neutral-400 absolute right-3 top-1/2 -translate-y-1/2"></i>
           <input 
             type="text" 
             id="productSearchInput" 
-            placeholder="Search products by title or category..." 
-            class="cms-input w-full pl-9 pr-4 py-2"
+            placeholder="البحث في المنتجات بالاسم أو القسم..." 
+            class="cms-input w-full pr-9 pl-4 py-2"
           >
         </div>
 
         <div class="flex items-center gap-3 w-full sm:w-auto">
-          <span class="text-neutral-400 uppercase tracking-wider text-[11px]">Filter:</span>
+          <span class="text-neutral-400 font-bold text-[12px]">تصفية بالقسم:</span>
           <select id="productCategoryFilter" class="cms-input py-2">
-            <option value="all">All Categories</option>
+            <option value="all">جميع الأقسام</option>
           </select>
         </div>
       </div>
@@ -522,68 +533,68 @@
       <!-- Products Grid / Table -->
       <div class="cms-card overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full text-left font-mono text-xs">
-            <thead class="bg-[#080808] border-b border-[#1A1A1A] text-[10px] text-neutral-400 uppercase font-semibold">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-[#080808] border-b border-[#1A1A1A] text-[11px] text-neutral-400 font-bold">
               <tr>
-                <th class="py-3.5 px-6">Garment Piece</th>
-                <th class="py-3.5 px-4">Category</th>
-                <th class="py-3.5 px-4">Price (EGP)</th>
-                <th class="py-3.5 px-4">Badge</th>
-                <th class="py-3.5 px-4">Sizes</th>
-                <th class="py-3.5 px-6 text-right">Actions</th>
+                <th class="py-3.5 px-6">القطعة والاسم</th>
+                <th class="py-3.5 px-4">القسم</th>
+                <th class="py-3.5 px-4">السعر (ج.م)</th>
+                <th class="py-3.5 px-4">الشارة</th>
+                <th class="py-3.5 px-4">المقاسات</th>
+                <th class="py-3.5 px-6 text-left">الإجراءات</th>
               </tr>
             </thead>
             <tbody id="productsTableBody" class="divide-y divide-[#141414]">
-              <!-- Dynamically populated via js/admin.js -->
+              <!-- يتم توليدها ديناميكياً بواسطة js/admin.js -->
             </tbody>
           </table>
         </div>
 
-        <div id="productsEmptyState" class="hidden py-16 text-center text-xs text-neutral-500 font-mono">
+        <div id="productsEmptyState" class="hidden py-16 text-center text-xs text-neutral-500 font-sans">
           <i data-lucide="shirt" class="w-8 h-8 mx-auto mb-2 text-neutral-600 stroke-[1.2]"></i>
-          <p class="font-bold text-white uppercase">No products match your search</p>
+          <p class="font-bold text-white text-sm">لا توجد قطع مطابقة لعملية البحث</p>
         </div>
       </div>
 
     </section>
 
     <!-- ========================================================
-         TAB 4: CATEGORIES (إدارة الأقسام)
+         التبويب 4: إدارة الأقسام (CATEGORIES)
          ======================================================== -->
     <section id="tab-categories" class="tab-pane hidden space-y-6">
       
       <div class="pb-4 border-b border-[#1A1A1A]">
-        <span class="text-[10px] font-mono text-neutral-400 uppercase tracking-[0.25em] block">CATEGORY HIERARCHY</span>
-        <h2 class="font-heading font-extrabold text-2xl text-white uppercase tracking-tight mt-1">
-          Store Categories
+        <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">هيكلية وتصنيفات المتجر</span>
+        <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1">
+          أقسام المتجر (Categories)
         </h2>
-        <p class="text-xs text-neutral-400 font-sans mt-0.5">
-          Add or remove garment departments and filters.
+        <p class="text-xs text-neutral-400 mt-1">
+          إضافة أو حذف أقسام وتصنيفات الملابس وفلاتر التصفح في المتجر.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 font-mono">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <!-- Add Category Form -->
         <div class="lg:col-span-5">
           <div class="cms-card p-6 space-y-4">
             <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
               <i data-lucide="folder-plus" class="w-4 h-4 text-white"></i>
-              <h3 class="font-heading font-bold text-sm uppercase text-white">Add New Category</h3>
+              <h3 class="font-bold text-sm text-white">إضافة قسم جديد</h3>
             </div>
 
             <form id="addCategoryForm" class="space-y-4">
               <div>
-                <label class="cms-label">Category Name *</label>
-                <input type="text" id="catNameInput" required placeholder="e.g. Leather, Knitwear" class="cms-input w-full">
+                <label class="cms-label">اسم القسم *</label>
+                <input type="text" id="catNameInput" required placeholder="مثال: جلود، ملابس صوفية، كاب..." class="cms-input w-full">
               </div>
 
               <div>
-                <label class="cms-label">Slug (Optional)</label>
-                <input type="text" id="catSlugInput" placeholder="auto-generated from name" class="cms-input w-full">
+                <label class="cms-label">المعرف اللطيف (Slug) - اختياري</label>
+                <input type="text" id="catSlugInput" placeholder="يتم توليده تلقائياً من الاسم (مثل: leather)" class="cms-input w-full">
               </div>
 
               <button type="submit" class="w-full py-3 bg-white text-black font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer">
-                + Create Category
+                + إنشاء القسم الآن
               </button>
             </form>
           </div>
@@ -595,13 +606,13 @@
             <div class="flex items-center justify-between pb-3 border-b border-[#1A1A1A]">
               <div class="flex items-center gap-2">
                 <i data-lucide="layers" class="w-4 h-4 text-white"></i>
-                <h3 class="font-heading font-bold text-sm uppercase text-white">Active Categories</h3>
+                <h3 class="font-bold text-sm text-white">الأقسام المفعلة حالياً</h3>
               </div>
-              <span id="catTotalBadge" class="text-[11px] text-neutral-400 font-mono">5 categories</span>
+              <span id="catTotalBadge" class="text-[11px] text-neutral-400 font-bold">5 أقسام</span>
             </div>
 
             <div id="categoryCardsList" class="space-y-2.5">
-              <!-- Dynamically rendered -->
+              <!-- يتم توليدها ديناميكياً -->
             </div>
           </div>
         </div>
@@ -610,70 +621,93 @@
     </section>
 
     <!-- ========================================================
-         TAB 5: SETTINGS & BACKUP (الإعدادات والنسخ الاحتياطي)
+         التبويب 5: النظام وقواعد البيانات (SYSTEM & DATABASE)
          ======================================================== -->
     <section id="tab-settings" class="tab-pane hidden space-y-6">
       <div class="pb-4 border-b border-[#1A1A1A]">
-        <span class="text-[10px] font-mono text-neutral-400 uppercase tracking-[0.25em] block">SYSTEM & STORAGE</span>
-        <h2 class="font-heading font-extrabold text-2xl text-white uppercase tracking-tight mt-1">
-          Settings, Backup & Maintenance
+        <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">البنية التحتية وقواعد البيانات</span>
+        <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1">
+          حالة النظام، قاعدة البيانات والنسخ الاحتياطي
         </h2>
-        <p class="text-xs text-neutral-400 font-sans mt-0.5">
-          Export full site configurations, import backups, or restore original SOKHM showcase presets.
+        <p class="text-xs text-neutral-400 mt-1">
+          مراقبة حالة محرك قاعدة بيانات SQLite، تنزيل نسخ احتياطية كاملة، أو استعادة ضبط المصنع.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono">
+      <!-- Database Status Overview Banner -->
+      <div class="cms-card p-6 bg-gradient-to-r from-[#0C0C0C] to-[#121212] border-emerald-950/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-950/40 border border-emerald-800/60 flex items-center justify-center text-emerald-400 flex-shrink-0">
+            <i data-lucide="database" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-sm text-white">قاعدة بيانات SQLite العلائقية (Relational Database)</h3>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-900/60 text-emerald-300 text-[10px] font-bold">نشطة ومحمية</span>
+            </div>
+            <p id="dbStatsSummary" class="text-xs text-neutral-400 mt-1">
+              المحرك: SQLite 3 مدمج • ملف التخزين: <code>database/sokhm.db</code> • سرعة استجابة فائقة.
+            </p>
+          </div>
+        </div>
+
+        <button id="refreshDbStatsBtn" class="px-4 py-2 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>تحديث حالة القاعدة</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        <!-- Export Backup -->
+        <!-- تصدير نسخة احتياطية -->
         <div class="cms-card p-6 flex flex-col justify-between space-y-4">
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-white">
               <i data-lucide="download" class="w-4 h-4"></i>
-              <h4 class="font-bold text-sm uppercase">Export Backup</h4>
+              <h4 class="font-bold text-sm">تصدير نسخة احتياطية (JSON)</h4>
             </div>
-            <p class="text-xs text-neutral-400 font-sans leading-relaxed">
-              Download a complete JSON snapshot containing all current texts, categories, and products.
+            <p class="text-xs text-neutral-400 leading-relaxed">
+              تنزيل لقطة كاملة بتنسيق JSON تحتوي على جميع النصوص الحالية والمنتجات والأقسام المحفوظة في قاعدة البيانات.
             </p>
           </div>
 
-          <button id="exportBackupBtn" class="w-full py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer">
-            Download JSON Backup
+          <button id="exportBackupBtn" class="w-full py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs transition-all cursor-pointer">
+            تنزيل النسخة الاحتياطية
           </button>
         </div>
 
-        <!-- Import Backup -->
+        <!-- استيراد نسخة احتياطية -->
         <div class="cms-card p-6 flex flex-col justify-between space-y-4">
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-white">
               <i data-lucide="upload" class="w-4 h-4"></i>
-              <h4 class="font-bold text-sm uppercase">Import Backup</h4>
+              <h4 class="font-bold text-sm">استيراد نسخة احتياطية</h4>
             </div>
-            <p class="text-xs text-neutral-400 font-sans leading-relaxed">
-              Restore previously saved products and texts from a JSON file.
+            <p class="text-xs text-neutral-400 leading-relaxed">
+              استرجاع المنتجات والنصوص من ملف نسخة احتياطية تم حفظه مسبقاً وتخزينه في قاعدة البيانات فوراً.
             </p>
           </div>
 
-          <label class="w-full py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs uppercase tracking-wider text-center transition-all cursor-pointer block">
-            <span>Select JSON File</span>
+          <label class="w-full py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs text-center transition-all cursor-pointer block">
+            <span>اختيار ملف النسخة (JSON)</span>
             <input type="file" id="importBackupInput" accept=".json" class="hidden">
           </label>
         </div>
 
-        <!-- Reset Factory Defaults -->
+        <!-- استعادة ضبط المصنع -->
         <div class="cms-card p-6 flex flex-col justify-between space-y-4 border-red-950/40">
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-red-400">
               <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-              <h4 class="font-bold text-sm uppercase">Reset Factory Presets</h4>
+              <h4 class="font-bold text-sm">استعادة ضبط المصنع</h4>
             </div>
-            <p class="text-xs text-neutral-400 font-sans leading-relaxed">
-              Reset all texts and products back to the original ✦ SOKHM Dark Noir defaults.
+            <p class="text-xs text-neutral-400 leading-relaxed">
+              استعادة كافة النصوص والمنتجات الأصلية للبراند إلى حالتها الافتراضية الأولى في قاعدة البيانات.
             </p>
           </div>
 
-          <button id="resetFactoryBtn" class="w-full py-2.5 rounded-xl border border-red-900/60 bg-red-950/30 text-red-300 hover:bg-red-900 hover:text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer">
-            Reset to Factory Defaults
+          <button id="resetFactoryBtn" class="w-full py-2.5 rounded-xl border border-red-900/60 bg-red-950/30 text-red-300 hover:bg-red-900 hover:text-white font-bold text-xs transition-all cursor-pointer">
+            استعادة الإعدادات الأصلية
           </button>
         </div>
 
@@ -682,13 +716,13 @@
 
   </main>
 
-  <!-- ================= ADD / EDIT PRODUCT MODAL ================= -->
+  <!-- ================= نافذة إضافة / تعديل قطعة ملابس (MODAL) ================= -->
   <dialog id="productEditModal" class="bg-[#0E0E0E] text-white p-0 max-w-2xl w-[92%] border border-[#222] rounded-[16px] shadow-2xl overflow-hidden backdrop:bg-black/80">
     <div class="p-5 border-b border-[#1A1A1A] flex items-center justify-between bg-[#080808]">
-      <div class="flex items-center gap-2.5 font-mono">
+      <div class="flex items-center gap-2.5">
         <i data-lucide="package" class="w-4 h-4 text-white"></i>
-        <h3 id="modalProductHeading" class="font-heading font-bold text-sm uppercase text-white tracking-wider">
-          Add New Garment Piece
+        <h3 id="modalProductHeading" class="font-bold text-sm text-white">
+          إضافة قطعة ملابس جديدة
         </h3>
       </div>
       <button id="closeProductModalBtn" class="text-neutral-400 hover:text-white p-1 cursor-pointer">
@@ -696,82 +730,82 @@
       </button>
     </div>
 
-    <form id="productEditForm" class="p-6 space-y-5 max-h-[80vh] overflow-y-auto font-mono text-xs">
+    <form id="productEditForm" class="p-6 space-y-5 max-h-[80vh] overflow-y-auto text-xs">
       <input type="hidden" id="modalProductId">
 
-      <!-- Title & Subtitle -->
+      <!-- الاسم والعنوان الفرعي -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="cms-label">Garment Title *</label>
-          <input type="text" id="modalProdName" required placeholder="e.g. PHANTOM HOODIE" class="cms-input w-full">
+          <label class="cms-label">اسم القطعة (Garment Title) *</label>
+          <input type="text" id="modalProdName" required placeholder="مثال: PHANTOM HOODIE" class="cms-input w-full">
         </div>
         <div>
-          <label class="cms-label">Garment Subtitle / Type</label>
-          <input type="text" id="modalProdSubtitle" placeholder="HOODIE, JACKET, TEE" class="cms-input w-full">
+          <label class="cms-label">النوع أو الوصف الفرعي</label>
+          <input type="text" id="modalProdSubtitle" placeholder="مثال: هودي فاخر ثقيل 500 GSM" class="cms-input w-full">
         </div>
       </div>
 
-      <!-- Category & Price -->
+      <!-- القسم والسعر والشارة -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label class="cms-label">Category *</label>
+          <label class="cms-label">القسم *</label>
           <select id="modalProdCategory" required class="cms-input w-full">
-            <!-- Populated dynamically -->
+            <!-- يتم تعبئتها ديناميكياً -->
           </select>
         </div>
         <div>
-          <label class="cms-label">Price in EGP *</label>
-          <input type="number" id="modalProdPrice" required min="1" step="10" placeholder="e.g. 1850" class="cms-input w-full font-bold">
+          <label class="cms-label">السعر بالجنيه المصري (ج.م) *</label>
+          <input type="number" id="modalProdPrice" required min="1" step="10" placeholder="مثال: 1850" class="cms-input w-full font-bold">
         </div>
         <div>
-          <label class="cms-label">Badge Tag</label>
-          <input type="text" id="modalProdBadge" placeholder="SIGNATURE, CORE, LIMITED" class="cms-input w-full">
+          <label class="cms-label">شارة التمييز (Badge)</label>
+          <input type="text" id="modalProdBadge" placeholder="مثال: SIGNATURE, CORE, LIMITED" class="cms-input w-full">
         </div>
       </div>
 
-      <!-- Image Management (Upload from computer OR URL) -->
+      <!-- إدارة الصور (رفع مباشر من الجهاز أو رابط) -->
       <div class="p-4 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-3">
         <div class="flex items-center justify-between">
-          <label class="cms-label !mb-0">Product Image *</label>
-          <span class="text-[10px] text-neutral-400">Direct upload from device or URL</span>
+          <label class="cms-label !mb-0">صورة المنتج الرئيسية *</label>
+          <span class="text-[10px] text-neutral-400">رفع مباشر من جهازك أو وضع رابط الصورة</span>
         </div>
 
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <input type="text" id="modalProdImage" required placeholder="assets/sokhm-card-1.jpg or URL" class="cms-input flex-grow">
+          <input type="text" id="modalProdImage" required placeholder="assets/sokhm-card-1.jpg أو رابط صورة خارجي" class="cms-input flex-grow">
           
-          <!-- File Upload Trigger -->
-          <label class="px-4 py-2.5 rounded-xl border border-[#333] hover:border-white bg-[#141414] hover:bg-white hover:text-black text-white font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all whitespace-nowrap shadow-sm">
+          <!-- زر رفع الملف المباشر -->
+          <label class="px-4 py-2.5 rounded-xl border border-[#333] hover:border-white bg-[#141414] hover:bg-white hover:text-black text-white font-bold text-[11px] flex items-center justify-center gap-2 cursor-pointer transition-all whitespace-nowrap shadow-sm">
             <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-            <span>Upload Photo</span>
+            <span>رفع صورة من الجهاز</span>
             <input type="file" id="modalPhotoFileInput" accept="image/*" class="hidden">
           </label>
         </div>
 
-        <!-- Live Photo Preview -->
+        <!-- المعاينة المباشرة للصورة -->
         <div class="flex items-center gap-3 pt-1">
           <div class="w-14 h-16 rounded-lg bg-[#111] border border-[#222] overflow-hidden flex items-center justify-center flex-shrink-0">
             <img id="modalImgPreview" src="" alt="Preview" class="w-full h-full object-cover hidden">
             <i id="modalImgPlaceholder" data-lucide="image" class="w-5 h-5 text-neutral-600"></i>
           </div>
           <div class="text-[11px]">
-            <p id="modalImgStatus" class="font-bold text-white">No photo selected</p>
-            <p class="text-[10px] text-neutral-500">2K / high-resolution portrait photos look best.</p>
+            <p id="modalImgStatus" class="font-bold text-white">لم يتم اختيار صورة بعد</p>
+            <p class="text-[10px] text-neutral-500">الصور العمودية عالية الدقة 2K تبدو الأجمل في واجهة المتجر.</p>
           </div>
         </div>
 
-        <!-- Presets Row -->
-        <div class="pt-1 flex items-center gap-1.5 flex-wrap text-[10px]">
-          <span class="text-neutral-500 uppercase">Presets:</span>
-          <button type="button" class="preset-pill px-2 py-0.5 rounded bg-[#161616] hover:bg-white hover:text-black border border-[#222] text-neutral-300" data-img="assets/sokhm-card-1.jpg">Black Hoodie</button>
-          <button type="button" class="preset-pill px-2 py-0.5 rounded bg-[#161616] hover:bg-white hover:text-black border border-[#222] text-neutral-300" data-img="assets/sokhm-card-2.jpg">Cream Hoodie</button>
-          <button type="button" class="preset-pill px-2 py-0.5 rounded bg-[#161616] hover:bg-white hover:text-black border border-[#222] text-neutral-300" data-img="assets/sokhm-card-3.jpg">Olive Hoodie</button>
-          <button type="button" class="preset-pill px-2 py-0.5 rounded bg-[#161616] hover:bg-white hover:text-black border border-[#222] text-neutral-300" data-img="assets/sokhm-card-4.jpg">Grey Hoodie</button>
+        <!-- أزرار النماذج الجاهزة -->
+        <div class="pt-1 flex items-center gap-1.5 flex-wrap text-[11px]">
+          <span class="text-neutral-500 font-bold">صور جاهزة:</span>
+          <button type="button" class="preset-pill px-2.5 py-1 rounded bg-[#161616] hover:bg-white hover:text-black border border-[#222] text-neutral-300" data-img="assets/sokhm-card-1.jpg">هودي أسود</button>
+          <button type="button" class="preset-pill px-2.5 py-1 rounded bg-[#161616] hover:bg-white hover:text-black border border-[#222] text-neutral-300" data-img="assets/sokhm-card-2.jpg">هودي بيج</button>
+          <button type="button" class="preset-pill px-2.5 py-1 rounded bg-[#161616] hover:bg-white hover:text-black border border-[#222] text-neutral-300" data-img="assets/sokhm-card-3.jpg">هودي زيتي</button>
+          <button type="button" class="preset-pill px-2.5 py-1 rounded bg-[#161616] hover:bg-white hover:text-black border border-[#222] text-neutral-300" data-img="assets/sokhm-card-4.jpg">هودي رمادي</button>
         </div>
       </div>
 
-      <!-- Sizes Available -->
+      <!-- المقاسات المتاحة -->
       <div>
-        <label class="cms-label">Sizes Available *</label>
+        <label class="cms-label">المقاسات المتوفرة بالمخزون *</label>
         <div id="modalSizesCheckboxes" class="flex flex-wrap gap-2">
           <label class="cursor-pointer select-none">
             <input type="checkbox" name="sizes" value="XS" class="hidden peer">
@@ -800,40 +834,40 @@
         </div>
       </div>
 
-      <!-- Description & Specs -->
+      <!-- الوصف والمواصفات المعمارية -->
       <div>
-        <label class="cms-label">Narrative Description</label>
-        <textarea id="modalProdDesc" rows="2" class="cms-input w-full" placeholder="The emblem piece in jet-black combed cotton..."></textarea>
+        <label class="cms-label">القصة الوصفية للقطعة (Narrative Description)</label>
+        <textarea id="modalProdDesc" rows="2" class="cms-input w-full" placeholder="قطعة مميزة من خامة القطن المصري المحبوك فائق الكثافة..."></textarea>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
-          <label class="cms-label">Fabric Specification</label>
-          <input type="text" id="modalProdFabric" placeholder="500 GSM Heavyweight French Terry" class="cms-input w-full">
+          <label class="cms-label">خامة القماش وكثافته</label>
+          <input type="text" id="modalProdFabric" placeholder="مثال: 500 GSM French Terry قطن مصري" class="cms-input w-full">
         </div>
         <div>
-          <label class="cms-label">Fit Architecture</label>
-          <input type="text" id="modalProdFit" placeholder="Sculpted drop-shoulder boxy drape" class="cms-input w-full">
+          <label class="cms-label">القصة الهندسية (Fit)</label>
+          <input type="text" id="modalProdFit" placeholder="مثال: دروب شولدر واسع مريح Boxy Drape" class="cms-input w-full">
         </div>
         <div>
-          <label class="cms-label">Care Instructions</label>
-          <input type="text" id="modalProdCare" placeholder="Machine wash cold, hang dry" class="cms-input w-full">
+          <label class="cms-label">تعليمات الغسيل والعناية</label>
+          <input type="text" id="modalProdCare" placeholder="مثال: غسيل بارد مقلوب، تجفيف بالهواء" class="cms-input w-full">
         </div>
       </div>
 
       <div class="pt-3 border-t border-[#1A1A1A] flex items-center justify-end gap-3">
-        <button type="button" id="cancelModalBtn" class="px-5 py-2.5 rounded-xl border border-[#222] text-neutral-400 hover:text-white font-bold text-xs uppercase cursor-pointer">
-          Cancel
+        <button type="button" id="cancelModalBtn" class="px-5 py-2.5 rounded-xl border border-[#222] text-neutral-400 hover:text-white font-bold text-xs cursor-pointer">
+          إلغاء
         </button>
-        <button type="submit" id="saveProductModalBtn" class="px-6 py-2.5 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wider hover:bg-neutral-200 transition-colors cursor-pointer shadow-md">
-          Save Garment
+        <button type="submit" id="saveProductModalBtn" class="px-6 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors cursor-pointer shadow-md">
+          حفظ القطعة في قاعدة البيانات
         </button>
       </div>
     </form>
   </dialog>
 
   <!-- ================= TOAST CONTAINER ================= -->
-  <div id="adminToastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none font-mono"></div>
+  <div id="adminToastContainer" class="fixed bottom-6 left-6 z-50 flex flex-col space-y-2 pointer-events-none font-sans"></div>
 
   <!-- SCRIPTS -->
   <script src="js/admin.js"></script>
