@@ -22,6 +22,36 @@ const db = new DatabaseSync(dbPath);
 db.exec('PRAGMA foreign_keys = ON;');
 
 /**
+ * Cairo Time (Africa/Cairo) helpers
+ */
+function normalizeUtcDate(val) {
+  if (!val) return new Date().toISOString();
+  if (val instanceof Date) return val.toISOString();
+  let str = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) {
+    return str.replace(' ', 'T') + 'Z';
+  }
+  return str;
+}
+
+function formatCairoDateTime(dateVal) {
+  if (!dateVal) return '';
+  const isoStr = normalizeUtcDate(dateVal);
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return String(dateVal);
+  return d.toLocaleString('ar-EG-u-nu-latn', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+
+/**
  * 1. Initialize Schema & Tables
  */
 function initSchema() {
@@ -475,10 +505,11 @@ function getProductById(id) {
     model_info: r.model_info || '',
     stockStatus: r.stock_status || 'in_stock',
     stock_status: r.stock_status || 'in_stock',
-    createdAt: r.created_at,
-    created_at: r.created_at,
-    updatedAt: r.updated_at,
-    updated_at: r.updated_at
+    createdAt: normalizeUtcDate(r.created_at),
+    created_at: normalizeUtcDate(r.created_at),
+    updatedAt: normalizeUtcDate(r.updated_at),
+    updated_at: normalizeUtcDate(r.updated_at),
+    created_at_cairo: formatCairoDateTime(r.created_at)
   };
 }
 
@@ -646,20 +677,22 @@ function deleteCategory(slug) {
 function createOrder(order) {
   const id = order.id || 'SKM-' + Math.floor(10000 + Math.random() * 90000);
   const status = order.status || 'pending';
+  const nowIso = new Date().toISOString();
   
   db.prepare(`
     INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, customer_notes, items_json, total_price, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    order.customerName || 'عميل المتجر',
-    order.customerPhone || '',
-    order.customerCity || order.governorate || 'القاهرة',
-    order.customerAddress || '',
-    order.customerNotes || order.notes || '',
+    order.customerName || order.customer_name || 'عميل المتجر',
+    order.customerPhone || order.customer_phone || '',
+    order.customerCity || order.customer_city || order.governorate || 'القاهرة',
+    order.customerAddress || order.customer_address || '',
+    order.customerNotes || order.customer_notes || order.notes || '',
     JSON.stringify(order.items || []),
-    typeof order.totalPrice === 'number' ? order.totalPrice : (parseFloat(order.totalPrice) || parseFloat(order.total) || 0),
-    status
+    typeof order.totalPrice === 'number' ? order.totalPrice : (parseFloat(order.totalPrice || order.total_price) || parseFloat(order.total) || 0),
+    status,
+    nowIso
   );
 
   return getOrderById(id);
@@ -671,17 +704,27 @@ function createOrder(order) {
 function getOrderById(id) {
   const r = db.prepare("SELECT * FROM orders WHERE id = ?").get(id);
   if (!r) return null;
+  const isoDate = normalizeUtcDate(r.created_at);
   return {
     id: r.id,
     customerName: r.customer_name,
+    customer_name: r.customer_name,
     customerPhone: r.customer_phone,
+    customer_phone: r.customer_phone,
     customerCity: r.customer_city,
+    customer_city: r.customer_city,
     customerAddress: r.customer_address,
+    customer_address: r.customer_address,
     customerNotes: r.customer_notes || '',
+    customer_notes: r.customer_notes || '',
     items: JSON.parse(r.items_json || '[]'),
+    items_json: r.items_json,
     totalPrice: r.total_price,
+    total_price: r.total_price,
     status: r.status,
-    createdAt: r.created_at
+    createdAt: isoDate,
+    created_at: isoDate,
+    created_at_cairo: formatCairoDateTime(r.created_at)
   };
 }
 
@@ -696,18 +739,30 @@ function getOrders(statusFilter = 'all') {
     rows = db.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
   }
 
-  return rows.map(r => ({
-    id: r.id,
-    customerName: r.customer_name,
-    customerPhone: r.customer_phone,
-    customerCity: r.customer_city,
-    customerAddress: r.customer_address,
-    customerNotes: r.customer_notes || '',
-    items: JSON.parse(r.items_json || '[]'),
-    totalPrice: r.total_price,
-    status: r.status,
-    createdAt: r.created_at
-  }));
+  return rows.map(r => {
+    const isoDate = normalizeUtcDate(r.created_at);
+    return {
+      id: r.id,
+      customerName: r.customer_name,
+      customer_name: r.customer_name,
+      customerPhone: r.customer_phone,
+      customer_phone: r.customer_phone,
+      customerCity: r.customer_city,
+      customer_city: r.customer_city,
+      customerAddress: r.customer_address,
+      customer_address: r.customer_address,
+      customerNotes: r.customer_notes || '',
+      customer_notes: r.customer_notes || '',
+      items: JSON.parse(r.items_json || '[]'),
+      items_json: r.items_json,
+      totalPrice: r.total_price,
+      total_price: r.total_price,
+      status: r.status,
+      createdAt: isoDate,
+      created_at: isoDate,
+      created_at_cairo: formatCairoDateTime(r.created_at)
+    };
+  });
 }
 
 /**
@@ -924,5 +979,7 @@ module.exports = {
   updateAdminPassword,
   createSession,
   validateSession,
-  revokeSession
+  revokeSession,
+  formatCairoDateTime,
+  normalizeUtcDate
 };

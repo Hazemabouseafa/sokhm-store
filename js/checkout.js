@@ -243,6 +243,10 @@
               <span id="coSuccessOrderId" class="font-mono font-extrabold text-white text-sm">#SKM-00000</span>
             </div>
             <div class="flex items-center justify-between text-neutral-400">
+              <span>تاريخ وتوقيت الطلب:</span>
+              <span id="coSuccessDate" class="text-white text-[11px] font-medium">-</span>
+            </div>
+            <div class="flex items-center justify-between text-neutral-400">
               <span>اسم العميل:</span>
               <span id="coSuccessName" class="font-bold text-white">-</span>
             </div>
@@ -510,6 +514,32 @@
       successView.classList.remove('hidden');
 
       document.getElementById('coSuccessOrderId').textContent = '#' + orderId;
+      
+      const dateEl = document.getElementById('coSuccessDate');
+      if (dateEl) {
+        if (createdOrder.created_at_cairo) {
+          dateEl.textContent = createdOrder.created_at_cairo + ' (توقيت القاهرة)';
+        } else {
+          try {
+            const rawD = createdOrder.created_at || createdOrder.createdAt || new Date();
+            let dStr = String(rawD).trim();
+            if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dStr)) dStr = dStr.replace(' ', 'T') + 'Z';
+            const cairoTime = new Date(dStr).toLocaleString('ar-EG-u-nu-latn', {
+              timeZone: 'Africa/Cairo',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            });
+            dateEl.textContent = cairoTime + ' (توقيت القاهرة)';
+          } catch (e) {
+            dateEl.textContent = new Date().toLocaleString() + ' (توقيت القاهرة)';
+          }
+        }
+      }
+
       document.getElementById('coSuccessName').textContent = customerName;
       document.getElementById('coSuccessPhone').textContent = customerPhone;
       document.getElementById('coSuccessAddress').textContent = `${customerCity} — ${customerAddress}`;

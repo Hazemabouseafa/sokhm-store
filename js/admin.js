@@ -1754,14 +1754,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   function formatDate(isoStr) {
     if (!isoStr) return 'اليوم';
     try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('ar-EG', {
+      let str = String(isoStr).trim();
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) {
+        str = str.replace(' ', 'T') + 'Z';
+      }
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return isoStr;
+      return d.toLocaleDateString('ar-EG-u-nu-latn', {
+        timeZone: 'Africa/Cairo',
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
-      });
+      }) + ' (توقيت القاهرة)';
     } catch (e) {
       return isoStr;
     }

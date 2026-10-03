@@ -26,6 +26,35 @@ function hashPassword(password, salt) {
   return crypto.scryptSync(password, salt, 64).toString('hex');
 }
 
+/**
+ * Cairo Time (Africa/Cairo) helpers
+ */
+function normalizeUtcDate(val) {
+  if (!val) return new Date().toISOString();
+  if (val instanceof Date) return val.toISOString();
+  let str = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) {
+    return str.replace(' ', 'T') + 'Z';
+  }
+  return str;
+}
+
+function formatCairoDateTime(dateVal) {
+  if (!dateVal) return '';
+  const isoStr = normalizeUtcDate(dateVal);
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return String(dateVal);
+  return d.toLocaleString('ar-EG-u-nu-latn', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
 let initialized = false;
 
 // ================= IN-MEMORY & LOCAL FILE FALLBACK =================
@@ -257,8 +286,11 @@ function parseProductRow(row) {
     modelInfo: row.model_info || row.modelInfo || '',
     stock_status: row.stock_status || row.stockStatus || 'in_stock',
     stockStatus: row.stock_status || row.stockStatus || 'in_stock',
-    created_at: row.created_at || new Date().toISOString(),
-    updated_at: row.updated_at || new Date().toISOString()
+    created_at: normalizeUtcDate(row.created_at),
+    createdAt: normalizeUtcDate(row.created_at),
+    updated_at: normalizeUtcDate(row.updated_at),
+    updatedAt: normalizeUtcDate(row.updated_at),
+    created_at_cairo: formatCairoDateTime(row.created_at)
   };
 }
 
@@ -590,6 +622,8 @@ function parseOrderRow(row) {
     items = [];
   }
 
+  const rawDate = row.created_at || row.createdAt;
+  const isoDate = normalizeUtcDate(rawDate);
   return {
     id: row.id,
     customer_name: row.customer_name || row.customerName || 'عميل',
@@ -607,8 +641,9 @@ function parseOrderRow(row) {
     total_price: Number(row.total_price || row.totalPrice || 0),
     totalPrice: Number(row.total_price || row.totalPrice || 0),
     status: row.status || 'pending',
-    created_at: row.created_at || row.createdAt || new Date().toISOString(),
-    createdAt: row.created_at || row.createdAt || new Date().toISOString()
+    created_at: isoDate,
+    createdAt: isoDate,
+    created_at_cairo: formatCairoDateTime(rawDate)
   };
 }
 
@@ -616,14 +651,15 @@ async function createOrder(data) {
   const id = 'SKM-' + Math.floor(10000 + Math.random() * 90000);
   const itemsJson = typeof data.items === 'string' ? data.items : JSON.stringify(data.items || []);
   const total = typeof data.totalPrice === 'number' ? data.totalPrice : (parseFloat(data.totalPrice || data.total_price) || 0);
+  const nowIso = new Date().toISOString();
 
   const c = getClient();
   if (c) {
     try {
       await initTursoSchema();
       await c.execute({
-        sql: `INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, customer_notes, items_json, total_price, status)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, customer_notes, items_json, total_price, status, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           id,
           data.customerName || data.customer_name || 'عميل',
@@ -633,7 +669,8 @@ async function createOrder(data) {
           data.customerNotes || data.customer_notes || '',
           itemsJson,
           total,
-          data.status || 'pending'
+          data.status || 'pending',
+          nowIso
         ]
       });
       const ord = await getOrderById(id);
@@ -653,7 +690,7 @@ async function createOrder(data) {
     items_json: itemsJson,
     total_price: total,
     status: data.status || 'pending',
-    created_at: new Date().toISOString()
+    created_at: nowIso
   });
   fallbackOrders.unshift(orderObj);
   return orderObj;
@@ -997,5 +1034,7 @@ module.exports = {
   createSession,
   validateSession,
   revokeSession,
-  getStats
+  getStats,
+  formatCairoDateTime,
+  normalizeUtcDate
 };

@@ -59,8 +59,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   const productModal = document.getElementById('productEditModal');
   const invoiceModal = document.getElementById('orderInvoiceModal');
 
+  // ================= توقيت القاهرة (AFRICA/CAIRO TIMEZONE) =================
+  function formatCairoDate(dateVal, options = {}) {
+    if (!dateVal) return '-';
+    let str = String(dateVal).trim();
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) {
+      str = str.replace(' ', 'T') + 'Z';
+    }
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return String(dateVal);
+    try {
+      return d.toLocaleString('ar-EG-u-nu-latn', {
+        timeZone: 'Africa/Cairo',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        ...options
+      });
+    } catch (e) {
+      return d.toLocaleString();
+    }
+  }
+
+  function startCairoClock() {
+    const clockText = document.getElementById('cairoClockText');
+    if (!clockText) return;
+
+    function tick() {
+      try {
+        const now = new Date();
+        clockText.textContent = now.toLocaleTimeString('ar-EG-u-nu-latn', {
+          timeZone: 'Africa/Cairo',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+      } catch (e) {
+        clockText.textContent = new Date().toLocaleTimeString();
+      }
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+
   // ================= 1. التهيئة الأولية (INIT) =================
   async function init() {
+    startCairoClock();
     setupTabNavigation();
     setupAuthControls();
     setupLucide();
@@ -297,7 +344,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             #${orderId}
           </td>
           <td class="py-3 px-4 text-neutral-400 text-[11px] whitespace-nowrap">
-            ${new Date(createdAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            <div class="font-medium text-white">${formatCairoDate(createdAt)}</div>
+            <div class="text-[10px] text-neutral-500 font-mono">توقيت القاهرة</div>
           </td>
           <td class="py-3 px-4">
             <div class="font-bold text-white">${customerName}</div>
@@ -477,6 +525,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="text-left font-mono">
             <span class="text-neutral-400 block text-[10px]">بوليصة شحن وتوصيل</span>
             <span class="font-bold text-white text-sm">#${orderId}</span>
+            <span class="text-neutral-400 block text-[10px] mt-0.5">${formatCairoDate(createdAt, { year: 'numeric', second: '2-digit' })} (بتوقيت القاهرة)</span>
           </div>
         </div>
 
