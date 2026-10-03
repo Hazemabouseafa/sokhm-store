@@ -124,6 +124,18 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       expires_at DATETIME NOT NULL
     );
+
+    -- Discount Codes & Coupons Table
+    CREATE TABLE IF NOT EXISTS discount_codes (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      discount_type TEXT NOT NULL DEFAULT 'percentage',
+      discount_value REAL NOT NULL,
+      min_order_amount REAL DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      usage_count INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
@@ -134,6 +146,30 @@ function initSchema() {
 
   try {
     db.exec('ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0;');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE products ADD COLUMN show_on_homepage INTEGER DEFAULT 1;');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE orders ADD COLUMN discount_code TEXT;');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0;');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE orders ADD COLUMN subtotal_price REAL;');
   } catch (e) {
     // Column already exists
   }
@@ -480,6 +516,8 @@ function getProducts() {
       stock_status: r.stock_status || 'in_stock',
       sortOrder: r.sort_order !== undefined ? r.sort_order : 0,
       sort_order: r.sort_order !== undefined ? r.sort_order : 0,
+      show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
+      showOnHomepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
       createdAt: r.created_at,
       created_at: r.created_at,
       updatedAt: r.updated_at,
@@ -545,6 +583,10 @@ function getProductById(id) {
     model_info: r.model_info || '',
     stockStatus: r.stock_status || 'in_stock',
     stock_status: r.stock_status || 'in_stock',
+    sortOrder: r.sort_order !== undefined ? r.sort_order : 0,
+    sort_order: r.sort_order !== undefined ? r.sort_order : 0,
+    show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
+    showOnHomepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
     createdAt: normalizeUtcDate(r.created_at),
     created_at: normalizeUtcDate(r.created_at),
     updatedAt: normalizeUtcDate(r.updated_at),
@@ -647,6 +689,7 @@ function upsertProduct(p) {
   const colors = Array.isArray(p.colors) ? p.colors : [{ name: 'Standard', hex: '#111' }];
   const modelInfo = p.model_info || p.modelInfo || '';
   const stockStatus = p.stock_status || p.stockStatus || 'in_stock';
+  const showOnHomepage = (p.show_on_homepage === false || p.show_on_homepage === 0 || p.show_on_homepage === '0' || p.showOnHomepage === false) ? 0 : 1;
   const description = p.description || '';
   const shortDesc = p.shortDesc || p.short_desc || '';
   const subtitle = p.subtitle || '';
@@ -659,8 +702,8 @@ function upsertProduct(p) {
     INSERT INTO products (
       id, name, subtitle, category_id, price, badge,
       images_json, sizes_json, short_desc, description,
-      fabric, fit_advice, care_advice, colors_json, model_info, stock_status, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      fabric, fit_advice, care_advice, colors_json, model_info, stock_status, show_on_homepage, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       name=excluded.name,
       subtitle=excluded.subtitle,
@@ -677,6 +720,7 @@ function upsertProduct(p) {
       colors_json=excluded.colors_json,
       model_info=excluded.model_info,
       stock_status=excluded.stock_status,
+      show_on_homepage=excluded.show_on_homepage,
       updated_at=CURRENT_TIMESTAMP
   `);
 
@@ -696,7 +740,8 @@ function upsertProduct(p) {
     careAdvice,
     JSON.stringify(colors),
     modelInfo,
-    stockStatus
+    stockStatus,
+    showOnHomepage
   );
 
   const updated = getProducts();
@@ -750,10 +795,16 @@ function createOrder(order) {
   const id = order.id || 'SKM-' + Math.floor(10000 + Math.random() * 90000);
   const status = order.status || 'pending';
   const nowIso = new Date().toISOString();
+  const discountCode = (order.discountCode || order.discount_code || '').trim().toUpperCase();
+  const discountAmount = typeof order.discountAmount === 'number' ? order.discountAmount : (parseFloat(order.discountAmount || order.discount_amount) || 0);
+  const subtotalPrice = typeof order.subtotalPrice === 'number' ? order.subtotalPrice : (parseFloat(order.subtotalPrice || order.subtotal_price) || 0);
+  const totalPrice = typeof order.totalPrice === 'number' ? order.totalPrice : (parseFloat(order.totalPrice || order.total_price) || parseFloat(order.total) || 0);
   
   db.prepare(`
-    INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, customer_notes, items_json, total_price, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO orders (
+      id, customer_name, customer_phone, customer_city, customer_address, customer_notes,
+      items_json, total_price, status, created_at, discount_code, discount_amount, subtotal_price
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     order.customerName || order.customer_name || 'عميل المتجر',
@@ -762,10 +813,17 @@ function createOrder(order) {
     order.customerAddress || order.customer_address || '',
     order.customerNotes || order.customer_notes || order.notes || '',
     JSON.stringify(order.items || []),
-    typeof order.totalPrice === 'number' ? order.totalPrice : (parseFloat(order.totalPrice || order.total_price) || parseFloat(order.total) || 0),
+    totalPrice,
     status,
-    nowIso
+    nowIso,
+    discountCode || null,
+    discountAmount,
+    subtotalPrice || totalPrice
   );
+
+  if (discountCode) {
+    recordDiscountUsage(discountCode);
+  }
 
   return getOrderById(id);
 }
@@ -793,6 +851,12 @@ function getOrderById(id) {
     items_json: r.items_json,
     totalPrice: r.total_price,
     total_price: r.total_price,
+    discountCode: r.discount_code || '',
+    discount_code: r.discount_code || '',
+    discountAmount: r.discount_amount || 0,
+    discount_amount: r.discount_amount || 0,
+    subtotalPrice: r.subtotal_price || r.total_price,
+    subtotal_price: r.subtotal_price || r.total_price,
     status: r.status,
     createdAt: isoDate,
     created_at: isoDate,
@@ -829,12 +893,149 @@ function getOrders(statusFilter = 'all') {
       items_json: r.items_json,
       totalPrice: r.total_price,
       total_price: r.total_price,
+      discountCode: r.discount_code || '',
+      discount_code: r.discount_code || '',
+      discountAmount: r.discount_amount || 0,
+      discount_amount: r.discount_amount || 0,
+      subtotalPrice: r.subtotal_price || r.total_price,
+      subtotal_price: r.subtotal_price || r.total_price,
       status: r.status,
       createdAt: isoDate,
       created_at: isoDate,
       created_at_cairo: formatCairoDateTime(r.created_at)
     };
   });
+}
+
+/**
+ * Discount Codes: Get all
+ */
+function getDiscounts() {
+  try {
+    const rows = db.prepare("SELECT * FROM discount_codes ORDER BY created_at DESC").all();
+    return rows.map(r => ({
+      id: r.id,
+      code: r.code,
+      discountType: r.discount_type,
+      discount_type: r.discount_type,
+      discountValue: r.discount_value,
+      discount_value: r.discount_value,
+      minOrderAmount: r.min_order_amount,
+      min_order_amount: r.min_order_amount,
+      isActive: Boolean(r.is_active),
+      is_active: Boolean(r.is_active),
+      usageCount: r.usage_count || 0,
+      usage_count: r.usage_count || 0,
+      createdAt: normalizeUtcDate(r.created_at),
+      created_at: normalizeUtcDate(r.created_at),
+      created_at_cairo: formatCairoDateTime(r.created_at)
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Discount Codes: Create new
+ */
+function createDiscount(data) {
+  const code = String(data.code || '').trim().toUpperCase();
+  if (!code) throw new Error('يرجى كتابة كود الخصم');
+  const discountType = data.discountType || data.discount_type === 'fixed' ? 'fixed' : 'percentage';
+  const discountValue = Number(data.discountValue || data.discount_value) || 0;
+  if (discountValue <= 0) throw new Error('يرجى تحديد قيمة خصم صالحة');
+  const minOrderAmount = Number(data.minOrderAmount || data.min_order_amount) || 0;
+  const id = 'disc_' + Date.now();
+  const nowIso = new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO discount_codes (id, code, discount_type, discount_value, min_order_amount, is_active, usage_count, created_at)
+    VALUES (?, ?, ?, ?, ?, 1, 0, ?)
+  `).run(id, code, discountType, discountValue, minOrderAmount, nowIso);
+
+  return {
+    id,
+    code,
+    discount_type: discountType,
+    discount_value: discountValue,
+    min_order_amount: minOrderAmount,
+    is_active: true,
+    usage_count: 0,
+    created_at: nowIso
+  };
+}
+
+/**
+ * Discount Codes: Delete
+ */
+function deleteDiscount(id) {
+  db.prepare("DELETE FROM discount_codes WHERE id = ? OR UPPER(code) = UPPER(?)").run(String(id), String(id));
+  return true;
+}
+
+/**
+ * Discount Codes: Toggle Active
+ */
+function toggleDiscount(id) {
+  const row = db.prepare("SELECT * FROM discount_codes WHERE id = ? OR UPPER(code) = UPPER(?)").get(String(id), String(id));
+  if (!row) throw new Error('كود الخصم غير موجود');
+  const newActive = row.is_active ? 0 : 1;
+  db.prepare("UPDATE discount_codes SET is_active = ? WHERE id = ?").run(newActive, row.id);
+  return { id: row.id, is_active: Boolean(newActive) };
+}
+
+/**
+ * Discount Codes: Validate for cart
+ */
+function validateDiscount(code, subtotal = 0) {
+  if (!code) return { valid: false, error: 'يرجى إدخال كود الخصم' };
+  const cleanCode = String(code).trim().toUpperCase();
+  
+  let disc = null;
+  try {
+    disc = db.prepare("SELECT * FROM discount_codes WHERE UPPER(code) = ?").get(cleanCode);
+  } catch (e) {}
+
+  if (!disc) {
+    return { valid: false, error: 'كود الخصم غير صالح أو غير موجود' };
+  }
+  if (!disc.is_active) {
+    return { valid: false, error: 'كود الخصم غير مفعل حالياً' };
+  }
+  const minOrder = Number(disc.min_order_amount) || 0;
+  if (minOrder > 0 && subtotal < minOrder) {
+    return { 
+      valid: false, 
+      error: `الحد الأدنى لقيمة السلة لتفعيل هذا الكود هو ${minOrder.toLocaleString('en-US')} ج.م` 
+    };
+  }
+
+  let discountAmount = 0;
+  if (disc.discount_type === 'percentage') {
+    discountAmount = Math.round((subtotal * (Number(disc.discount_value) || 0)) / 100);
+  } else {
+    discountAmount = Math.min(Number(disc.discount_value) || 0, subtotal);
+  }
+
+  return {
+    valid: true,
+    code: disc.code,
+    discountType: disc.discount_type,
+    discountValue: disc.discount_value,
+    discountAmount,
+    minOrderAmount: minOrder
+  };
+}
+
+/**
+ * Discount Codes: Record usage count
+ */
+function recordDiscountUsage(code) {
+  if (!code) return;
+  const cleanCode = String(code).trim().toUpperCase();
+  try {
+    db.prepare("UPDATE discount_codes SET usage_count = usage_count + 1 WHERE UPPER(code) = ?").run(cleanCode);
+  } catch (e) {}
 }
 
 /**
@@ -1047,6 +1248,12 @@ module.exports = {
   updateOrderStatus,
   deleteOrder,
   getOrderStats,
+  getDiscounts,
+  createDiscount,
+  deleteDiscount,
+  toggleDiscount,
+  validateDiscount,
+  recordDiscountUsage,
   getStats,
   verifyAdminCredentials,
   updateAdminPassword,

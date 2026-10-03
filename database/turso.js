@@ -165,6 +165,16 @@ async function initTursoSchema() {
         username TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         expires_at DATETIME NOT NULL
+      );`,
+      `CREATE TABLE IF NOT EXISTS discount_codes (
+        id TEXT PRIMARY KEY,
+        code TEXT UNIQUE NOT NULL,
+        discount_type TEXT NOT NULL DEFAULT 'percentage',
+        discount_value REAL NOT NULL,
+        min_order_amount REAL DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        usage_count INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );`
     ], 'write');
 
@@ -260,6 +270,30 @@ async function initTursoSchema() {
       // Column already exists
     }
 
+    try {
+      await c.execute('ALTER TABLE products ADD COLUMN show_on_homepage INTEGER DEFAULT 1');
+    } catch (e) {
+      // Column already exists
+    }
+
+    try {
+      await c.execute('ALTER TABLE orders ADD COLUMN discount_code TEXT');
+    } catch (e) {
+      // Column already exists
+    }
+
+    try {
+      await c.execute('ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0');
+    } catch (e) {
+      // Column already exists
+    }
+
+    try {
+      await c.execute('ALTER TABLE orders ADD COLUMN subtotal_price REAL');
+    } catch (e) {
+      // Column already exists
+    }
+
     initialized = true;
   } catch (err) {
     console.error('Turso schema initialization error:', err.message);
@@ -300,6 +334,8 @@ function parseProductRow(row) {
     stockStatus: row.stock_status || row.stockStatus || 'in_stock',
     sort_order: row.sort_order !== undefined ? Number(row.sort_order) : 0,
     sortOrder: row.sort_order !== undefined ? Number(row.sort_order) : 0,
+    show_on_homepage: row.show_on_homepage === undefined || row.show_on_homepage === null || Number(row.show_on_homepage) === 1,
+    showOnHomepage: row.show_on_homepage === undefined || row.show_on_homepage === null || Number(row.show_on_homepage) === 1,
     created_at: normalizeUtcDate(row.created_at),
     createdAt: normalizeUtcDate(row.created_at),
     updated_at: normalizeUtcDate(row.updated_at),
@@ -503,13 +539,14 @@ async function upsertProduct(p) {
   const stockStatus = p.stock_status || p.stockStatus || 'in_stock';
   const category = p.category || 'hoodies';
   const description = p.description || '';
+  const showOnHomepage = (p.show_on_homepage === false || p.show_on_homepage === 0 || p.show_on_homepage === '0' || p.showOnHomepage === false) ? 0 : 1;
 
   if (c) {
     try {
       await initTursoSchema();
       await c.execute({
-        sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, show_on_homepage, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         args: [
           id,
           p.name || 'منتج SOKHM',
@@ -521,7 +558,8 @@ async function upsertProduct(p) {
           sizesJson,
           colorsJson,
           modelInfo,
-          stockStatus
+          stockStatus,
+          showOnHomepage
         ]
       });
       const prod = await getProductById(id);
@@ -545,6 +583,7 @@ async function upsertProduct(p) {
     colors,
     model_info: modelInfo,
     stock_status: stockStatus,
+    show_on_homepage: showOnHomepage,
     updated_at: new Date().toISOString()
   });
 
@@ -749,6 +788,12 @@ function parseOrderRow(row) {
     items_json: typeof row.items_json === 'string' ? row.items_json : JSON.stringify(items),
     total_price: Number(row.total_price || row.totalPrice || 0),
     totalPrice: Number(row.total_price || row.totalPrice || 0),
+    discount_code: row.discount_code || row.discountCode || '',
+    discountCode: row.discount_code || row.discountCode || '',
+    discount_amount: Number(row.discount_amount || row.discountAmount || 0),
+    discountAmount: Number(row.discount_amount || row.discountAmount || 0),
+    subtotal_price: Number(row.subtotal_price || row.subtotalPrice || row.total_price || row.totalPrice || 0),
+    subtotalPrice: Number(row.subtotal_price || row.subtotalPrice || row.total_price || row.totalPrice || 0),
     status: row.status || 'pending',
     created_at: isoDate,
     createdAt: isoDate,
@@ -760,6 +805,9 @@ async function createOrder(data) {
   const id = 'SKM-' + Math.floor(10000 + Math.random() * 90000);
   const itemsJson = typeof data.items === 'string' ? data.items : JSON.stringify(data.items || []);
   const total = typeof data.totalPrice === 'number' ? data.totalPrice : (parseFloat(data.totalPrice || data.total_price) || 0);
+  const discountCode = (data.discountCode || data.discount_code || '').trim().toUpperCase();
+  const discountAmount = typeof data.discountAmount === 'number' ? data.discountAmount : (parseFloat(data.discountAmount || data.discount_amount) || 0);
+  const subtotalPrice = typeof data.subtotalPrice === 'number' ? data.subtotalPrice : (parseFloat(data.subtotalPrice || data.subtotal_price) || total);
   const nowIso = new Date().toISOString();
 
   const c = getClient();
@@ -767,8 +815,8 @@ async function createOrder(data) {
     try {
       await initTursoSchema();
       await c.execute({
-        sql: `INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, customer_notes, items_json, total_price, status, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, customer_notes, items_json, total_price, status, created_at, discount_code, discount_amount, subtotal_price)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           id,
           data.customerName || data.customer_name || 'عميل',
@@ -779,9 +827,17 @@ async function createOrder(data) {
           itemsJson,
           total,
           data.status || 'pending',
-          nowIso
+          nowIso,
+          discountCode || null,
+          discountAmount,
+          subtotalPrice
         ]
       });
+
+      if (discountCode) {
+        await recordDiscountUsage(discountCode);
+      }
+
       const ord = await getOrderById(id);
       if (ord) return ord;
     } catch (err) {
@@ -798,6 +854,9 @@ async function createOrder(data) {
     customer_notes: data.customerNotes || data.customer_notes || '',
     items_json: itemsJson,
     total_price: total,
+    discount_code: discountCode,
+    discount_amount: discountAmount,
+    subtotal_price: subtotalPrice,
     status: data.status || 'pending',
     created_at: nowIso
   });
@@ -873,6 +932,187 @@ async function deleteOrder(id) {
   }
   fallbackOrders = fallbackOrders.filter(o => o.id !== id);
   return true;
+}
+
+// ================= DISCOUNT CODES REPOSITORY =================
+let fallbackDiscounts = [];
+
+async function getDiscounts() {
+  const c = getClient();
+  if (c) {
+    try {
+      await initTursoSchema();
+      const res = await c.execute('SELECT * FROM discount_codes ORDER BY created_at DESC');
+      if (res && res.rows) {
+        return res.rows.map(r => ({
+          id: r.id,
+          code: r.code,
+          discount_type: r.discount_type,
+          discountType: r.discount_type,
+          discount_value: Number(r.discount_value),
+          discountValue: Number(r.discount_value),
+          min_order_amount: Number(r.min_order_amount || 0),
+          minOrderAmount: Number(r.min_order_amount || 0),
+          is_active: Boolean(r.is_active),
+          isActive: Boolean(r.is_active),
+          usage_count: Number(r.usage_count || 0),
+          usageCount: Number(r.usage_count || 0),
+          created_at: normalizeUtcDate(r.created_at),
+          createdAt: normalizeUtcDate(r.created_at),
+          created_at_cairo: formatCairoDateTime(r.created_at)
+        }));
+      }
+    } catch (err) {
+      console.error('Turso getDiscounts error:', err.message);
+    }
+  }
+  return fallbackDiscounts;
+}
+
+async function createDiscount(data) {
+  const code = String(data.code || '').trim().toUpperCase();
+  if (!code) throw new Error('يرجى كتابة كود الخصم');
+  const discountType = data.discountType || data.discount_type === 'fixed' ? 'fixed' : 'percentage';
+  const discountValue = Number(data.discountValue || data.discount_value) || 0;
+  if (discountValue <= 0) throw new Error('يرجى تحديد قيمة خصم صالحة');
+  const minOrderAmount = Number(data.minOrderAmount || data.min_order_amount) || 0;
+  const id = 'disc_' + Date.now();
+  const nowIso = new Date().toISOString();
+
+  const c = getClient();
+  if (c) {
+    try {
+      await initTursoSchema();
+      await c.execute({
+        sql: `INSERT INTO discount_codes (id, code, discount_type, discount_value, min_order_amount, is_active, usage_count, created_at)
+              VALUES (?, ?, ?, ?, ?, 1, 0, ?)`,
+        args: [id, code, discountType, discountValue, minOrderAmount, nowIso]
+      });
+    } catch (err) {
+      console.error('Turso createDiscount error:', err.message);
+    }
+  }
+
+  const obj = {
+    id,
+    code,
+    discount_type: discountType,
+    discountType,
+    discount_value: discountValue,
+    discountValue,
+    min_order_amount: minOrderAmount,
+    minOrderAmount,
+    is_active: true,
+    isActive: true,
+    usage_count: 0,
+    usageCount: 0,
+    created_at: nowIso,
+    createdAt: nowIso,
+    created_at_cairo: formatCairoDateTime(nowIso)
+  };
+  fallbackDiscounts.unshift(obj);
+  return obj;
+}
+
+async function deleteDiscount(id) {
+  const c = getClient();
+  if (c) {
+    try {
+      await initTursoSchema();
+      await c.execute({
+        sql: 'DELETE FROM discount_codes WHERE id = ? OR UPPER(code) = UPPER(?)',
+        args: [String(id), String(id)]
+      });
+    } catch (err) {
+      console.error('Turso deleteDiscount error:', err.message);
+    }
+  }
+  fallbackDiscounts = fallbackDiscounts.filter(x => x.id !== id && x.code.toUpperCase() !== String(id).toUpperCase());
+  return true;
+}
+
+async function toggleDiscount(id) {
+  const discounts = await getDiscounts();
+  const disc = discounts.find(x => x.id === id || x.code.toUpperCase() === String(id).toUpperCase());
+  if (!disc) throw new Error('كود الخصم غير موجود');
+  const newActive = disc.is_active ? 0 : 1;
+
+  const c = getClient();
+  if (c) {
+    try {
+      await initTursoSchema();
+      await c.execute({
+        sql: 'UPDATE discount_codes SET is_active = ? WHERE id = ?',
+        args: [newActive, disc.id]
+      });
+    } catch (err) {
+      console.error('Turso toggleDiscount error:', err.message);
+    }
+  }
+  disc.is_active = Boolean(newActive);
+  disc.isActive = Boolean(newActive);
+  return { id: disc.id, is_active: Boolean(newActive) };
+}
+
+async function validateDiscount(code, subtotal = 0) {
+  if (!code) return { valid: false, error: 'يرجى إدخال كود الخصم' };
+  const cleanCode = String(code).trim().toUpperCase();
+
+  const discounts = await getDiscounts();
+  const disc = discounts.find(x => x.code.toUpperCase() === cleanCode);
+
+  if (!disc) {
+    return { valid: false, error: 'كود الخصم غير صالح أو غير موجود' };
+  }
+  if (!disc.is_active && !disc.isActive) {
+    return { valid: false, error: 'كود الخصم غير مفعل حالياً' };
+  }
+  const minOrder = Number(disc.min_order_amount || disc.minOrderAmount) || 0;
+  if (minOrder > 0 && subtotal < minOrder) {
+    return { 
+      valid: false, 
+      error: `الحد الأدنى لقيمة السلة لتفعيل هذا الكود هو ${minOrder.toLocaleString('en-US')} ج.م` 
+    };
+  }
+
+  let discountAmount = 0;
+  const dVal = Number(disc.discount_value || disc.discountValue) || 0;
+  const dType = disc.discount_type || disc.discountType;
+
+  if (dType === 'percentage') {
+    discountAmount = Math.round((subtotal * dVal) / 100);
+  } else {
+    discountAmount = Math.min(dVal, subtotal);
+  }
+
+  return {
+    valid: true,
+    code: disc.code,
+    discountType: dType,
+    discountValue: dVal,
+    discountAmount,
+    minOrderAmount: minOrder
+  };
+}
+
+async function recordDiscountUsage(code) {
+  if (!code) return;
+  const cleanCode = String(code).trim().toUpperCase();
+  const c = getClient();
+  if (c) {
+    try {
+      await initTursoSchema();
+      await c.execute({
+        sql: 'UPDATE discount_codes SET usage_count = usage_count + 1 WHERE UPPER(code) = ?',
+        args: [cleanCode]
+      });
+    } catch (err) {}
+  }
+  const d = fallbackDiscounts.find(x => x.code.toUpperCase() === cleanCode);
+  if (d) {
+    d.usage_count = (d.usage_count || 0) + 1;
+    d.usageCount = d.usage_count;
+  }
 }
 
 // ================= AUTHENTICATION METHODS =================
@@ -1139,6 +1379,12 @@ module.exports = {
   updateOrderStatus,
   deleteOrder,
   getOrderStats,
+  getDiscounts,
+  createDiscount,
+  deleteDiscount,
+  toggleDiscount,
+  validateDiscount,
+  recordDiscountUsage,
   verifyAdminCredentials,
   updateAdminPassword,
   createSession,

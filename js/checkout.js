@@ -36,6 +36,7 @@
 
   let currentOrderItems = [];
   let modalInitialized = false;
+  let appliedDiscount = null;
 
   function initCheckoutModal() {
     if (document.getElementById('checkoutModal')) {
@@ -170,8 +171,32 @@
                 </div>
 
                 <!-- Items Preview List -->
-                <div id="coItemsList" class="divide-y divide-[#141414] max-h-56 overflow-y-auto py-2 space-y-2">
+                <div id="coItemsList" class="divide-y divide-[#141414] max-h-48 overflow-y-auto py-2 space-y-2">
                   <!-- Dynamically populated -->
+                </div>
+
+                <!-- Promo / Discount Code Box -->
+                <div class="py-2.5 border-t border-[#181818] my-1">
+                  <label class="block text-[10px] font-bold text-neutral-400 mb-1.5 flex items-center gap-1.5">
+                    <i data-lucide="tag" class="w-3 h-3 text-amber-400"></i>
+                    <span>كود الخصم (Promo Code)</span>
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      id="coDiscountInput" 
+                      placeholder="أدخل الكود (مثال: SOKHM10)" 
+                      class="flex-1 bg-[#070707] border border-[#222] rounded-xl px-3 py-2 text-white placeholder-neutral-600 focus:outline-none focus:border-white text-xs font-mono uppercase transition-colors"
+                    >
+                    <button 
+                      type="button" 
+                      id="coApplyDiscountBtn" 
+                      class="px-4 py-2 rounded-xl bg-[#181818] hover:bg-white hover:text-black text-white border border-[#2A2A2A] hover:border-white text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-sm"
+                    >
+                      تطبيق
+                    </button>
+                  </div>
+                  <div id="coDiscountMsg" class="hidden text-[10px] mt-1.5 font-medium"></div>
                 </div>
 
                 <!-- Financial Calculation -->
@@ -180,6 +205,19 @@
                     <span>المجموع الفرعي:</span>
                     <span id="coSubtotal" class="font-bold text-white font-mono">0 ج.م</span>
                   </div>
+
+                  <!-- Discount Line (Hidden by default, shown when coupon applied) -->
+                  <div id="coDiscountRow" class="hidden flex items-center justify-between text-emerald-400">
+                    <span class="flex items-center gap-1.5">
+                      <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                      <span>خصم الكود (<span id="coAppliedCodeLabel" class="font-mono font-bold"></span>):</span>
+                    </span>
+                    <div class="flex items-center gap-2 font-mono font-bold">
+                      <span id="coDiscountVal">-0 ج.م</span>
+                      <button type="button" id="coRemoveDiscountBtn" class="text-neutral-500 hover:text-red-400 text-[10px] underline cursor-pointer">إلغاء</button>
+                    </div>
+                  </div>
+
                   <div class="flex items-center justify-between text-neutral-400">
                     <span id="coShippingLabel">مصاريف الشحن:</span>
                     <span id="coShipping" class="font-bold text-emerald-400 font-mono">مجاناً</span>
@@ -341,6 +379,88 @@
         await submitCheckoutOrder();
       });
     }
+
+    // Coupon discount application
+    const applyDiscountBtn = document.getElementById('coApplyDiscountBtn');
+    const discountInput = document.getElementById('coDiscountInput');
+    const removeDiscountBtn = document.getElementById('coRemoveDiscountBtn');
+
+    if (applyDiscountBtn && discountInput) {
+      applyDiscountBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const code = discountInput.value.trim();
+        const msgEl = document.getElementById('coDiscountMsg');
+        if (!code) {
+          if (msgEl) {
+            msgEl.className = 'text-[10px] mt-1.5 font-bold text-red-400 block';
+            msgEl.textContent = 'يرجى كتابة كود الخصم أولاً';
+          }
+          discountInput.focus();
+          return;
+        }
+
+        let subtotal = 0;
+        currentOrderItems.forEach(i => {
+          const p = typeof i.price === 'number' ? i.price : parseFloat(i.price) || 0;
+          subtotal += p * (i.quantity || 1);
+        });
+
+        applyDiscountBtn.disabled = true;
+        applyDiscountBtn.innerHTML = '<span class="inline-block animate-spin mr-1">✦</span> تطبيق...';
+
+        try {
+          const res = await fetch('/api/discounts/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, subtotal })
+          });
+          const data = await res.json();
+          if (res.ok && data.valid) {
+            appliedDiscount = data;
+            if (msgEl) {
+              msgEl.className = 'text-[10px] mt-1.5 font-bold text-emerald-400 block';
+              msgEl.textContent = `✓ تم تطبيق كود الخصم (${data.code}) بنجاح! وفّرت ${data.discountAmount.toLocaleString('en-US')} ج.م`;
+            }
+            renderOrderSummary();
+          } else {
+            if (msgEl) {
+              msgEl.className = 'text-[10px] mt-1.5 font-bold text-red-400 block';
+              msgEl.textContent = '✕ ' + (data.error || 'كود الخصم غير صحيح');
+            }
+          }
+        } catch (err) {
+          if (msgEl) {
+            msgEl.className = 'text-[10px] mt-1.5 font-bold text-red-400 block';
+            msgEl.textContent = '✕ تعذر التحقق من كود الخصم';
+          }
+        } finally {
+          applyDiscountBtn.disabled = false;
+          applyDiscountBtn.textContent = 'تطبيق';
+          if (window.lucide) window.lucide.createIcons();
+        }
+      });
+
+      discountInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          applyDiscountBtn.click();
+        }
+      });
+    }
+
+    if (removeDiscountBtn) {
+      removeDiscountBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        appliedDiscount = null;
+        if (discountInput) discountInput.value = '';
+        const msgEl = document.getElementById('coDiscountMsg');
+        if (msgEl) {
+          msgEl.className = 'hidden';
+          msgEl.textContent = '';
+        }
+        renderOrderSummary();
+      });
+    }
   }
 
   function getCheckoutConfig() {
@@ -396,6 +516,9 @@
     const totalEl = document.getElementById('coTotal');
     const btnTextEl = document.getElementById('coSubmitBtnText');
     const shippingNoticeEl = document.getElementById('coShippingRuleNotice');
+    const discountRow = document.getElementById('coDiscountRow');
+    const appliedCodeLabel = document.getElementById('coAppliedCodeLabel');
+    const discountVal = document.getElementById('coDiscountVal');
 
     if (!listEl) return;
 
@@ -436,10 +559,36 @@
     const threshold = typeof cfg.freeShippingThreshold === 'number' ? cfg.freeShippingThreshold : (parseFloat(cfg.freeShippingThreshold) || 2500);
     const standardFee = typeof cfg.standardShippingFee === 'number' ? cfg.standardShippingFee : (parseFloat(cfg.standardShippingFee) || 75);
 
+    // Calculate discount if applied
+    let discountAmount = 0;
+    if (appliedDiscount) {
+      const minReq = appliedDiscount.minOrderAmount || 0;
+      if (subtotal >= minReq) {
+        if (appliedDiscount.discountType === 'percentage') {
+          discountAmount = Math.round((subtotal * appliedDiscount.discountValue) / 100);
+        } else {
+          discountAmount = Math.min(appliedDiscount.discountValue, subtotal);
+        }
+        if (discountRow) discountRow.classList.remove('hidden');
+        if (appliedCodeLabel) appliedCodeLabel.textContent = appliedDiscount.code;
+        if (discountVal) discountVal.textContent = `-${discountAmount.toLocaleString('en-US')} ج.م`;
+      } else {
+        discountAmount = 0;
+        if (discountRow) discountRow.classList.add('hidden');
+        const msgEl = document.getElementById('coDiscountMsg');
+        if (msgEl) {
+          msgEl.className = 'text-[10px] mt-1.5 font-bold text-amber-400 block';
+          msgEl.textContent = `الحد الأدنى لتفعيل هذا الكود هو ${minReq.toLocaleString('en-US')} ج.م`;
+        }
+      }
+    } else {
+      if (discountRow) discountRow.classList.add('hidden');
+    }
+
     // Shipping calculation
     const isFreeShipping = subtotal >= threshold;
     const shippingFee = isFreeShipping ? 0 : standardFee;
-    const finalTotal = subtotal + shippingFee;
+    const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
     if (badgeEl) badgeEl.textContent = `${totalCount} ${totalCount === 1 ? 'قطعة' : 'قطع'}`;
     if (subtotalEl) subtotalEl.textContent = `${subtotal.toLocaleString('en-US')} ج.م`;
@@ -458,6 +607,8 @@
     
     const baseBtnText = cfg.submitButtonText || 'تأكيد الطلب الآن';
     if (btnTextEl) btnTextEl.textContent = `${baseBtnText} — ${finalTotal.toLocaleString('en-US')} ج.م`;
+
+    if (window.lucide) window.lucide.createIcons();
   }
 
   async function submitCheckoutOrder() {
@@ -496,8 +647,18 @@
       const p = typeof i.price === 'number' ? i.price : parseFloat(i.price) || 0;
       subtotal += p * (i.quantity || 1);
     });
+
+    let discountAmount = 0;
+    if (appliedDiscount && subtotal >= (appliedDiscount.minOrderAmount || 0)) {
+      if (appliedDiscount.discountType === 'percentage') {
+        discountAmount = Math.round((subtotal * appliedDiscount.discountValue) / 100);
+      } else {
+        discountAmount = Math.min(appliedDiscount.discountValue, subtotal);
+      }
+    }
+
     const shippingFee = subtotal >= threshold ? 0 : standardFee;
-    const totalPrice = subtotal + shippingFee;
+    const totalPrice = Math.max(0, subtotal - discountAmount + shippingFee);
 
     const payload = {
       customerName,
@@ -506,6 +667,12 @@
       customerAddress,
       customerNotes,
       items: currentOrderItems,
+      discountCode: appliedDiscount ? appliedDiscount.code : null,
+      discount_code: appliedDiscount ? appliedDiscount.code : null,
+      discountAmount,
+      discount_amount: discountAmount,
+      subtotalPrice: subtotal,
+      subtotal_price: subtotal,
       totalPrice,
       status: 'pending'
     };

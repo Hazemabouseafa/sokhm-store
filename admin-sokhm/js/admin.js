@@ -54,6 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let orderSearchTerm = '';
   let orderStatusFilterValue = 'all';
   let modalColorsList = [];
+  let discounts = [];
+  let pendingNewColorImages = [];
 
   // عناصر النوافذ المنبثقة
   const productModal = document.getElementById('productEditModal');
@@ -117,6 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadOrders(),
       loadSiteContent(),
       loadProducts(),
+      loadDiscounts(),
       loadDbStats()
     ]);
 
@@ -129,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateCategoryDropdowns();
     renderCategoriesList();
     renderProductsTable();
+    renderDiscounts();
 
     // تفعيل معالجات الأحداث
     setupOrdersHandlers();
@@ -137,6 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupCheckoutFormHandlers();
     setupCategoriesHandlers();
     setupProductsHandlers();
+    setupDiscountsHandlers();
     setupModalHandlers();
     setupInvoiceHandlers();
     setupSecurityHandlers();
@@ -215,6 +220,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         pane.classList.add('hidden');
       }
     });
+
+    if (targetTabId === 'tab-discounts') {
+      loadDiscounts();
+    } else if (targetTabId === 'tab-products') {
+      renderProductsTable();
+    } else if (targetTabId === 'tab-orders') {
+      loadOrders().then(() => {
+        renderOrdersTable();
+        renderOrderStats();
+      });
+    }
 
     setupLucide();
   }
@@ -370,7 +386,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span class="text-[10px] text-neutral-500 font-mono">${items.length} قطع مختلفة</span>
           </td>
           <td class="py-3 px-4 font-mono font-extrabold text-emerald-400 whitespace-nowrap">
-            ${totalPrice.toLocaleString('en-US')} ج.م
+            <div>${totalPrice.toLocaleString('en-US')} ج.م</div>
+            ${(order.discount_code || (order.discount_amount && parseFloat(order.discount_amount) > 0)) ? `
+              <div class="text-[10px] text-amber-400 font-sans font-bold flex items-center gap-1 mt-0.5">
+                <i data-lucide="tag" class="w-2.5 h-2.5"></i>
+                <span>كود: ${order.discount_code || ''} (-${(parseFloat(order.discount_amount) || 0).toLocaleString('en-US')} ج.م)</span>
+              </div>
+            ` : ''}
           </td>
           <td class="py-3 px-4 whitespace-nowrap">
             <select class="order-status-select bg-[#080808] border rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer transition-colors ${st.class}" data-order-id="${orderId}">
@@ -566,6 +588,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             </tbody>
           </table>
         </div>
+
+        ${(order.discount_code || (order.discount_amount && parseFloat(order.discount_amount) > 0)) ? `
+          <div class="pt-2 border-t border-[#1A1A1A] space-y-1 text-xs">
+            <div class="flex items-center justify-between text-neutral-400">
+              <span>المجموع الفرعي (Subtotal):</span>
+              <span class="font-mono text-neutral-200">${((parseFloat(order.subtotal_price) || (totalPrice + (parseFloat(order.discount_amount) || 0)))).toLocaleString('en-US')} ج.م</span>
+            </div>
+            <div class="flex items-center justify-between text-amber-400 font-bold">
+              <span class="flex items-center gap-1">
+                <i data-lucide="tag" class="w-3 h-3"></i>
+                <span>خصم الكوبون (${order.discount_code}):</span>
+              </span>
+              <span class="font-mono">-${((parseFloat(order.discount_amount) || 0)).toLocaleString('en-US')} ج.م</span>
+            </div>
+          </div>
+        ` : ''}
 
         <div class="pt-3 border-t border-[#222] flex items-center justify-between text-sm font-bold">
           <span>المبلغ المطلوب تحصيله (COD):</span>
@@ -1210,9 +1248,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <img src="${prod.image ? '../' + prod.image.replace(/^\.\.\//, '') : '../assets/sokhm-card-1.jpg'}" alt="${prod.name}" class="w-full h-full object-cover">
               </div>
               <div>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 flex-wrap">
                   <h4 class="font-bold text-white text-xs truncate max-w-[180px]">${prod.name}</h4>
                   ${isFirst ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-bold border border-amber-500/30">في المقدمة</span>' : ''}
+                  ${(prod.show_on_homepage === 0 || prod.show_on_homepage === false) 
+                    ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30" title="يظهر فقط داخل قسم التصنيف (مخفي من الرئيسية)">📁 قسم فقط</span>' 
+                    : '<span class="text-[9px] px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 font-bold" title="يظهر في الصفحة الرئيسية وقسم التصنيف">🌐 الرئيسية</span>'}
                 </div>
                 <span class="text-[10px] text-neutral-500 font-mono block mt-0.5">#${prod.id}</span>
               </div>
@@ -1234,7 +1275,8 @@ document.addEventListener('DOMContentLoaded', async () => {
               ${colors.map(c => {
                 const hex = typeof c === 'object' ? c.hex : '#111';
                 const name = typeof c === 'object' ? c.name : c;
-                return `<span class="w-3.5 h-3.5 rounded-full border border-[#333] shadow-sm flex-shrink-0" style="background-color: ${hex}" title="${name}"></span>`;
+                const imgCount = (typeof c === 'object' && Array.isArray(c.images) && c.images.length > 1) ? ` (${c.images.length} صور)` : '';
+                return `<span class="w-3.5 h-3.5 rounded-full border border-[#333] shadow-sm flex-shrink-0" style="background-color: ${hex}" title="${name}${imgCount}"></span>`;
               }).join('')}
               ${colors.length === 0 ? '<span class="text-neutral-500 text-[10px]">-</span>' : ''}
             </div>
@@ -1458,6 +1500,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       setVal('pm_image', prod.image);
       setVal('pm_description', prod.description);
 
+      // Display scope
+      const showOnHomepageSelect = document.getElementById('pm_show_on_homepage');
+      if (showOnHomepageSelect) {
+        showOnHomepageSelect.value = (prod.show_on_homepage === 0 || prod.show_on_homepage === false) ? '0' : '1';
+      }
+
+      // Reset pending images for new color
+      pendingNewColorImages = [];
+      renderPendingNewColorImages();
+
       // Sizes checkboxes
       const sizes = Array.isArray(prod.sizes) ? prod.sizes : (typeof prod.sizes === 'string' ? prod.sizes.split(',') : []);
       document.querySelectorAll('input[name="pm_sizes"]').forEach(cb => {
@@ -1471,14 +1523,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       modalColorsList = rawColors.map(c => {
         const name = typeof c === 'object' ? (c.name || 'Standard') : c;
         const hex = typeof c === 'object' ? (c.hex || '#111111') : '#111111';
-        const image = typeof c === 'object' ? (c.image || prod.image || 'assets/sokhm-card-1.jpg') : (prod.image || 'assets/sokhm-card-1.jpg');
+        let images = [];
+        if (typeof c === 'object' && Array.isArray(c.images) && c.images.length > 0) {
+          images = c.images.filter(Boolean);
+        } else if (typeof c === 'object' && c.image) {
+          images = [c.image];
+        } else if (prod.image) {
+          images = [prod.image];
+        } else {
+          images = ['assets/sokhm-card-1.jpg'];
+        }
+        const image = images[0] || 'assets/sokhm-card-1.jpg';
         const isMain = (!matchedMain && (image === prod.image || (typeof c === 'object' && c.isMain)));
         if (isMain) matchedMain = true;
-        return { name, hex, image, isMain };
+        return { name, hex, image, images, isMain };
       });
 
       if (modalColorsList.length === 0) {
-        modalColorsList = [{ name: 'اللون الرئيسي', hex: '#111111', image: prod.image || 'assets/sokhm-card-1.jpg', isMain: true }];
+        modalColorsList = [{ name: 'اللون الرئيسي', hex: '#111111', image: prod.image || 'assets/sokhm-card-1.jpg', images: [prod.image || 'assets/sokhm-card-1.jpg'], isMain: true }];
         matchedMain = true;
       } else if (!matchedMain) {
         modalColorsList[0].isMain = true;
@@ -1494,9 +1556,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       setVal('pm_image', 'assets/sokhm-card-1.jpg');
       setVal('pm_description', 'تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.');
       if (catSelect && activeCats.length > 0) catSelect.value = activeCats[0].slug || activeCats[0].id;
+      
+      const showOnHomepageSelect = document.getElementById('pm_show_on_homepage');
+      if (showOnHomepageSelect) showOnHomepageSelect.value = '1';
+
+      pendingNewColorImages = [];
+      renderPendingNewColorImages();
+
       modalColorsList = [
-        { name: 'أسود فحمي / Onyx Black', hex: '#0B0B0B', image: 'assets/sokhm-card-1.jpg', isMain: true },
-        { name: 'بيج رملي / Sand Cream', hex: '#D6CDBF', image: 'assets/sokhm-card-2.jpg', isMain: false }
+        { name: 'أسود فحمي / Onyx Black', hex: '#0B0B0B', image: 'assets/sokhm-card-1.jpg', images: ['assets/sokhm-card-1.jpg'], isMain: true },
+        { name: 'بيج رملي / Sand Cream', hex: '#D6CDBF', image: 'assets/sokhm-card-2.jpg', images: ['assets/sokhm-card-2.jpg'], isMain: false }
       ];
       renderModalColors();
 
@@ -1520,6 +1589,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function renderPendingNewColorImages() {
+    const box = document.getElementById('newColorPendingImagesBox');
+    const list = document.getElementById('newColorPendingImagesList');
+    const countEl = document.getElementById('newColorPendingCount');
+    if (!box || !list || !countEl) return;
+
+    if (pendingNewColorImages.length === 0) {
+      box.classList.add('hidden');
+      list.innerHTML = '';
+      countEl.textContent = '0';
+      return;
+    }
+
+    box.classList.remove('hidden');
+    countEl.textContent = pendingNewColorImages.length;
+    list.innerHTML = pendingNewColorImages.map((img, idx) => {
+      const src = img.startsWith('http') || img.startsWith('data:') ? img : '../' + img.replace(/^\.\.\//, '');
+      return `
+        <div class="relative w-10 h-12 rounded-lg overflow-hidden border border-[#333] bg-black flex-shrink-0">
+          <img src="${src}" class="w-full h-full object-cover">
+          <button type="button" class="remove-pending-color-img absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-black/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-[8px] cursor-pointer" data-idx="${idx}">✕</button>
+        </div>
+      `;
+    }).join('');
+
+    list.querySelectorAll('.remove-pending-color-img').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        pendingNewColorImages.splice(idx, 1);
+        renderPendingNewColorImages();
+      });
+    });
+  }
+
   function renderModalColors() {
     const list = document.getElementById('modalColorsBadgesList');
     if (!list) return;
@@ -1536,8 +1640,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (mainColorIndicator) mainColorIndicator.textContent = '(لا توجد ألوان مضافة)';
 
       list.innerHTML = `
-        <div class="w-full py-2.5 px-3 text-center border border-dashed border-[#222] rounded-xl text-neutral-500 text-xs">
-          لم تقم بإضافة ألوان بعد. اختر اسم اللون وكوده وصورته واضغط <strong class="text-white">+ إضافة اللون</strong>.
+        <div class="w-full py-4 px-3 text-center border border-dashed border-[#222] rounded-xl text-neutral-500 text-xs">
+          لم تقم بإضافة ألوان بعد. اختر اسم اللون وكوده وصوره واضغط <strong class="text-white">+ إضافة اللون</strong>.
         </div>
       `;
       setupLucide();
@@ -1573,35 +1677,71 @@ document.addEventListener('DOMContentLoaded', async () => {
     list.innerHTML = modalColorsList.map((c, idx) => {
       const hex = typeof c === 'object' ? (c.hex || '#111') : '#111';
       const name = typeof c === 'object' ? (c.name || 'Color') : c;
-      const img = (typeof c === 'object' && c.image) ? c.image : 'assets/sokhm-card-1.jpg';
-      const imgSrc = img.startsWith('http') || img.startsWith('data:') ? img : '../' + img.replace(/^\.\.\//, '');
+      const images = (typeof c === 'object' && Array.isArray(c.images) && c.images.length > 0)
+        ? c.images
+        : (c.image ? [c.image] : ['assets/sokhm-card-1.jpg']);
       const isMain = Boolean(c.isMain);
 
       return `
-        <div class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl ${isMain ? 'bg-[#181818] border-amber-500/60 ring-1 ring-amber-500/30' : 'bg-[#121212] border-[#222]'} border text-xs text-white transition-all shadow-sm">
-          <span class="w-3.5 h-3.5 rounded-full border border-white/20 shadow-inner flex-shrink-0" style="background-color: ${hex}"></span>
-          <img src="${imgSrc}" alt="${name}" class="w-6 h-6 rounded-md object-cover border border-[#333] flex-shrink-0" onerror="this.src='../assets/sokhm-card-1.jpg'">
-          <span class="font-bold text-[11px] leading-tight">${name}</span>
-          ${isMain ? `
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
-              <i data-lucide="star" class="w-2.5 h-2.5 fill-amber-300"></i>
-              الرئيسية
-            </span>
-          ` : `
-            <button type="button" class="set-main-color-btn text-[10px] text-neutral-400 hover:text-white bg-[#1A1A1A] hover:bg-[#252525] px-2 py-0.5 rounded-full border border-[#2D2D2D] hover:border-amber-500/40 transition-colors cursor-pointer flex items-center gap-1" data-idx="${idx}" title="تعيين صورة هذا اللون كصورة رئيسية للواجهة">
-              <i data-lucide="star" class="w-2.5 h-2.5"></i>
-              <span>تعيين كرئيسية</span>
-            </button>
-          `}
-          <button type="button" class="remove-modal-color-btn text-neutral-500 hover:text-red-400 mr-0.5 cursor-pointer transition-colors p-1" data-idx="${idx}" title="حذف هذا اللون">
-            <i data-lucide="x" class="w-3 h-3"></i>
-          </button>
+        <div class="p-3 rounded-xl ${isMain ? 'bg-[#141414] border-amber-500/60 ring-1 ring-amber-500/20' : 'bg-[#101010] border-[#1E1E1E]'} border text-xs text-white space-y-2.5 transition-all shadow-sm">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full border border-white/20 shadow-inner flex-shrink-0" style="background-color: ${hex}"></span>
+              <span class="font-bold text-xs">${name}</span>
+              <span class="text-[10px] text-neutral-400 font-mono">(${images.length} ${images.length === 1 ? 'صورة' : 'صور'})</span>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              ${isMain ? `
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
+                  <i data-lucide="star" class="w-2.5 h-2.5 fill-amber-300"></i>
+                  صورة الواجهة
+                </span>
+              ` : `
+                <button type="button" class="set-main-color-btn text-[10px] text-neutral-400 hover:text-white bg-[#1A1A1A] hover:bg-[#252525] px-2.5 py-1 rounded-full border border-[#2D2D2D] hover:border-amber-500/40 transition-colors cursor-pointer flex items-center gap-1" data-idx="${idx}" title="تعيين أول صورة لهذا اللون كصورة رئيسية للواجهة">
+                  <i data-lucide="star" class="w-2.5 h-2.5"></i>
+                  <span>تعيين كرئيسية</span>
+                </button>
+              `}
+              <button type="button" class="remove-modal-color-btn text-neutral-500 hover:text-red-400 p-1 cursor-pointer transition-colors" data-idx="${idx}" title="حذف هذا اللون بالكامل">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Color Images Thumbnails -->
+          <div class="flex items-center gap-2 flex-wrap pt-0.5">
+            ${images.map((img, imgIdx) => {
+              const src = img.startsWith('http') || img.startsWith('data:') ? img : '../' + img.replace(/^\.\.\//, '');
+              return `
+                <div class="relative group w-12 h-14 rounded-lg overflow-hidden border ${imgIdx === 0 ? 'border-amber-500/50' : 'border-[#2A2A2A]'} bg-black flex-shrink-0 shadow-sm" title="${imgIdx === 0 ? 'الصورة الأساسية للون' : `صورة ${imgIdx + 1}`}">
+                  <img src="${src}" class="w-full h-full object-cover" onerror="this.src='../assets/sokhm-card-1.jpg'">
+                  ${imgIdx === 0 ? `
+                    <span class="absolute bottom-0 inset-x-0 bg-black/80 text-[8px] text-amber-300 text-center font-bold py-0.5">أساسية</span>
+                  ` : ''}
+                  ${images.length > 1 ? `
+                    <button type="button" class="delete-color-img-btn absolute top-0.5 right-0.5 w-4 h-4 bg-black/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-[9px] cursor-pointer transition-colors" data-color-idx="${idx}" data-img-idx="${imgIdx}" title="حذف هذه الصورة من هذا اللون">
+                      ✕
+                    </button>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+
+            <!-- Add more images directly to this color -->
+            <label class="w-12 h-14 rounded-lg border border-dashed border-[#333] hover:border-white hover:bg-[#1A1A1A] flex flex-col items-center justify-center text-neutral-400 hover:text-white cursor-pointer transition-colors flex-shrink-0" title="رفع صور إضافية لهذا اللون">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span class="text-[9px] mt-0.5 font-bold">+صورة</span>
+              <input type="file" multiple accept="image/*" class="hidden color-extra-file-input" data-color-idx="${idx}">
+            </label>
+          </div>
         </div>
       `;
     }).join('');
 
     setupLucide();
 
+    // Attach Set Main Color Events
     list.querySelectorAll('.set-main-color-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1614,6 +1754,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
+    // Attach Remove Entire Color Events
     list.querySelectorAll('.remove-modal-color-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1624,6 +1765,49 @@ document.addEventListener('DOMContentLoaded', async () => {
           modalColorsList[0].isMain = true;
         }
         renderModalColors();
+      });
+    });
+
+    // Attach Delete Specific Image from Color
+    list.querySelectorAll('.delete-color-img-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const colorIdx = parseInt(btn.getAttribute('data-color-idx'), 10);
+        const imgIdx = parseInt(btn.getAttribute('data-img-idx'), 10);
+        if (modalColorsList[colorIdx] && Array.isArray(modalColorsList[colorIdx].images)) {
+          modalColorsList[colorIdx].images.splice(imgIdx, 1);
+          if (modalColorsList[colorIdx].images.length > 0) {
+            modalColorsList[colorIdx].image = modalColorsList[colorIdx].images[0];
+          }
+          renderModalColors();
+        }
+      });
+    });
+
+    // Attach Upload Extra Images to Color
+    list.querySelectorAll('.color-extra-file-input').forEach(input => {
+      input.addEventListener('change', async (e) => {
+        const colorIdx = parseInt(input.getAttribute('data-color-idx'), 10);
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0 || !modalColorsList[colorIdx]) return;
+
+        showToast(`جاري رفع ${files.length} صور للون ${modalColorsList[colorIdx].name}...`);
+        for (const file of files) {
+          try {
+            const uploadedUrl = await uploadImageFile(file);
+            if (uploadedUrl) {
+              if (!Array.isArray(modalColorsList[colorIdx].images)) {
+                modalColorsList[colorIdx].images = [modalColorsList[colorIdx].image || uploadedUrl];
+              }
+              modalColorsList[colorIdx].images.push(uploadedUrl);
+              modalColorsList[colorIdx].image = modalColorsList[colorIdx].images[0];
+            }
+          } catch (err) {
+            console.error('Error uploading extra image:', err);
+          }
+        }
+        renderModalColors();
+        showToast(`تمت إضافة الصور الجديدة للون بنجاح`);
       });
     });
   }
@@ -1737,23 +1921,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     const colorImgIn = document.getElementById('newColorImgInput');
     const colorPreviewThumb = document.getElementById('newColorPreviewThumb');
 
-    if (colorImgFileInput && colorImgIn) {
+    if (colorImgFileInput) {
       colorImgFileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
         try {
-          showToast('جاري معالجة ورفع صورة اللون...');
-          const uploadedUrl = await uploadImageFile(file);
-          colorImgIn.value = uploadedUrl;
-          if (colorPreviewThumb) {
-            colorPreviewThumb.src = uploadedUrl.startsWith('http') || uploadedUrl.startsWith('data:')
-              ? uploadedUrl
-              : '../' + uploadedUrl.replace(/^\.\.\//, '');
+          showToast(`جاري معالجة ورفع ${files.length} صور للون...`);
+          for (const file of files) {
+            const uploadedUrl = await uploadImageFile(file);
+            if (uploadedUrl) {
+              pendingNewColorImages.push(uploadedUrl);
+              if (colorImgIn) colorImgIn.value = uploadedUrl;
+              if (colorPreviewThumb) {
+                colorPreviewThumb.src = uploadedUrl.startsWith('http') || uploadedUrl.startsWith('data:')
+                  ? uploadedUrl
+                  : '../' + uploadedUrl.replace(/^\.\.\//, '');
+              }
+            }
           }
-          showToast('تم اختيار ورفع صورة اللون بنجاح!');
+          renderPendingNewColorImages();
+          showToast(`تم رفع وتجهيز ${files.length} صور للون بنجاح!`);
         } catch (err) {
-          alert('تعذر قراءة ملف الصورة');
+          alert('تعذر قراءة ملفات الصور');
         }
+      });
+    }
+
+    const clearPendingBtn = document.getElementById('clearPendingColorImagesBtn');
+    if (clearPendingBtn) {
+      clearPendingBtn.addEventListener('click', () => {
+        pendingNewColorImages = [];
+        renderPendingNewColorImages();
       });
     }
 
@@ -1776,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       addColorBtn.addEventListener('click', () => {
         const name = colorNameIn.value.trim();
         const hex = colorHexIn.value || '#111111';
-        const colorImg = (colorImgIn ? colorImgIn.value.trim() : '') || 'assets/sokhm-card-1.jpg';
+        const singleImg = (colorImgIn ? colorImgIn.value.trim() : '');
 
         if (!name) {
           alert('يرجى كتابة اسم اللون أولاً (مثال: أسود فحمي / Onyx Black)');
@@ -1784,13 +1982,26 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
 
+        let colorImages = [];
+        if (pendingNewColorImages.length > 0) {
+          colorImages = [...pendingNewColorImages];
+        } else if (singleImg) {
+          colorImages = [singleImg];
+        } else {
+          colorImages = ['assets/sokhm-card-1.jpg'];
+        }
+
         const isMain = modalColorsList.length === 0;
-        modalColorsList.push({ name, hex, image: colorImg, isMain });
+        const primaryImg = colorImages[0];
+        modalColorsList.push({ name, hex, image: primaryImg, images: colorImages, isMain });
         renderModalColors();
+
         colorNameIn.value = '';
         if (colorImgIn) colorImgIn.value = '';
         if (colorPreviewThumb) colorPreviewThumb.src = '../assets/sokhm-card-1.jpg';
-        showToast(`تمت إضافة اللون "${name}" بنجاح`);
+        pendingNewColorImages = [];
+        renderPendingNewColorImages();
+        showToast(`تمت إضافة اللون "${name}" ومعه ${colorImages.length} صور بنجاح`);
       });
     }
 
@@ -1825,9 +2036,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const mainColor = modalColorsList.find(c => c.isMain) || modalColorsList[0];
         const image = (mainColor && mainColor.image) ? mainColor.image : (getVal('pm_image') || 'assets/sokhm-card-1.jpg');
         const description = getVal('pm_description') || '';
+        const show_on_homepage = (document.getElementById('pm_show_on_homepage')?.value === '0') ? 0 : 1;
 
-        const colorImages = modalColorsList.map(c => c.image).filter(Boolean);
-        const imagesList = [image, ...colorImages.filter(ci => ci !== image)];
+        // Collect all images from all colors
+        const allColorImages = [];
+        modalColorsList.forEach(c => {
+          if (Array.isArray(c.images)) {
+            c.images.forEach(img => {
+              if (img && !allColorImages.includes(img)) allColorImages.push(img);
+            });
+          } else if (c.image && !allColorImages.includes(c.image)) {
+            allColorImages.push(c.image);
+          }
+        });
+        if (image && !allColorImages.includes(image)) {
+          allColorImages.unshift(image);
+        }
 
         const payload = {
           id,
@@ -1836,10 +2060,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           price,
           category,
           image,
-          images: imagesList,
+          images: allColorImages.length > 0 ? allColorImages : [image],
           description,
           sizes: checkedSizes,
-          colors: modalColorsList.length > 0 ? modalColorsList : [{ name: 'Standard', hex: '#111', image }],
+          colors: modalColorsList.map(c => ({
+            name: c.name,
+            hex: c.hex,
+            image: (c.images && c.images.length > 0) ? c.images[0] : c.image,
+            images: (c.images && c.images.length > 0) ? c.images : [c.image || image],
+            isMain: Boolean(c.isMain)
+          })),
+          show_on_homepage,
           stock_status: 'in_stock'
         };
 
@@ -2033,7 +2264,224 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ================= 12. إحصائيات قاعدة البيانات (DATABASE STATS) =================
+  // ================= 12. إدارة أكواد الخصم والكوبونات (DISCOUNTS) =================
+  async function loadDiscounts() {
+    try {
+      const res = await fetch('/api/discounts', {
+        headers: { 
+          'Authorization': 'Bearer ' + token,
+          'x-admin-token': token
+        }
+      });
+      if (res.ok) {
+        discounts = await res.json();
+      }
+    } catch (e) {
+      console.warn('تعذر جلب أكواد الخصم:', e);
+    }
+    renderDiscounts();
+  }
+
+  function renderDiscounts() {
+    const tbody = document.getElementById('discountsTableBody');
+    const badge = document.getElementById('discountsCountBadge');
+    if (badge) badge.textContent = `${discounts.length} كود`;
+    if (!tbody) return;
+
+    if (!discounts || discounts.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center py-10 text-neutral-500 text-xs">
+            لا توجد أكواد خصم حالياً. أنشئ كود خصم جديد من النموذج الجانبي.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = discounts.map(d => {
+      const isPercent = d.discount_type === 'percentage';
+      const valStr = isPercent ? `${d.discount_value}%` : `${d.discount_value.toLocaleString('en-US')} ج.م`;
+      const minOrder = d.min_order_amount > 0 ? `${d.min_order_amount.toLocaleString('en-US')} ج.م` : 'بدون حد أدنى';
+      const isActive = Boolean(d.is_active);
+
+      return `
+        <tr class="hover:bg-white/[0.02] transition-colors">
+          <td class="py-3 px-3 font-mono font-bold text-white whitespace-nowrap">
+            <span class="px-2.5 py-1 rounded-lg bg-[#141414] border border-[#262626] text-amber-300 font-extrabold tracking-wider">
+              ${d.code}
+            </span>
+          </td>
+          <td class="py-3 px-3 font-mono font-bold text-white whitespace-nowrap">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${isPercent ? 'bg-purple-950/60 text-purple-300 border border-purple-800/60' : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/60'} text-[11px]">
+              ${valStr} (${isPercent ? 'نسبة' : 'مبلغ ثابت'})
+            </span>
+          </td>
+          <td class="py-3 px-3 font-mono text-neutral-300 text-xs whitespace-nowrap">
+            ${minOrder}
+          </td>
+          <td class="py-3 px-3 text-center font-mono font-bold text-white whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded-full bg-[#161616] border border-[#222] text-[11px]">
+              ${d.usage_count || 0} مرات
+            </span>
+          </td>
+          <td class="py-3 px-3 text-center whitespace-nowrap">
+            <button type="button" class="toggle-discount-btn inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-colors ${isActive ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 hover:bg-emerald-900/60' : 'bg-neutral-900 text-neutral-500 border border-neutral-700 hover:bg-neutral-800'}" data-id="${d.id}" title="${isActive ? 'الكود مفعّل - اضغط لتعطيله' : 'الكود معطل - اضغط لتفعيله'}">
+              <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-neutral-500'}"></span>
+              <span>${isActive ? 'مفعل' : 'معطل'}</span>
+            </button>
+          </td>
+          <td class="py-3 px-3 text-center whitespace-nowrap">
+            <button type="button" class="delete-discount-btn p-1.5 rounded-lg bg-[#141414] hover:bg-red-950/60 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer border border-[#222]" data-id="${d.id}" data-code="${d.code}" title="حذف كود الخصم">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    setupLucide();
+
+    // Toggle discount active state
+    tbody.querySelectorAll('.toggle-discount-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        try {
+          const res = await fetch(`/api/discounts/${id}/toggle`, {
+            method: 'POST',
+            headers: { 
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            }
+          });
+          if (res.ok) {
+            await loadDiscounts();
+            showToast('تم تحديث حالة كود الخصم');
+          } else {
+            alert('تعذر تحديث حالة الكود');
+          }
+        } catch (e) {
+          alert('خطأ في الاتصال بالسيرفر');
+        }
+      });
+    });
+
+    // Delete discount
+    tbody.querySelectorAll('.delete-discount-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const code = btn.getAttribute('data-code');
+        if (!confirm(`هل أنت متأكد من حذف كود الخصم "${code}"؟`)) return;
+
+        try {
+          const res = await fetch(`/api/discounts/${id}`, {
+            method: 'DELETE',
+            headers: { 
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            }
+          });
+          if (res.ok) {
+            await loadDiscounts();
+            showToast(`تم حذف كود الخصم "${code}" بنجاح`);
+          } else {
+            alert('تعذر حذف كود الخصم');
+          }
+        } catch (e) {
+          alert('خطأ في الاتصال بالسيرفر');
+        }
+      });
+    });
+  }
+
+  function setupDiscountsHandlers() {
+    const form = document.getElementById('createDiscountForm');
+    const typeSelect = document.getElementById('newDiscountType');
+    const unitLabel = document.getElementById('newDiscountUnitLabel');
+    const refreshBtn = document.getElementById('refreshDiscountsBtn');
+
+    if (typeSelect && unitLabel) {
+      typeSelect.addEventListener('change', () => {
+        unitLabel.textContent = typeSelect.value === 'percentage' ? '%' : 'ج.م';
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
+        refreshBtn.classList.add('animate-spin');
+        await loadDiscounts();
+        setTimeout(() => refreshBtn.classList.remove('animate-spin'), 600);
+        showToast('تم تحديث قائمة أكواد الخصم');
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = (document.getElementById('newDiscountCode')?.value || '').trim().toUpperCase();
+        const discount_type = document.getElementById('newDiscountType')?.value || 'percentage';
+        const discount_value = parseFloat(document.getElementById('newDiscountValue')?.value) || 0;
+        const min_order_amount = parseFloat(document.getElementById('newDiscountMinOrder')?.value) || 0;
+
+        if (!code) {
+          alert('يرجى كتابة كود الخصم');
+          return;
+        }
+        if (discount_value <= 0) {
+          alert('يرجى تحديد قيمة خصم صالحة');
+          return;
+        }
+        if (discount_type === 'percentage' && discount_value > 100) {
+          alert('نسبة الخصم لا يمكن أن تتجاوز 100%');
+          return;
+        }
+
+        const submitBtn = document.getElementById('createDiscountSubmitBtn');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">✦</span> جاري الإنشاء...';
+        }
+
+        try {
+          const res = await fetch('/api/discounts', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            },
+            body: JSON.stringify({
+              code,
+              discount_type,
+              discount_value,
+              min_order_amount
+            })
+          });
+
+          if (res.ok) {
+            form.reset();
+            if (unitLabel) unitLabel.textContent = '%';
+            await loadDiscounts();
+            showToast(`تم إنشاء وتفعيل كود الخصم "${code}" بنجاح ✦`);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            alert(err.error || 'تعذر إنشاء كود الخصم');
+          }
+        } catch (err) {
+          console.error('Error creating discount:', err);
+          alert('خطأ في الاتصال بالسيرفر أثناء إنشاء الكود');
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i data-lucide="plus-circle" class="w-4 h-4"></i><span>تفعيل وإنشاء الكود</span>';
+            setupLucide();
+          }
+        }
+      });
+    }
+  }
+
+  // ================= 13. إحصائيات قاعدة البيانات (DATABASE STATS) =================
   async function loadDbStats() {
     try {
       const res = await fetch('/api/stats');

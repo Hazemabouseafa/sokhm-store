@@ -372,6 +372,68 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 13. Discounts: GET /api/discounts
+    if (pathname === '/api/discounts' && req.method === 'GET') {
+      try {
+        const discounts = await db.getDiscounts();
+        return sendJson(res, 200, discounts);
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 14. Discounts: POST /api/discounts
+    if (pathname === '/api/discounts' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const created = await db.createDiscount(body);
+        return sendJson(res, 201, { success: true, discount: created });
+      } catch (e) {
+        return sendJson(res, 400, { error: e.message });
+      }
+    }
+
+    // 15. Discounts: POST /api/discounts/validate (Public Validation)
+    if (pathname === '/api/discounts/validate' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const result = await db.validateDiscount(body.code, body.subtotal);
+        if (!result.valid) {
+          return sendJson(res, 400, result);
+        }
+        return sendJson(res, 200, result);
+      } catch (e) {
+        return sendJson(res, 500, { valid: false, error: e.message });
+      }
+    }
+
+    // 16. Discounts: DELETE /api/discounts/:id or /api/discounts?id=...
+    const discMatch = pathname.match(/^\/api\/discounts\/([^\/]+)$/);
+    if ((pathname === '/api/discounts' || discMatch) && req.method === 'DELETE') {
+      try {
+        const id = discMatch ? discMatch[1] : parsedUrl.searchParams.get('id');
+        if (!id) return sendJson(res, 400, { error: 'Missing discount id' });
+        await db.deleteDiscount(id);
+        return sendJson(res, 200, { success: true, message: 'Discount deleted successfully' });
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 17. Discounts: PUT /api/discounts/:id/toggle or POST /api/discounts/toggle
+    const discToggleMatch = pathname.match(/^\/api\/discounts\/([^\/]+)\/toggle$/);
+    if ((discToggleMatch || pathname === '/api/discounts/toggle') && (req.method === 'PUT' || req.method === 'POST')) {
+      try {
+        const body = await readBody(req);
+        const id = discToggleMatch ? discToggleMatch[1] : body.id;
+        if (!id) return sendJson(res, 400, { error: 'Missing discount id' });
+        const resObj = await db.toggleDiscount(id);
+        return sendJson(res, 200, { success: true, ...resObj });
+      } catch (e) {
+        return sendJson(res, 400, { error: e.message });
+      }
+    }
+
     // 5. POST /api/upload-image
     if (pathname === '/api/upload-image' && req.method === 'POST') {
       try {

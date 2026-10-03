@@ -8,6 +8,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   let selectedModalSize = 'M';
   let activeModalProduct = null;
   let cart = [];
+  let categories = [];
+  let activeCategory = 'all';
+
+  // Read URL category query param if present
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const catParam = urlParams.get('category');
+    if (catParam) activeCategory = catParam;
+  } catch (e) {}
 
   // --- DOM REFERENCES ---
   const noirBestSellersGrid = document.getElementById('noirBestSellersGrid');
@@ -147,6 +156,95 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       ];
     }
+    loadCategories();
+    renderBestSellers();
+  }
+
+  // ================= 1.5 CATEGORY FILTERS & PRODUCTS DROPDOWN =================
+  async function loadCategories() {
+    try {
+      const res = await fetch(`/api/categories?_t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          categories = data;
+        }
+      }
+    } catch (e) {
+      categories = [
+        { id: 'hoodies', name: 'Hoodies', slug: 'hoodies' },
+        { id: 'jackets', name: 'Jackets', slug: 'jackets' },
+        { id: 'tees', name: 'Tees', slug: 'tees' },
+        { id: 'pants', name: 'Pants', slug: 'pants' },
+        { id: 'accessories', name: 'Accessories', slug: 'accessories' }
+      ];
+    }
+    renderCategoryFilters();
+  }
+
+  function renderCategoryFilters() {
+    const navList = document.getElementById('navCategoriesList');
+    const filterBar = document.getElementById('categoryFilterBar');
+
+    if (navList) {
+      navList.innerHTML = categories.map(c => `
+        <a href="#collection" data-nav-category="${c.slug || c.id}" class="nav-category-link flex items-center justify-between px-3 py-2 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 text-xs font-mono transition-all">
+          <span>${c.name}</span>
+          <i data-lucide="chevron-left" class="w-3 h-3 text-neutral-500"></i>
+        </a>
+      `).join('');
+
+      navList.querySelectorAll('.nav-category-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const cat = link.getAttribute('data-nav-category');
+          selectCategory(cat);
+          const col = document.getElementById('collection');
+          if (col) col.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+    }
+
+    const allNavBtn = document.querySelector('[data-nav-category="all"]');
+    if (allNavBtn) {
+      allNavBtn.onclick = (e) => {
+        e.preventDefault();
+        selectCategory('all');
+        const col = document.getElementById('collection');
+        if (col) col.scrollIntoView({ behavior: 'smooth' });
+      };
+    }
+
+    if (filterBar) {
+      const isAll = activeCategory === 'all';
+      filterBar.innerHTML = `
+        <button type="button" class="cat-pill ${isAll ? 'active px-4 py-2 rounded-full border border-white bg-white text-black font-bold uppercase transition-all whitespace-nowrap cursor-pointer shadow-sm' : 'px-4 py-2 rounded-full border border-[#222] bg-[#0E0E0E] text-neutral-400 hover:text-white hover:border-neutral-600 font-bold uppercase transition-all whitespace-nowrap cursor-pointer'}" data-category="all">
+          <span>ALL</span>
+        </button>
+      ` + categories.map(c => {
+        const slug = (c.slug || c.id || '').toLowerCase();
+        const isActive = activeCategory.toLowerCase() === slug;
+        return `
+          <button type="button" class="cat-pill ${isActive ? 'active px-4 py-2 rounded-full border border-white bg-white text-black font-bold uppercase transition-all whitespace-nowrap cursor-pointer shadow-sm' : 'px-4 py-2 rounded-full border border-[#222] bg-[#0E0E0E] text-neutral-400 hover:text-white hover:border-neutral-600 font-bold uppercase transition-all whitespace-nowrap cursor-pointer'}" data-category="${slug}">
+            <span>${c.name}</span>
+          </button>
+        `;
+      }).join('');
+
+      filterBar.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const cat = btn.getAttribute('data-category');
+          selectCategory(cat);
+        });
+      });
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function selectCategory(catSlug) {
+    activeCategory = (catSlug || 'all').toLowerCase();
+    renderCategoryFilters();
     renderBestSellers();
   }
 
@@ -155,7 +253,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!noirBestSellersGrid) return;
     noirBestSellersGrid.innerHTML = '';
 
-    products.forEach((prod) => {
+    // Filter logic:
+    // 1. If activeCategory === 'all', only display products that are marked for homepage (show_on_homepage !== false)
+    // 2. If activeCategory is specific, show all products in that category (including those marked category-only)
+    let displayedProducts = products;
+    if (activeCategory === 'all') {
+      displayedProducts = products.filter(p => p.show_on_homepage !== false && p.show_on_homepage !== 0 && p.show_on_homepage !== '0' && p.showOnHomepage !== false);
+    } else {
+      displayedProducts = products.filter(p => {
+        const pCat = (p.category || p.category_id || '').toLowerCase();
+        return pCat === activeCategory;
+      });
+    }
+
+    if (displayedProducts.length === 0) {
+      noirBestSellersGrid.innerHTML = `
+        <div class="col-span-full py-16 text-center text-neutral-500 font-mono text-xs">
+          <p class="text-sm text-neutral-400 font-bold uppercase tracking-wider mb-2">لا توجد قطع معروضة في هذا القسم حالياً</p>
+          <p>يرجى اختيار قسم آخر أو الضغط على ALL لعرض باقي التشكيلة.</p>
+        </div>
+      `;
+      return;
+    }
+
+    displayedProducts.forEach((prod) => {
       const card = document.createElement('div');
       card.className = 'sokhm-card flex flex-col group cursor-pointer';
 

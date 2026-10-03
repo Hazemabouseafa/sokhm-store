@@ -281,6 +281,62 @@ module.exports = async (req, res) => {
       }
     }
 
+    // 5.5 Discount Codes Endpoints
+    if (pathname === '/api/discounts') {
+      if (req.method === 'GET') {
+        const discounts = await db.getDiscounts();
+        return sendJson(res, 200, discounts);
+      }
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        try {
+          const created = await db.createDiscount(body);
+          return sendJson(res, 201, { success: true, discount: created });
+        } catch (e) {
+          return sendJson(res, 400, { error: e.message });
+        }
+      }
+      if (req.method === 'DELETE') {
+        const id = parsedUrl.searchParams.get('id');
+        if (!id) return sendJson(res, 400, { error: 'Missing discount id' });
+        await db.deleteDiscount(id);
+        return sendJson(res, 200, { success: true, message: 'Discount deleted' });
+      }
+    }
+
+    if (pathname === '/api/discounts/validate' && req.method === 'POST') {
+      const body = await parseBody(req);
+      try {
+        const result = await db.validateDiscount(body.code, body.subtotal);
+        if (!result.valid) {
+          return sendJson(res, 400, result);
+        }
+        return sendJson(res, 200, result);
+      } catch (e) {
+        return sendJson(res, 500, { valid: false, error: e.message });
+      }
+    }
+
+    const discMatch = pathname.match(/^\/api\/discounts\/([^\/]+)$/);
+    if (discMatch && req.method === 'DELETE') {
+      const id = discMatch[1];
+      await db.deleteDiscount(id);
+      return sendJson(res, 200, { success: true, message: 'Discount deleted' });
+    }
+
+    const discToggleMatch = pathname.match(/^\/api\/discounts\/([^\/]+)\/toggle$/);
+    if ((discToggleMatch || pathname === '/api/discounts/toggle') && (req.method === 'PUT' || req.method === 'POST')) {
+      const body = await parseBody(req);
+      const id = discToggleMatch ? discToggleMatch[1] : body.id;
+      if (!id) return sendJson(res, 400, { error: 'Missing discount id' });
+      try {
+        const resObj = await db.toggleDiscount(id);
+        return sendJson(res, 200, { success: true, ...resObj });
+      } catch (e) {
+        return sendJson(res, 400, { error: e.message });
+      }
+    }
+
     // 6. Stats
     if (pathname === '/api/stats' && req.method === 'GET') {
       const stats = await db.getStats();

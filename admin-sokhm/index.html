@@ -203,6 +203,11 @@
           <span>تخصيص الشراء (Checkout)</span>
         </button>
 
+        <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-discounts">
+          <i data-lucide="tag" class="w-4 h-4 text-emerald-400"></i>
+          <span>أكواد الخصم والكوبونات (Discounts)</span>
+        </button>
+
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-categories">
           <i data-lucide="layers" class="w-4 h-4"></i>
           <span>الأقسام والتصنيفات (Categories)</span>
@@ -1246,6 +1251,113 @@
     </section>
 
     <!-- ========================================================
+         التبويب: أكواد الخصم والكوبونات (DISCOUNTS TAB)
+         ======================================================== -->
+    <section id="tab-discounts" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1A1A1A]">
+        <div>
+          <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">العروض والخصومات الترويجية</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1 flex items-center gap-3">
+            <span>أكواد الخصم والكوبونات (Discount Codes)</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-400 border border-emerald-800 font-mono font-bold">PROMO CODES</span>
+          </h2>
+          <p class="text-xs text-neutral-400 mt-1">
+            إنشاء وإدارة كوبونات الخصم للمتجر (نسبة مئوية % أو خصم بمبلغ ثابت ج.م)، تفعيلها، وإيقافها أو حذفها، ومتابعة استخدام العملاء لها في شاشة الشراء (Checkout).
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="refreshDiscountsBtn" class="px-4 py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>تحديث الأكواد</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- New Discount Form (4 Cols) -->
+        <div class="lg:col-span-4">
+          <div class="cms-card p-6 space-y-4">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
+              <i data-lucide="tag" class="w-4 h-4 text-emerald-400"></i>
+              <span>إنشاء كود خصم جديد</span>
+            </h3>
+
+            <form id="createDiscountForm" class="space-y-4">
+              <div>
+                <label class="cms-label">كود الخصم (Promo Code) *</label>
+                <input type="text" id="newDiscountCode" required placeholder="مثال: SOKHM20 أو VIP100" class="cms-input w-full font-mono uppercase tracking-wider font-bold">
+                <span class="text-[10px] text-neutral-500 block mt-1">الكود الذي يكتبه العميل في صفحة إتمام الطلب (Checkout).</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="cms-label">نوع الخصم *</label>
+                  <select id="newDiscountType" class="cms-input w-full cursor-pointer">
+                    <option value="percentage">نسبة مئوية (%)</option>
+                    <option value="fixed">مبلغ ثابت (ج.م)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="cms-label">قيمة الخصم *</label>
+                  <div class="relative">
+                    <input type="number" id="newDiscountValue" required min="1" step="any" placeholder="20" class="cms-input w-full font-mono pl-9 font-bold">
+                    <span id="newDiscountUnitLabel" class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-neutral-400 font-bold">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="cms-label">الحد الأدنى لقيمة السلة (ج.م)</label>
+                <div class="relative">
+                  <input type="number" id="newDiscountMinOrder" min="0" step="any" value="0" placeholder="0" class="cms-input w-full font-mono pl-14">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-neutral-400 font-bold">ج.م</span>
+                </div>
+                <span class="text-[10px] text-neutral-500 block mt-1">اتركه 0 إذا لم يكن هناك حد أدنى للطلب.</span>
+              </div>
+
+              <button type="submit" id="createDiscountSubmitBtn" class="w-full py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>تفعيل وإنشاء الكود</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Discounts Table (8 Cols) -->
+        <div class="lg:col-span-8">
+          <div class="cms-card p-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-[#1A1A1A]">
+              <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i data-lucide="percent" class="w-4 h-4 text-emerald-400"></i>
+                <span>أكواد الخصم المفعلة والمتاحة</span>
+              </h3>
+              <span id="discountsCountBadge" class="text-xs font-mono font-bold text-neutral-400">0 أكواد</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-right text-xs">
+                <thead class="border-b border-[#1A1A1A] text-neutral-400 font-bold">
+                  <tr>
+                    <th class="py-2.5 px-3">الكود</th>
+                    <th class="py-2.5 px-3">الخصم</th>
+                    <th class="py-2.5 px-3">الحد الأدنى</th>
+                    <th class="py-2.5 px-3 text-center">الاستخدام</th>
+                    <th class="py-2.5 px-3 text-center">الحالة</th>
+                    <th class="py-2.5 px-3 text-center">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="discountsTableBody" class="divide-y divide-[#141414]">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
          التبويب ٧: الحماية وإدارة كلمة المرور (SECURITY TAB)
          ======================================================== -->
     <section id="tab-security" class="tab-pane hidden space-y-6">
@@ -1504,6 +1616,23 @@
         </div>
       </div>
 
+      <!-- Display Scope (نطاق الظهور في المتجر) -->
+      <div>
+        <label class="cms-label flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="eye" class="w-3.5 h-3.5 text-neutral-400"></i>
+            <span>نطاق ظهور المنتج (Display Scope) *</span>
+          </span>
+        </label>
+        <select id="pm_show_on_homepage" class="cms-input w-full cursor-pointer">
+          <option value="1">🌐 الظهور في الصفحة الرئيسية + قسم التصنيف (العرض العام)</option>
+          <option value="0">📁 الظهور فقط في صفحة التصنيف (مخفي من الصفحة الرئيسية)</option>
+        </select>
+        <p class="text-[10px] text-neutral-500 mt-1">
+          عند اختيار "الظهور فقط في صفحة التصنيف"، سيظهر المنتج فقط للعملاء عند الضغط على تصنيفه من قائمة المنتجات (Dropdown) ولن يزاحم واجهة المتجر الرئيسية.
+        </p>
+      </div>
+
       <!-- Available Sizes Checkboxes -->
       <div>
         <label class="cms-label">المقاسات المتوفرة للطلب *</label>
@@ -1536,9 +1665,9 @@
         <div class="flex items-center justify-between mb-1.5">
           <label class="cms-label mb-0 flex items-center gap-2">
             <i data-lucide="palette" class="w-4 h-4 text-neutral-400"></i>
-            <span>ألوان القطعة وصورها (واختيار الصورة الرئيسية للواجهة) *</span>
+            <span>ألوان القطعة وصورها (إمكانية إضافة عدة صور لكل لون واختيار صورة الواجهة) *</span>
           </label>
-          <span class="text-[10px] text-neutral-500">ارفع صورة لكل لون وحدد منها الصورة الرئيسية</span>
+          <span class="text-[10px] text-neutral-500">يمكنك رفع عدة صور لنفس اللون وعرضها في المعرض</span>
         </div>
         
         <div class="p-3.5 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-3.5">
@@ -1556,12 +1685,12 @@
             <!-- Image input & upload -->
             <div class="sm:col-span-4 flex items-center gap-1.5">
               <div class="relative flex-grow">
-                <input type="text" id="newColorImgInput" placeholder="رابط صورة هذا اللون أو ارفع ملف..." class="cms-input w-full font-mono text-[11px] pr-8">
+                <input type="text" id="newColorImgInput" placeholder="رابط صورة هذا اللون أو ارفع ملفات..." class="cms-input w-full font-mono text-[11px] pr-8">
                 <img id="newColorPreviewThumb" src="../assets/sokhm-card-1.jpg" class="w-5 h-5 rounded object-cover absolute right-1.5 top-1/2 -translate-y-1/2 border border-[#333]">
               </div>
-              <label class="p-2 rounded-lg bg-[#141414] hover:bg-white hover:text-black border border-[#2A2A2A] text-white text-[11px] font-bold cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors" title="رفع صورة لهذا اللون من جهازك">
+              <label class="p-2 rounded-lg bg-[#141414] hover:bg-white hover:text-black border border-[#2A2A2A] text-white text-[11px] font-bold cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors" title="رفع صورة أو عدة صور لهذا اللون من جهازك">
                 <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                <input type="file" id="newColorImgFileInput" accept="image/*" class="hidden">
+                <input type="file" id="newColorImgFileInput" accept="image/*" multiple class="hidden">
               </label>
             </div>
             <!-- Add Button -->
@@ -1572,13 +1701,27 @@
             </div>
           </div>
 
-          <!-- Color Badges List -->
+          <!-- Pending Multi-Images Preview for the active color being added -->
+          <div id="newColorPendingImagesBox" class="hidden p-2.5 rounded-xl bg-[#0D0D0D] border border-[#1A1A1A] space-y-1.5">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-neutral-300 font-bold flex items-center gap-1.5">
+                <i data-lucide="images" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>الصور المختارة لهذا اللون (<span id="newColorPendingCount">0</span> صور):</span>
+              </span>
+              <button type="button" id="clearPendingColorImagesBtn" class="text-[10px] text-neutral-500 hover:text-red-400 cursor-pointer">مسح الكل</button>
+            </div>
+            <div id="newColorPendingImagesList" class="flex items-center gap-2 flex-wrap pt-1">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Color Cards List -->
           <div>
             <div class="text-[11px] text-neutral-400 mb-1.5 flex items-center justify-between">
-              <span>الألوان المضافة (اضغط <strong class="text-amber-300">"★ تعيين كرئيسية"</strong> لاختيار صورة الواجهة):</span>
+              <span>الألوان المعتمدة وصورها (اضغط <strong class="text-amber-300">"★ تعيين كرئيسية"</strong> لاختيار صورة الواجهة):</span>
             </div>
-            <div id="modalColorsBadgesList" class="flex flex-wrap items-center gap-2 pt-1 min-h-[40px]">
-              <!-- Badges populated dynamically with color swatch, name, image thumbnail, main badge/button, and remove button -->
+            <div id="modalColorsBadgesList" class="flex flex-col gap-2.5 pt-1 min-h-[40px]">
+              <!-- Color cards populated dynamically with multi-images and add more image buttons -->
             </div>
           </div>
         </div>

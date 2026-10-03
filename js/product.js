@@ -117,13 +117,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Set active default color & size
   const productColors = Array.isArray(currentProduct.colors) && currentProduct.colors.length > 0
-    ? currentProduct.colors.map(c => ({
-        name: typeof c === 'object' ? (c.name || 'Standard') : c,
-        hex: typeof c === 'object' ? (c.hex || '#111') : '#111',
-        image: (typeof c === 'object' && c.image) ? c.image : pMainImage,
-        isMain: typeof c === 'object' ? Boolean(c.isMain) : false
-      }))
-    : [{ name: 'Onyx Black', hex: '#0E0E0E', image: pMainImage, isMain: true }];
+    ? currentProduct.colors.map(c => {
+        const cImages = Array.isArray(c.images) && c.images.length > 0
+          ? c.images
+          : (c.image ? [c.image] : [pMainImage]);
+        return {
+          name: typeof c === 'object' ? (c.name || 'Standard') : c,
+          hex: typeof c === 'object' ? (c.hex || '#111') : '#111',
+          image: (typeof c === 'object' && c.image) ? c.image : cImages[0],
+          images: cImages,
+          isMain: typeof c === 'object' ? Boolean(c.isMain) : false
+        };
+      })
+    : [{ name: 'Onyx Black', hex: '#0E0E0E', image: pMainImage, images: [pMainImage], isMain: true }];
   selectedColor = productColors.find(c => c.isMain || c.image === pMainImage) || productColors[0];
 
   // ================= 2. POPULATE PRODUCT METADATA =================
@@ -142,17 +148,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (accordionCareText) accordionCareText.textContent = currentProduct.care || currentProduct.care_advice || currentProduct.careAdvice || 'Machine wash cold inside-out, hang dry.';
 
   // ================= 3. POPULATE GALLERY =================
-  const galleryImages = (Array.isArray(currentProduct.images) && currentProduct.images.length > 0)
-    ? currentProduct.images
-    : [pMainImage];
-  if (mainGalleryImg) mainGalleryImg.src = pMainImage;
-
-  if (galleryThumbnails) {
+  function renderGallery(imagesList) {
+    if (!galleryThumbnails || !mainGalleryImg) return;
+    const images = Array.isArray(imagesList) && imagesList.length > 0 ? imagesList : [pMainImage];
+    mainGalleryImg.src = images[0];
     galleryThumbnails.innerHTML = '';
-    galleryImages.forEach((imgSrc, idx) => {
+
+    images.forEach((imgSrc, idx) => {
       const thumbBtn = document.createElement('button');
-      thumbBtn.className = `aspect-[3/4] rounded-[8px] overflow-hidden border ${idx === 0 ? 'border-white ring-1 ring-white' : 'border-[#222]'} cursor-pointer bg-[#111] transition-all`;
-      thumbBtn.innerHTML = `<img src="${imgSrc}" class="w-full h-full object-cover object-center">`;
+      thumbBtn.className = `aspect-[3/4] rounded-[8px] overflow-hidden border ${idx === 0 ? 'border-white ring-1 ring-white' : 'border-[#222]'} cursor-pointer bg-[#111] transition-all hover:border-neutral-500`;
+      thumbBtn.innerHTML = `<img src="${imgSrc}" class="w-full h-full object-cover object-center" onerror="this.src='assets/sokhm-card-1.jpg'">`;
 
       thumbBtn.addEventListener('click', () => {
         galleryThumbnails.querySelectorAll('button').forEach(b => {
@@ -171,6 +176,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Initial gallery from selected color's images or product images
+  const initialGalleryImages = (selectedColor && Array.isArray(selectedColor.images) && selectedColor.images.length > 0)
+    ? selectedColor.images
+    : (Array.isArray(currentProduct.images) && currentProduct.images.length > 0 ? currentProduct.images : [pMainImage]);
+  renderGallery(initialGalleryImages);
+
   // ================= 4. POPULATE COLOR SWATCHES =================
   if (colorSwatchesContainer && selectedColorLabel) {
     colorSwatchesContainer.innerHTML = '';
@@ -188,13 +199,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectedColor = col;
         selectedColorLabel.textContent = col.name;
 
-        if (col.image && mainGalleryImg) {
-          mainGalleryImg.style.opacity = '0.35';
-          setTimeout(() => {
-            mainGalleryImg.src = col.image;
-            mainGalleryImg.style.opacity = '1';
-          }, 120);
-        }
+        // When color is clicked, render ALL images for this color!
+        const colImages = Array.isArray(col.images) && col.images.length > 0
+          ? col.images
+          : (col.image ? [col.image] : [pMainImage]);
+        renderGallery(colImages);
       });
 
       colorSwatchesContainer.appendChild(swBtn);
@@ -619,6 +628,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       setTimeout(() => toast.remove(), 250);
     }, 2400);
   }
+
+  // ================= 13. NAV CATEGORIES =================
+  async function loadNavCategories() {
+    const list = document.getElementById('navCategoriesList');
+    if (!list) return;
+    try {
+      const res = await fetch(`/api/categories?_t=${Date.now()}`);
+      if (res.ok) {
+        const cats = await res.json();
+        if (Array.isArray(cats) && cats.length > 0) {
+          list.innerHTML = cats.map(c => `
+            <a href="index.html?category=${encodeURIComponent(c.slug || c.id)}#collection" class="nav-category-link flex items-center justify-between px-3 py-2 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 text-xs font-mono transition-all">
+              <span>${c.name}</span>
+              <i data-lucide="chevron-left" class="w-3 h-3 text-neutral-500"></i>
+            </a>
+          `).join('');
+          if (window.lucide) window.lucide.createIcons();
+        }
+      }
+    } catch (e) {}
+  }
+  loadNavCategories();
 
   // Initial render
   renderCart();
