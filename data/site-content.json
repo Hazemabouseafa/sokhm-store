@@ -1,0 +1,152 @@
+{
+  "homepage": {
+    "nav": {
+      "brand": "✦ SOKHM",
+      "links": [
+        {
+          "label": "HOME",
+          "url": "#hero"
+        },
+        {
+          "label": "SHOP",
+          "url": "#collection"
+        },
+        {
+          "label": "ABOUT",
+          "url": "#story"
+        },
+        {
+          "label": "JOURNAL",
+          "url": "#journal"
+        }
+      ]
+    },
+    "hero": {
+      "kicker": "MORE THAN CLOTHING",
+      "title": "SOKHM",
+      "subtitle": "BUILT DIFFERENT",
+      "description": "Premium streetwear for those who move different. Timeless designs. Superior quality. A mindset, not just a brand.",
+      "ctaText": "SHOP NOW",
+      "scrollLabel": "SCROLL"
+    },
+    "valueBar": [
+      {
+        "id": "val-1",
+        "title": "PREMIUM QUALITY",
+        "subtitle": "Built to last.",
+        "icon": "sparkle"
+      },
+      {
+        "id": "val-2",
+        "title": "FREE SHIPPING",
+        "subtitle": "On orders over 2,500 EGP.",
+        "icon": "truck"
+      },
+      {
+        "id": "val-3",
+        "title": "SECURE PAYMENTS",
+        "subtitle": "Shop with confidence.",
+        "icon": "shield-check"
+      },
+      {
+        "id": "val-4",
+        "title": "SUSTAINABLE APPROACH",
+        "subtitle": "Better for tomorrow.",
+        "icon": "leaf"
+      }
+    ],
+    "collection": {
+      "kicker": "FEATURED COLLECTION",
+      "title": "BEST SELLERS",
+      "viewAllText": "VIEW ALL"
+    },
+    "bottomBanner": {
+      "brandTag": "✦ SOKHM",
+      "headline": "FOR THE ONES WHO KEEP GOING",
+      "ctaText": "OUR STORY"
+    },
+    "footer": {
+      "brandTag": "✦ SOKHM",
+      "slogan": "BUILT DIFFERENT",
+      "copyright": "© 2026 SOKHM ATELIER. ALL RIGHTS RESERVED."
+    }
+  },
+  "productPage": {
+    "breadcrumbs": {
+      "home": "HOME",
+      "collection": "BEST SELLERS",
+      "backLink": "Back to Collection"
+    },
+    "kickerPrefix": "✦ SOKHM ATELIER //",
+    "sizeGuideButtonText": "Size Guide (CM)",
+    "addToBagPrefix": "ADD TO BAG",
+    "expressCheckoutText": "EXPRESS CHECKOUT",
+    "highlights": [
+      {
+        "id": "hl-1",
+        "text": "500 GSM Ultra-Dense Egyptian Combed Cotton",
+        "icon": "check"
+      },
+      {
+        "id": "hl-2",
+        "text": "Free Express Courier Delivery on Orders Over 2,500 EGP",
+        "icon": "truck"
+      },
+      {
+        "id": "hl-3",
+        "text": "30-Day Hassle-Free Exchange Policy",
+        "icon": "rotate-ccw"
+      }
+    ],
+    "accordions": [
+      {
+        "id": "acc-1",
+        "title": "Details & Architectural Fit"
+      },
+      {
+        "id": "acc-2",
+        "title": "Fabric & Care (500 GSM)"
+      },
+      {
+        "id": "acc-3",
+        "title": "Shipping & Doorstep Logistics",
+        "content": "Orders dispatched within 24 hours across Cairo, Giza, and all Egyptian Governorates via trusted couriers."
+      }
+    ],
+    "relatedTitle": "YOU MAY ALSO LIKE",
+    "cartDrawer": {
+      "title": "SHOPPING BAG",
+      "emptyTitle": "YOUR BAG IS EMPTY",
+      "emptySubtitle": "Explore SOKHM Best Sellers.",
+      "subtotalLabel": "SUBTOTAL",
+      "checkoutButton": "CHECKOUT"
+    }
+  },
+  "categories": [
+    {
+      "id": "hoodies",
+      "name": "Hoodies",
+      "slug": "hoodies"
+    },
+    {
+      "id": "jackets",
+      "name": "Jackets",
+      "slug": "jackets"
+    },
+    {
+      "id": "tees",
+      "name": "Tees",
+      "slug": "tees"
+    },
+    {
+      "id": "pants",
+      "name": "Pants",
+      "slug": "pants"
+    },
+    {
+      "id": "accessories",
+      "name": "Accessories",
+      "slug": "accessories"
+    }
+  ]
+}

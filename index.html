@@ -35,6 +35,8 @@
 
   <!-- Custom Stylesheet -->
   <link rel="stylesheet" href="css/styles.css">
+  <!-- CMS Dynamic Content Manager -->
+  <script src="js/content-manager.js"></script>
 </head>
 <body class="bg-[#070707] text-white antialiased selection:bg-white selection:text-black min-h-screen flex flex-col justify-between">
 
@@ -97,29 +99,21 @@
           <div class="hero-accent-line"></div>
           <div class="hero-accent-star">✦</div>
 
-          <span class="text-[10px] sm:text-[11px] font-mono font-semibold tracking-[0.25em] text-neutral-400 uppercase block">
-            MORE THAN CLOTHING
-          </span>
+          <span data-cms="homepage.hero.kicker" class="text-[10px] sm:text-[11px] font-mono font-semibold tracking-[0.25em] text-neutral-400 uppercase block">MORE THAN CLOTHING</span>
 
           <div class="space-y-1">
-            <h1 class="font-gothic font-bold text-4xl sm:text-6xl xl:text-7xl uppercase tracking-wider text-white leading-none">
-              SOKHM
-            </h1>
-            <h2 class="font-heading font-extrabold text-3xl sm:text-5xl xl:text-6xl uppercase tracking-tight text-white leading-none">
-              BUILT DIFFERENT
-            </h2>
+            <h1 data-cms="homepage.hero.title" class="font-gothic font-bold text-4xl sm:text-6xl xl:text-7xl uppercase tracking-wider text-white leading-none">SOKHM</h1>
+            <h2 data-cms="homepage.hero.subtitle" class="font-heading font-extrabold text-3xl sm:text-5xl xl:text-6xl uppercase tracking-tight text-white leading-none">BUILT DIFFERENT</h2>
           </div>
 
-          <p class="text-xs sm:text-sm text-neutral-400 font-light leading-relaxed max-w-md">
-            Premium streetwear for those who move different. Timeless designs. Superior quality. A mindset, not just a brand.
-          </p>
+          <p data-cms="homepage.hero.description" class="text-xs sm:text-sm text-neutral-400 font-light leading-relaxed max-w-md">Premium streetwear for those who move different. Timeless designs. Superior quality. A mindset, not just a brand.</p>
 
           <div class="pt-2">
             <a 
               href="#collection" 
               class="inline-flex items-center gap-2 border border-white/40 hover:border-white text-white bg-black/40 hover:bg-white hover:text-black font-semibold text-[11px] tracking-[0.18em] uppercase rounded-full px-7 py-3 transition-all shadow-sm cursor-pointer"
             >
-              <span>SHOP NOW</span>
+              <span data-cms="homepage.hero.ctaText">SHOP NOW</span>
               <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
             </a>
           </div>
@@ -128,7 +122,7 @@
 
         <!-- Right Scroll Indicator -->
         <div class="hidden lg:flex flex-col items-center space-y-3 text-white text-[10px] font-mono tracking-[0.25em]">
-          <span class="opacity-70">SCROLL</span>
+          <span data-cms="homepage.hero.scrollLabel" class="opacity-70">SCROLL</span>
           <div class="scroll-indicator-line"></div>
         </div>
 
@@ -146,8 +140,8 @@
               ✦
             </div>
             <div>
-              <h4 class="text-[11px] font-bold uppercase tracking-wider text-white">PREMIUM QUALITY</h4>
-              <p class="text-[10px] text-noirMuted font-normal mt-0.5">Built to last.</p>
+              <h4 data-cms="homepage.valueBar.0.title" class="text-[11px] font-bold uppercase tracking-wider text-white">PREMIUM QUALITY</h4>
+              <p data-cms="homepage.valueBar.0.subtitle" class="text-[10px] text-noirMuted font-normal mt-0.5">Built to last.</p>
             </div>
           </div>
 
@@ -157,8 +151,8 @@
               <i data-lucide="truck" class="w-6 h-6 stroke-[1.6]"></i>
             </div>
             <div>
-              <h4 class="text-[11px] font-bold uppercase tracking-wider text-white">FREE SHIPPING</h4>
-              <p class="text-[10px] text-noirMuted font-normal mt-0.5">On orders over 2,500 EGP.</p>
+              <h4 data-cms="homepage.valueBar.1.title" class="text-[11px] font-bold uppercase tracking-wider text-white">FREE SHIPPING</h4>
+              <p data-cms="homepage.valueBar.1.subtitle" class="text-[10px] text-noirMuted font-normal mt-0.5">On orders over 2,500 EGP.</p>
             </div>
           </div>
 
@@ -168,8 +162,8 @@
               <i data-lucide="shield-check" class="w-6 h-6 stroke-[1.6]"></i>
             </div>
             <div>
-              <h4 class="text-[11px] font-bold uppercase tracking-wider text-white">SECURE PAYMENTS</h4>
-              <p class="text-[10px] text-noirMuted font-normal mt-0.5">Shop with confidence.</p>
+              <h4 data-cms="homepage.valueBar.2.title" class="text-[11px] font-bold uppercase tracking-wider text-white">SECURE PAYMENTS</h4>
+              <p data-cms="homepage.valueBar.2.subtitle" class="text-[10px] text-noirMuted font-normal mt-0.5">Shop with confidence.</p>
             </div>
           </div>
 
@@ -179,8 +173,8 @@
               <i data-lucide="leaf" class="w-6 h-6 stroke-[1.6]"></i>
             </div>
             <div>
-              <h4 class="text-[11px] font-bold uppercase tracking-wider text-white">SUSTAINABLE APPROACH</h4>
-              <p class="text-[10px] text-noirMuted font-normal mt-0.5">Better for tomorrow.</p>
+              <h4 data-cms="homepage.valueBar.3.title" class="text-[11px] font-bold uppercase tracking-wider text-white">SUSTAINABLE APPROACH</h4>
+              <p data-cms="homepage.valueBar.3.subtitle" class="text-[10px] text-noirMuted font-normal mt-0.5">Better for tomorrow.</p>
             </div>
           </div>
 
@@ -194,16 +188,12 @@
       <!-- Section Header -->
       <div class="flex items-end justify-between mb-8 pb-3 border-b border-[#1A1A1A]">
         <div>
-          <span class="text-[10px] font-semibold text-noirMuted uppercase tracking-[0.2em] block">
-            FEATURED COLLECTION
-          </span>
-          <h2 class="font-heading font-extrabold text-2xl sm:text-3xl text-white uppercase tracking-tight mt-1">
-            BEST SELLERS
-          </h2>
+          <span data-cms="homepage.collection.kicker" class="text-[10px] font-semibold text-noirMuted uppercase tracking-[0.2em] block">FEATURED COLLECTION</span>
+          <h2 data-cms="homepage.collection.title" class="font-heading font-extrabold text-2xl sm:text-3xl text-white uppercase tracking-tight mt-1">BEST SELLERS</h2>
         </div>
 
         <a href="#collection" class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer">
-          <span>VIEW ALL</span>
+          <span data-cms="homepage.collection.viewAllText">VIEW ALL</span>
           <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
         </a>
       </div>
@@ -222,11 +212,9 @@
 
         <div class="relative z-10 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div class="flex items-center gap-3 text-white">
-            <span class="font-gothic font-bold text-lg tracking-widest">✦ SOKHM</span>
+            <span data-cms="homepage.bottomBanner.brandTag" class="font-gothic font-bold text-lg tracking-widest">✦ SOKHM</span>
             <span class="text-neutral-500">|</span>
-            <h3 class="font-heading font-bold text-base sm:text-xl uppercase tracking-tight">
-              FOR THE ONES WHO KEEP GOING
-            </h3>
+            <h3 data-cms="homepage.bottomBanner.headline" class="font-heading font-bold text-base sm:text-xl uppercase tracking-tight">FOR THE ONES WHO KEEP GOING</h3>
           </div>
 
           <div>
@@ -234,7 +222,7 @@
               href="#collection" 
               class="text-[11px] font-bold uppercase tracking-wider text-neutral-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              <span>OUR STORY</span>
+              <span data-cms="homepage.bottomBanner.ctaText">OUR STORY</span>
               <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
             </a>
           </div>
@@ -250,9 +238,9 @@
       
       <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pb-6 border-b border-[#141414]">
         <div class="flex items-center gap-2">
-          <span class="font-gothic font-bold text-base text-white uppercase tracking-wider">✦ SOKHM</span>
+          <span data-cms="homepage.footer.brandTag" class="font-gothic font-bold text-base text-white uppercase tracking-wider">✦ SOKHM</span>
           <span class="text-neutral-600">|</span>
-          <span class="text-neutral-400">BUILT DIFFERENT</span>
+          <span data-cms="homepage.footer.slogan" class="text-neutral-400">BUILT DIFFERENT</span>
         </div>
 
         <div class="flex items-center space-x-8 font-medium text-neutral-400 text-xs">
@@ -264,7 +252,7 @@
       </div>
 
       <div class="flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-4 font-mono">
-        <p>&copy; 2026 SOKHM ATELIER. All rights reserved.</p>
+        <p data-cms="homepage.footer.copyright">&copy; 2026 SOKHM ATELIER. All rights reserved.</p>
         <div class="flex items-center gap-6">
           <span>PRIVACY POLICY</span>
           <span>TERMS OF SALE</span>

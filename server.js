@@ -7,16 +7,164 @@ const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
   '.css': 'text/css; charset=UTF-8',
   '.js': 'text/javascript; charset=UTF-8',
-  '.json': 'application/json',
+  '.json': 'application/json; charset=UTF-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.webp': 'image/webp'
 };
 
-const server = http.createServer((req, res) => {
-  let reqPath = req.url.split('?')[0];
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+      // 10MB limit for base64 image uploads
+      if (body.length > 10 * 1024 * 1024) {
+        req.destroy();
+        reject(new Error('Payload too large'));
+      }
+    });
+    req.on('end', () => {
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (err) {
+        resolve({ raw: body });
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function sendJson(res, statusCode, data) {
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  });
+  res.end(JSON.stringify(data));
+}
+
+const server = http.createServer(async (req, res) => {
+  // CORS Preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+    return res.end();
+  }
+
+  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost:3000'}`);
+  const pathname = parsedUrl.pathname;
+
+  // ================= REST API ENDPOINTS =================
+  if (pathname.startsWith('/api/')) {
+    
+    // 1. GET /api/site-content
+    if (pathname === '/api/site-content' && req.method === 'GET') {
+      const contentPath = path.join(__dirname, 'data', 'site-content.json');
+      fs.readFile(contentPath, 'utf8', (err, data) => {
+        if (err) return sendJson(res, 500, { error: 'Failed to read site content' });
+        try {
+          sendJson(res, 200, JSON.parse(data));
+        } catch (e) {
+          sendJson(res, 500, { error: 'Invalid JSON in site content' });
+        }
+      });
+      return;
+    }
+
+    // 2. POST /api/site-content
+    if (pathname === '/api/site-content' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const contentPath = path.join(__dirname, 'data', 'site-content.json');
+        fs.writeFileSync(contentPath, JSON.stringify(body, null, 2), 'utf8');
+        return sendJson(res, 200, { success: true, message: 'Site content updated successfully' });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 3. GET /api/products
+    if (pathname === '/api/products' && req.method === 'GET') {
+      const productsPath = path.join(__dirname, 'data', 'products.json');
+      fs.readFile(productsPath, 'utf8', (err, data) => {
+        if (err) return sendJson(res, 500, { error: 'Failed to read products' });
+        try {
+          sendJson(res, 200, JSON.parse(data));
+        } catch (e) {
+          sendJson(res, 500, { error: 'Invalid JSON in products' });
+        }
+      });
+      return;
+    }
+
+    // 4. POST /api/products
+    if (pathname === '/api/products' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const productsPath = path.join(__dirname, 'data', 'products.json');
+        fs.writeFileSync(productsPath, JSON.stringify(body, null, 2), 'utf8');
+        return sendJson(res, 200, { success: true, message: 'Products updated successfully' });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 5. POST /api/upload-image
+    if (pathname === '/api/upload-image' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const filename = body.filename;
+        const base64 = body.base64 || body.image;
+        if (!base64) {
+          return sendJson(res, 400, { error: 'Missing base64 image data' });
+        }
+
+        // Clean base64 data
+        const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        let ext = '.jpg';
+        let buffer;
+        if (matches && matches.length === 3) {
+          const mime = matches[1];
+          if (mime.includes('png')) ext = '.png';
+          else if (mime.includes('webp')) ext = '.webp';
+          buffer = Buffer.from(matches[2], 'base64');
+        } else {
+          buffer = Buffer.from(base64, 'base64');
+        }
+
+        const safeBaseName = (filename ? path.basename(filename, path.extname(filename)) : 'upload')
+          .replace(/[^a-zA-Z0-9_-]/g, '_')
+          .toLowerCase();
+        const safeName = `${safeBaseName}_${Date.now()}${ext}`;
+        const destPath = path.join(__dirname, 'assets', safeName);
+
+        fs.writeFileSync(destPath, buffer);
+        console.log(`Image uploaded successfully: ${safeName} (${buffer.length} bytes)`);
+
+        return sendJson(res, 200, {
+          success: true,
+          url: `assets/${safeName}`,
+          path: `assets/${safeName}`,
+          name: safeName
+        });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    return sendJson(res, 404, { error: 'API route not found' });
+  }
+
+  // ================= STATIC FILE SERVING =================
+  let reqPath = pathname;
   if (reqPath === '/' || reqPath === '') {
     reqPath = '/index.html';
   }
@@ -42,7 +190,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`SOKH WEAR is live at http://localhost:${PORT}`);
+  console.log(`SOKHM STORE with CMS API is live at http://localhost:${PORT}`);
   console.log(`Storefront: http://localhost:${PORT}/index.html`);
   console.log(`Admin Panel: http://localhost:${PORT}/admin.html`);
 });

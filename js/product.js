@@ -176,8 +176,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updateButtonLabel() {
     if (qtyDisplay) qtyDisplay.textContent = quantity;
     const total = (currentProduct.price * quantity).toLocaleString();
-    if (addToBagLabel) addToBagLabel.textContent = `ADD TO BAG — ${total} EGP`;
+    const prefix = (window.sokhmContent && window.sokhmContent.get('productPage.addToBagPrefix')) || 
+                   (window.sokhmContent && window.sokhmContent.get('productPage.buttons.addToBag')) || 
+                   'ADD TO BAG';
+    if (addToBagLabel) addToBagLabel.textContent = `${prefix} — ${total} EGP`;
   }
+
+  window.addEventListener('sokhm:content-updated', () => {
+    updateButtonLabel();
+  });
 
   if (qtyMinus) {
     qtyMinus.addEventListener('click', () => {
