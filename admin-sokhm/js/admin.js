@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 0. التحقق من الهوية والأمان (AUTH GUARD) =================
   const token = localStorage.getItem('sokhm_admin_token') || getCookie('sokhm_admin_token');
   if (!token) {
-    window.location.href = '/admin-sokhm/login.html';
+    window.location.href = 'login.html';
     return;
   }
 
@@ -15,20 +15,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authRes = await fetch('/api/admin/verify', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
-    if (!authRes.ok) throw new Error('Unauthorized');
-    const authData = await authRes.json();
-    if (!authData.authenticated) {
-      throw new Error('Unauthenticated');
-    }
-    const adminUserEl = document.getElementById('currentAdminUsername');
-    if (adminUserEl && authData.user) {
-      adminUserEl.textContent = authData.user.username || 'websiteadmin';
+    if (authRes.ok) {
+      const authData = await authRes.json();
+      if (authData.authenticated) {
+        const adminUserEl = document.getElementById('currentAdminUsername');
+        if (adminUserEl && authData.user) {
+          adminUserEl.textContent = authData.user.username || 'websiteadmin';
+        }
+      }
+    } else if (authRes.status === 401) {
+      // Backend online and explicitly rejected token
+      localStorage.removeItem('sokhm_admin_token');
+      document.cookie = 'sokhm_admin_token=; path=/; max-age=0;';
+      window.location.href = 'login.html';
+      return;
     }
   } catch (err) {
-    localStorage.removeItem('sokhm_admin_token');
-    document.cookie = 'sokhm_admin_token=; path=/; max-age=0;';
-    window.location.href = '/admin-sokhm/login.html';
-    return;
+    // Backend offline / static mode (GitHub Pages / file://): allow session from localStorage
+    console.log('Running in static/local admin session mode');
   }
 
   // ================= حالة التطبيق (STATE) =================
@@ -129,7 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {}
         localStorage.removeItem('sokhm_admin_token');
         document.cookie = 'sokhm_admin_token=; path=/; max-age=0;';
-        window.location.href = '/admin-sokhm/login.html';
+        window.location.href = 'login.html';
       });
     }
 
@@ -977,12 +981,21 @@ document.addEventListener('DOMContentLoaded', async () => {
           throw new Error(data.error || 'تعذر تغيير كلمة المرور');
         }
 
+        localStorage.setItem('sokhm_admin_password', newPassword);
         showPasswordAlert('✓ تم تحديث كلمة المرور بنجاح في قاعدة البيانات!', 'success');
         form.reset();
         showToast('تم تغيير كلمة المرور بنجاح');
 
       } catch (err) {
-        showPasswordAlert(err.message, 'error');
+        // If offline / static fallback
+        if (err.message && (err.message.includes('fetch') || err.message.includes('Failed'))) {
+          localStorage.setItem('sokhm_admin_password', newPassword);
+          showPasswordAlert('✓ تم تحديث كلمة المرور محلياً بنجاح!', 'success');
+          form.reset();
+          showToast('تم تحديث كلمة المرور');
+        } else {
+          showPasswordAlert(err.message, 'error');
+        }
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i><span>تحديث وحفظ كلمة المرور الجديدة</span>';

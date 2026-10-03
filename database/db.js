@@ -741,11 +741,14 @@ function hashPassword(password, salt) {
  */
 function verifyAdminCredentials(username, password) {
   if (!username || !password) return null;
-  const user = db.prepare('SELECT * FROM admin_users WHERE username = ?').get(username);
+  const cleanUser = username.toString().trim().toLowerCase();
+  const cleanPass = password.toString().trim();
+
+  const user = db.prepare('SELECT * FROM admin_users WHERE LOWER(TRIM(username)) = ?').get(cleanUser);
   if (!user) return null;
 
   try {
-    const testHash = hashPassword(password, user.salt);
+    const testHash = hashPassword(cleanPass, user.salt);
     if (crypto.timingSafeEqual(Buffer.from(testHash, 'hex'), Buffer.from(user.password_hash, 'hex'))) {
       return { id: user.id, username: user.username };
     }
@@ -759,23 +762,27 @@ function verifyAdminCredentials(username, password) {
  * Update admin password
  */
 function updateAdminPassword(username, currentPassword, newPassword) {
-  const verified = verifyAdminCredentials(username, currentPassword);
+  const cleanUser = username.toString().trim().toLowerCase();
+  const cleanCur = currentPassword.toString().trim();
+  const cleanNew = newPassword.toString().trim();
+
+  const verified = verifyAdminCredentials(cleanUser, cleanCur);
   if (!verified) {
     throw new Error('كلمة المرور الحالية غير صحيحة');
   }
 
-  if (!newPassword || newPassword.trim().length < 4) {
+  if (!cleanNew || cleanNew.length < 4) {
     throw new Error('كلمة المرور الجديدة يجب أن تحتوي على 4 خانات على الأقل');
   }
 
   const newSalt = crypto.randomBytes(16).toString('hex');
-  const newHash = hashPassword(newPassword.trim(), newSalt);
+  const newHash = hashPassword(cleanNew, newSalt);
 
   db.prepare(`
     UPDATE admin_users 
     SET password_hash = ?, salt = ?, updated_at = CURRENT_TIMESTAMP 
-    WHERE username = ?
-  `).run(newHash, newSalt, username);
+    WHERE LOWER(TRIM(username)) = ?
+  `).run(newHash, newSalt, cleanUser);
 
   return true;
 }
