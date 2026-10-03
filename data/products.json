@@ -1,5 +1,164 @@
 [
   {
+    "id": "sokhm-garment-291",
+    "name": "saassasa",
+    "slug": "sokhm-garment-291",
+    "subtitle": "",
+    "category": "jackets",
+    "category_id": "jackets",
+    "price": 1850,
+    "badge": "",
+    "image": "assets/sokhm-card-1.jpg",
+    "images": [
+      "assets/sokhm-card-1.jpg",
+      "assets/sokhm-card-2.jpg"
+    ],
+    "sizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "shortDesc": "",
+    "short_desc": "",
+    "description": "تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.",
+    "fabric": "",
+    "fitAdvice": "",
+    "fit_advice": "",
+    "careAdvice": "",
+    "care_advice": "",
+    "colors": [
+      {
+        "name": "أسود فحمي / Onyx Black",
+        "hex": "#0B0B0B",
+        "image": "assets/sokhm-card-1.jpg",
+        "isMain": true
+      },
+      {
+        "name": "بيج رملي / Sand Cream",
+        "hex": "#D6CDBF",
+        "image": "assets/sokhm-card-2.jpg",
+        "isMain": false
+      }
+    ],
+    "modelInfo": "",
+    "model_info": "",
+    "stockStatus": "in_stock",
+    "stock_status": "in_stock",
+    "sortOrder": 0,
+    "sort_order": 0,
+    "createdAt": "2026-10-03 22:09:25",
+    "created_at": "2026-10-03 22:09:25",
+    "updatedAt": "2026-10-03 22:09:25",
+    "updated_at": "2026-10-03 22:09:25"
+  },
+  {
+    "id": "sokhm-noir-03",
+    "name": "COMBAT HOODIE",
+    "slug": "sokhm-noir-03",
+    "subtitle": "HOODIE",
+    "category": "hoodies",
+    "category_id": "hoodies",
+    "price": 1850,
+    "badge": "LIMITED",
+    "image": "assets/sokhm-card-3.jpg",
+    "images": [
+      "assets/sokhm-card-3.jpg",
+      "assets/sokhm-hoodie-back.jpg",
+      "assets/sokhm-hoodie-detail.jpg",
+      "assets/sokhm-card-1.jpg"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "shortDesc": "",
+    "short_desc": "",
+    "description": "Engineered for stealth and motion. Dyed in tactical military dark olive with micro-embroidered silver SOKHM chest star and ergonomic articulated raglan sleeves.",
+    "fabric": "500 GSM Heavyweight Terry Fleece with water-repellent treatment",
+    "fitAdvice": "",
+    "fit_advice": "",
+    "careAdvice": "",
+    "care_advice": "",
+    "colors": [
+      {
+        "name": "Tactical Olive",
+        "hex": "#373E32",
+        "image": "assets/sokhm-card-3.jpg"
+      },
+      {
+        "name": "Onyx Black",
+        "hex": "#0E0E0E",
+        "image": "assets/sokhm-card-1.jpg"
+      }
+    ],
+    "modelInfo": "",
+    "model_info": "",
+    "stockStatus": "in_stock",
+    "stock_status": "in_stock",
+    "sortOrder": 0,
+    "sort_order": 0,
+    "createdAt": "2026-10-03 18:34:18",
+    "created_at": "2026-10-03 18:34:18",
+    "updatedAt": "2026-10-03 18:34:18",
+    "updated_at": "2026-10-03 18:34:18"
+  },
+  {
+    "id": "sokhm-garment-657",
+    "name": "hoodie",
+    "slug": "sokhm-garment-657",
+    "subtitle": "",
+    "category": "hoodies",
+    "category_id": "hoodies",
+    "price": 849,
+    "badge": "",
+    "image": "assets/sokhm_download__9__1791064374476.webp",
+    "images": [
+      "assets/sokhm_download__9__1791064374476.webp",
+      "assets/sokhm_____________________________https___t_me_promtmasterai_1791064416413.webp"
+    ],
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "shortDesc": "",
+    "short_desc": "",
+    "description": "تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.",
+    "fabric": "",
+    "fitAdvice": "",
+    "fit_advice": "",
+    "careAdvice": "",
+    "care_advice": "",
+    "colors": [
+      {
+        "name": "اسود",
+        "hex": "#000000",
+        "image": "assets/sokhm_download__9__1791064374476.webp",
+        "isMain": true
+      },
+      {
+        "name": "احمر",
+        "hex": "#fd0808",
+        "image": "assets/sokhm_____________________________https___t_me_promtmasterai_1791064416413.webp",
+        "isMain": false
+      }
+    ],
+    "modelInfo": "",
+    "model_info": "",
+    "stockStatus": "in_stock",
+    "stock_status": "in_stock",
+    "sortOrder": 0,
+    "sort_order": 0,
+    "createdAt": "2026-10-03 21:53:59",
+    "created_at": "2026-10-03 21:53:59",
+    "updatedAt": "2026-10-03 21:55:59",
+    "updated_at": "2026-10-03 21:55:59"
+  },
+  {
     "id": "sokhm-noir-02",
     "name": "ESSENTIAL HOODIE",
     "slug": "sokhm-noir-02",
@@ -45,59 +204,6 @@
         "name": "Royal Cobalt",
         "hex": "#1A365D",
         "image": "assets/sokhm-card-3.jpg"
-      }
-    ],
-    "modelInfo": "",
-    "model_info": "",
-    "stockStatus": "in_stock",
-    "stock_status": "in_stock",
-    "sortOrder": 0,
-    "sort_order": 0,
-    "createdAt": "2026-10-03 18:34:18",
-    "created_at": "2026-10-03 18:34:18",
-    "updatedAt": "2026-10-03 18:34:18",
-    "updated_at": "2026-10-03 18:34:18"
-  },
-  {
-    "id": "sokhm-noir-03",
-    "name": "COMBAT HOODIE",
-    "slug": "sokhm-noir-03",
-    "subtitle": "HOODIE",
-    "category": "hoodies",
-    "category_id": "hoodies",
-    "price": 1850,
-    "badge": "LIMITED",
-    "image": "assets/sokhm-card-3.jpg",
-    "images": [
-      "assets/sokhm-card-3.jpg",
-      "assets/sokhm-hoodie-back.jpg",
-      "assets/sokhm-hoodie-detail.jpg",
-      "assets/sokhm-card-1.jpg"
-    ],
-    "sizes": [
-      "S",
-      "M",
-      "L",
-      "XL"
-    ],
-    "shortDesc": "",
-    "short_desc": "",
-    "description": "Engineered for stealth and motion. Dyed in tactical military dark olive with micro-embroidered silver SOKHM chest star and ergonomic articulated raglan sleeves.",
-    "fabric": "500 GSM Heavyweight Terry Fleece with water-repellent treatment",
-    "fitAdvice": "",
-    "fit_advice": "",
-    "careAdvice": "",
-    "care_advice": "",
-    "colors": [
-      {
-        "name": "Tactical Olive",
-        "hex": "#373E32",
-        "image": "assets/sokhm-card-3.jpg"
-      },
-      {
-        "name": "Onyx Black",
-        "hex": "#0E0E0E",
-        "image": "assets/sokhm-card-1.jpg"
       }
     ],
     "modelInfo": "",

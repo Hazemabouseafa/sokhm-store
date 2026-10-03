@@ -327,16 +327,16 @@
       <div class="flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-4 font-mono">
         <p>&copy; 2026 SOKHM ATELIER. All rights reserved.</p>
         <div class="flex items-center gap-6">
-          <span>PRIVACY POLICY</span>
-          <span>TERMS OF SALE</span>
-          <span>DOORSTEP EXPRESS DELIVERY</span>
+          <button type="button" class="policy-trigger hover:text-white transition-colors cursor-pointer" data-policy="privacy">PRIVACY POLICY</button>
+          <button type="button" class="policy-trigger hover:text-white transition-colors cursor-pointer" data-policy="terms">TERMS OF SALE</button>
+          <button type="button" class="policy-trigger hover:text-white transition-colors cursor-pointer" data-policy="delivery">DOORSTEP EXPRESS DELIVERY</button>
         </div>
       </div>
     </div>
   </footer>
 
   <!-- ================= SIZE GUIDE MODAL ================= -->
-  <dialog id="sizeGuideModal" class="bg-transparent p-0 max-w-lg w-[92%] border border-[#222] rounded-[14px] shadow-2xl overflow-hidden">
+  <dialog id="sizeGuideModal" class="bg-transparent p-0 max-w-lg w-[92%] border border-[#222] rounded-[14px] shadow-2xl overflow-hidden backdrop:bg-black/80">
     <div class="bg-[#0E0E0E] text-white p-6 sm:p-8 font-mono">
       <div class="flex items-center justify-between pb-3 border-b border-[#1A1A1A] mb-4">
         <div>
@@ -409,6 +409,61 @@
       </button>
     </div>
   </aside>
+
+  <!-- ================= SEARCH MODAL (DARK NOIR) ================= -->
+  <dialog id="searchDialog" class="bg-transparent p-0 max-w-lg w-[90%] border border-[#222] rounded-[14px] shadow-2xl overflow-hidden backdrop:bg-black/80 font-mono">
+    <div class="bg-[#0E0E0E] text-white p-6 font-mono">
+      <div class="flex items-center justify-between pb-3 border-b border-[#1A1A1A] mb-4">
+        <h4 class="text-xs font-bold uppercase tracking-wider">SEARCH ✦ SOKHM</h4>
+        <button id="closeSearchBtn" class="p-1 text-neutral-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <input id="searchInput" type="text" placeholder="Type to search (signature, combat, essential)..." class="w-full px-4 py-2.5 bg-neutral-900 rounded-lg border border-[#222] text-xs text-white focus:outline-none focus:border-white">
+      <div id="searchResults" class="mt-4 space-y-2 max-h-60 overflow-y-auto"></div>
+    </div>
+  </dialog>
+
+  <!-- ================= BRAND POLICIES MODAL ================= -->
+  <dialog id="policyModal" class="bg-transparent p-0 max-w-xl w-[92%] border border-[#222] rounded-[16px] shadow-2xl overflow-hidden backdrop:bg-black/80 font-sans" dir="rtl">
+    <div class="bg-[#0E0E0E] text-white p-6 sm:p-8 relative max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-[#1A1A1A] mb-5">
+        <div class="flex items-center gap-2">
+          <svg viewBox="0 0 100 120" class="w-4 h-5 text-white fill-current" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
+          </svg>
+          <h3 id="policyModalTitle" class="font-bold text-sm uppercase tracking-wider text-white">✦ SOKHM POLICIES // سياسات المتجر</h3>
+        </div>
+        <button id="closePolicyModalBtn" class="p-1.5 text-neutral-400 hover:text-white cursor-pointer rounded-lg hover:bg-neutral-900 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 mb-6 border-b border-[#1A1A1A] pb-3 text-xs font-bold overflow-x-auto">
+        <button type="button" class="policy-tab-btn active px-3 py-1.5 rounded-lg bg-white text-black transition-colors cursor-pointer whitespace-nowrap" data-target="policy-privacy">الخصوصية (Privacy)</button>
+        <button type="button" class="policy-tab-btn px-3 py-1.5 rounded-lg bg-[#141414] text-neutral-400 hover:text-white border border-[#222] transition-colors cursor-pointer whitespace-nowrap" data-target="policy-terms">شروط البيع (Terms)</button>
+        <button type="button" class="policy-tab-btn px-3 py-1.5 rounded-lg bg-[#141414] text-neutral-400 hover:text-white border border-[#222] transition-colors cursor-pointer whitespace-nowrap" data-target="policy-delivery">الشحن والتوصيل (Delivery)</button>
+      </div>
+
+      <div id="policyModalContent" class="space-y-4 text-xs text-neutral-300 leading-relaxed font-sans">
+        <div id="policy-privacy" class="policy-section">
+          <h4 class="text-sm font-bold text-white mb-2">سياسة الخصوصية وحماية البيانات</h4>
+          <p class="text-neutral-400 mb-2">نحن في <strong>✦ SOKHM ATELIER</strong> نلتزم بأعلى معايير حماية بيانات عملائنا. لا نقوم بمشاركة بياناتك الشخصية (الاسم، الهاتف، العنوان) مع أي طرف ثالث سوى شركة الشحن الرسمية لإتمام التوصيل فقط.</p>
+          <p class="text-neutral-400">تُخزن بيانات الطلبات بأمان لتسهيل متابعة الشحنات والرد على استفساراتك عبر خدمة العملاء والواتساب.</p>
+        </div>
+        <div id="policy-terms" class="policy-section hidden">
+          <h4 class="text-sm font-bold text-white mb-2">شروط البيع والاستبدال</h4>
+          <p class="text-neutral-400 mb-2">جميع القطع مصممة بأعلى جودة من القطن المصري 500 GSM المعالج فائق الكثافة. يحق للعميل معاينة القطعة والتأكد من المقاس والجودة عند استلامها مع مندوب الشحن قبل دفع القيمة نقدياً.</p>
+          <p class="text-neutral-400">نوفر سياسة استبدال واسترجاع مرنة خلال 30 يوماً من تاريخ الاستلام بشرط بقاء القطعة بحالتها الأصلية غير المستخدمة وبالعلامات الأصلية.</p>
+        </div>
+        <div id="policy-delivery" class="policy-section hidden">
+          <h4 class="text-sm font-bold text-white mb-2">خدمة الشحن السريع لباب المنزل (Doorstep Express)</h4>
+          <p class="text-neutral-400 mb-2">يتم تجهيز وشحن الطلبات خلال 24 إلى 48 ساعة بحد أقصى لجميع محافظات جمهورية مصر العربية مع توفير رقم تتبع مباشر عبر الرسائل النصية والواتساب.</p>
+          <p class="text-neutral-400">الشحن مجاني بالكامل لجميع الطلبات التي تتجاوز قيمتها 2,500 ج.م، مع إمكانية الدفع عند الاستلام بجميع المحافظات.</p>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
   <!-- TOAST CONTAINER -->
   <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none font-mono"></div>

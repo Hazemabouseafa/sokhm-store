@@ -65,6 +65,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const checkoutBtn = document.getElementById('checkoutBtn');
   const toastContainer = document.getElementById('toastContainer');
 
+  // Search Modal
+  const searchBtn = document.getElementById('searchBtn');
+  const searchDialog = document.getElementById('searchDialog');
+  const closeSearchBtn = document.getElementById('closeSearchBtn');
+  const searchInput = document.getElementById('searchInput');
+  const searchResults = document.getElementById('searchResults');
+  const accountBtn = document.getElementById('accountBtn');
+
+  // Policy Modal
+  const policyModal = document.getElementById('policyModal');
+  const closePolicyModalBtn = document.getElementById('closePolicyModalBtn');
+  const policyTriggers = document.querySelectorAll('.policy-trigger');
+  const policyTabBtns = document.querySelectorAll('.policy-tab-btn');
+
   // ================= 1. FETCH PRODUCTS & LOCATE TARGET =================
   let apiLoaded = false;
   try {
@@ -459,7 +473,136 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderCart();
   });
 
-  // ================= 9. TOAST =================
+  // ================= 9. SEARCH =================
+  if (searchBtn && searchDialog && closeSearchBtn && searchInput) {
+    searchBtn.addEventListener('click', () => {
+      searchDialog.showModal();
+      searchInput.value = '';
+      renderSearch('');
+      setTimeout(() => searchInput.focus(), 50);
+    });
+
+    closeSearchBtn.addEventListener('click', () => searchDialog.close());
+
+    searchInput.addEventListener('input', (e) => {
+      renderSearch(e.target.value.trim());
+    });
+
+    function renderSearch(q) {
+      if (!searchResults) return;
+      searchResults.innerHTML = '';
+      const matched = q.length === 0
+        ? products
+        : products.filter(p => (p.name || '').toLowerCase().includes(q.toLowerCase()));
+
+      if (matched.length === 0) {
+        searchResults.innerHTML = '<div class="py-4 text-center text-xs text-neutral-500 font-mono">No pieces found matching your search.</div>';
+        return;
+      }
+
+      matched.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'p-2 rounded-lg hover:bg-neutral-900 border border-transparent hover:border-[#222] flex items-center justify-between cursor-pointer transition-colors';
+        const img = p.image || (Array.isArray(p.images) && p.images[0]) || 'assets/sokhm-card-1.jpg';
+        const priceNum = typeof p.price === 'number' ? p.price : (parseFloat(p.price) || 0);
+
+        item.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <img src="${img}" class="w-9 h-9 object-cover rounded border border-[#222]">
+            <div>
+              <span class="text-xs font-bold text-white uppercase block">${p.name}</span>
+              <span class="text-[9px] text-neutral-400 font-mono uppercase">${p.category || 'HOODIE'}</span>
+            </div>
+          </div>
+          <span class="text-xs font-bold text-white font-mono">${p.formattedPrice || (priceNum.toLocaleString('en-US') + ' EGP')}</span>
+        `;
+        item.addEventListener('click', () => {
+          searchDialog.close();
+          window.location.href = `product.html?id=${p.id}`;
+        });
+        searchResults.appendChild(item);
+      });
+    }
+  }
+
+  // Account button
+  if (accountBtn) {
+    accountBtn.addEventListener('click', () => {
+      showToast('✦ SOKHM Atelier Membership Active');
+    });
+  }
+
+  // ================= 10. BRAND POLICIES MODAL =================
+  if (policyModal) {
+    if (closePolicyModalBtn) {
+      closePolicyModalBtn.addEventListener('click', () => policyModal.close());
+    }
+
+    policyTriggers.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const policyType = btn.getAttribute('data-policy') || 'privacy';
+        openPolicyTab(policyType);
+        policyModal.showModal();
+        if (window.lucide) window.lucide.createIcons();
+      });
+    });
+
+    policyTabBtns.forEach(tabBtn => {
+      tabBtn.addEventListener('click', () => {
+        const targetId = tabBtn.getAttribute('data-target');
+        const policyType = targetId ? targetId.replace('policy-', '') : 'privacy';
+        openPolicyTab(policyType);
+      });
+    });
+
+    function openPolicyTab(policyType) {
+      const targetId = `policy-${policyType}`;
+      policyTabBtns.forEach(btn => {
+        if (btn.getAttribute('data-target') === targetId) {
+          btn.className = 'policy-tab-btn active px-3 py-1.5 rounded-lg bg-white text-black transition-colors cursor-pointer whitespace-nowrap font-bold';
+        } else {
+          btn.className = 'policy-tab-btn px-3 py-1.5 rounded-lg bg-[#141414] text-neutral-400 hover:text-white border border-[#222] transition-colors cursor-pointer whitespace-nowrap font-bold';
+        }
+      });
+
+      document.querySelectorAll('#policyModalContent .policy-section').forEach(sec => {
+        if (sec.id === targetId) {
+          sec.classList.remove('hidden');
+        } else {
+          sec.classList.add('hidden');
+        }
+      });
+    }
+  }
+
+  // ================= 11. BACKDROP DISMISS FOR DIALOGS =================
+  [searchDialog, sizeGuideModal, policyModal].forEach(dlg => {
+    if (!dlg) return;
+    dlg.addEventListener('click', (e) => {
+      const rect = dlg.getBoundingClientRect();
+      const isInDialog = (
+        rect.top <= e.clientY &&
+        e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX &&
+        e.clientX <= rect.left + rect.width
+      );
+      if (!isInDialog) {
+        dlg.close();
+      }
+    });
+  });
+
+  // Cross-tab / Cross-page Cart Sync
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'sokhm_noir_cart_v1') {
+      try {
+        cart = e.newValue ? JSON.parse(e.newValue) : [];
+        renderCart();
+      } catch (err) {}
+    }
+  });
+
+  // ================= 12. TOAST =================
   function showToast(msg) {
     if (!toastContainer) return;
     const toast = document.createElement('div');

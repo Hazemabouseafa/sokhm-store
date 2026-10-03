@@ -27,30 +27,37 @@
       "subtitle": "BUILT DIFFERENT",
       "description": "Premium streetwear for those who move different. Timeless designs. Superior quality. A mindset, not just a brand.",
       "ctaText": "SHOP NOW",
-      "scrollLabel": "SCROLL"
+      "scrollLabel": "SCROLL",
+      "cta": "SHOP NOW",
+      "narrative": "Premium streetwear for those who move different. Timeless designs. Superior quality. A mindset, not just a brand.",
+      "scroll": "SCROLL"
     },
     "valueBar": [
       {
         "id": "val-1",
         "title": "PREMIUM QUALITY",
+        "desc": "Built to last.",
         "subtitle": "Built to last.",
         "icon": "sparkle"
       },
       {
         "id": "val-2",
         "title": "FREE SHIPPING",
+        "desc": "On orders over 2,500 EGP.",
         "subtitle": "On orders over 2,500 EGP.",
         "icon": "truck"
       },
       {
         "id": "val-3",
         "title": "SECURE PAYMENTS",
+        "desc": "Shop with confidence.",
         "subtitle": "Shop with confidence.",
         "icon": "shield-check"
       },
       {
         "id": "val-4",
         "title": "SUSTAINABLE APPROACH",
+        "desc": "Better for tomorrow.",
         "subtitle": "Better for tomorrow.",
         "icon": "leaf"
       }
@@ -58,7 +65,8 @@
     "collection": {
       "kicker": "FEATURED COLLECTION",
       "title": "BEST SELLERS",
-      "viewAllText": "VIEW ALL"
+      "viewAllText": "VIEW ALL",
+      "viewAll": "VIEW ALL"
     },
     "bottomBanner": {
       "brandTag": "✦ SOKHM",
@@ -68,7 +76,14 @@
     "footer": {
       "brandTag": "✦ SOKHM",
       "slogan": "BUILT DIFFERENT",
-      "copyright": "© 2026 SOKHM ATELIER. ALL RIGHTS RESERVED."
+      "copyright": "© 2026 SOKHM ATELIER. ALL RIGHTS RESERVED.",
+      "brand": "✦ SOKHM",
+      "copy": "© 2026 SOKHM ATELIER. ALL RIGHTS RESERVED."
+    },
+    "banner": {
+      "brand": "✦ SOKHM",
+      "heading": "FOR THE ONES WHO KEEP GOING",
+      "cta": "OUR STORY"
     }
   },
   "productPage": {
@@ -139,9 +154,9 @@
     "subtitle": "يرجى استيفاء بيانات التوصيل بدقة لضمان سرعة وصول الشحنة",
     "codTitle": "الدفع نقدياً عند الاستلام (COD)",
     "codSubtitle": "معاينة القطع قبل الدفع متاحة مع مندوب التوصيل.",
-    "shippingRuleText": "شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر",
-    "freeShippingThreshold": 2500,
-    "standardShippingFee": 75,
+    "shippingRuleText": "شحن سريع مجاني لجميع الطلبات بقيمة 1500 ج.م أو أكثر",
+    "freeShippingThreshold": 1500,
+    "standardShippingFee": 50,
     "submitButtonText": "تأكيد الطلب الآن",
     "trustHighlights": [
       "500 GSM قطن مصري فاخر فائق الكثافة",
@@ -155,7 +170,39 @@
   },
   "visibility": {
     "homepage.hero.subtitle": true,
-    "checkout.codBox": true
+    "checkout.codBox": true,
+    "checkout.shippingRuleText": true,
+    "checkout.title": true,
+    "checkout.subtitle": true,
+    "checkout.submitButtonText": true,
+    "checkout.notesContainer": true,
+    "checkout.codTitle": true,
+    "checkout.codSubtitle": true,
+    "checkout.trustHighlightsContainer": true,
+    "checkout.trustHighlight1": true,
+    "checkout.trustHighlight2": true,
+    "checkout.trustHighlight3": true,
+    "checkout.successTitle": true,
+    "checkout.successSubtitle": true,
+    "checkout.whatsappButtonText": true,
+    "homepage.collection.title": true,
+    "homepage.hero.kicker": true,
+    "homepage.hero.title": true,
+    "homepage.hero.ctaText": true,
+    "homepage.hero.description": true,
+    "homepage.hero.scrollLabel": true,
+    "homepage.valueBar.0.title": true,
+    "homepage.valueBar.1.title": true,
+    "homepage.valueBar.2.title": true,
+    "homepage.valueBar.3.title": true,
+    "homepage.collection.kicker": true,
+    "homepage.collection.viewAllText": true,
+    "homepage.bottomBanner.brandTag": true,
+    "homepage.bottomBanner.headline": true,
+    "homepage.bottomBanner.ctaText": true,
+    "homepage.footer.brandTag": true,
+    "homepage.footer.slogan": true,
+    "homepage.footer.copyright": true
   },
   "categories": [
     {

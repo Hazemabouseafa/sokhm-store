@@ -43,6 +43,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   const accountBtn = document.getElementById('accountBtn');
   const toastContainer = document.getElementById('toastContainer');
 
+  // Policy Modal
+  const policyModal = document.getElementById('policyModal');
+  const closePolicyModalBtn = document.getElementById('closePolicyModalBtn');
+  const policyTriggers = document.querySelectorAll('.policy-trigger');
+  const policyTabBtns = document.querySelectorAll('.policy-tab-btn');
+
+  // Load persisted cart from localStorage
+  try {
+    const saved = localStorage.getItem('sokhm_noir_cart_v1');
+    if (saved) cart = JSON.parse(saved);
+  } catch (e) {
+    cart = [];
+  }
+
+  function saveCart() {
+    try {
+      localStorage.setItem('sokhm_noir_cart_v1', JSON.stringify(cart));
+    } catch (e) {}
+  }
+
   // ================= 1. FETCH SOKHM PRODUCTS =================
   async function loadProducts() {
     try {
@@ -164,11 +184,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       }).join('');
 
       card.innerHTML = `
-        <div class="sokhm-card-media">
+        <div class="sokhm-card-media relative">
           <img src="${mainImg}" alt="${prod.name}" class="card-product-img" loading="lazy">
           
           <button type="button" class="wishlist-btn-dark" title="Add to Wishlist">
             <i data-lucide="heart" class="w-3.5 h-3.5 stroke-[1.8]"></i>
+          </button>
+
+          <button type="button" class="quick-view-btn absolute bottom-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-black/80 hover:bg-white text-white hover:text-black border border-white/40 hover:border-white text-[10px] font-mono font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 whitespace-nowrap cursor-pointer z-10" title="Quick View">
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+            <span>QUICK VIEW</span>
           </button>
         </div>
 
@@ -205,6 +230,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           icon.removeAttribute('fill');
         }
       });
+
+      // Quick View click
+      const quickViewBtn = card.querySelector('.quick-view-btn');
+      if (quickViewBtn) {
+        quickViewBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openProductModal(prod);
+        });
+      }
 
       // Swatch click
       const swatchBtns = card.querySelectorAll('.swatch-dot-dark');
@@ -305,9 +339,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
   if (cartBackdrop) cartBackdrop.addEventListener('click', closeCart);
 
-  function addToBag(product, size = 'M') {
-    const itemId = `${product.id}-${size}`;
+  function addToBag(product, size = 'M', colorName = null) {
+    const pMainImage = product.image || (Array.isArray(product.images) && product.images[0]) || 'assets/sokhm-card-1.jpg';
+    const cName = colorName || (Array.isArray(product.colors) && product.colors[0] ? (typeof product.colors[0] === 'object' ? product.colors[0].name : product.colors[0]) : 'Standard');
+    const itemId = `${product.id}-${size}-${cName}`;
     const existing = cart.find(i => i.id === itemId);
+    const priceNum = typeof product.price === 'number' ? product.price : (parseFloat(product.price) || 0);
+
     if (existing) {
       existing.quantity += 1;
     } else {
@@ -315,14 +353,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         id: itemId,
         productId: product.id,
         name: product.name,
-        price: product.price,
-        formattedPrice: product.formattedPrice || `${product.price.toLocaleString()} EGP`,
-        image: product.images[0] || 'assets/sokhm-card-1.jpg',
+        price: priceNum,
+        formattedPrice: product.formattedPrice || `${priceNum.toLocaleString()} EGP`,
+        image: pMainImage,
         size: size,
+        color: cName,
         quantity: 1
       });
     }
 
+    saveCart();
     showToast(`Added ${product.name} [${size}] to Bag`);
     renderCart();
   }
@@ -363,7 +403,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
-          <p class="text-[10px] text-neutral-400 font-medium">SIZE: ${item.size}</p>
+          <p class="text-[10px] text-neutral-400 font-medium">SIZE: ${item.size} ${item.color ? '• ' + item.color : ''}</p>
           <div class="flex justify-between items-center mt-1.5">
             <div class="flex items-center border border-[#222] bg-[#111] rounded px-1.5 py-0.5 text-xs">
               <button class="qty-min px-1 font-bold text-neutral-400 hover:text-white">-</button>
@@ -377,6 +417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       itemEl.querySelector('.remove-btn').addEventListener('click', () => {
         cart = cart.filter(i => i.id !== item.id);
+        saveCart();
         renderCart();
       });
 
@@ -385,11 +426,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (item.quantity <= 0) {
           cart = cart.filter(i => i.id !== item.id);
         }
+        saveCart();
         renderCart();
       });
 
       itemEl.querySelector('.qty-plus').addEventListener('click', () => {
         item.quantity += 1;
+        saveCart();
         renderCart();
       });
 
@@ -414,6 +457,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('sokhm:cart-cleared', () => {
     cart = [];
+    saveCart();
     renderCart();
   });
 
@@ -465,7 +509,77 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ================= 6. TOAST =================
+  // ================= 6. BRAND POLICIES MODAL =================
+  if (policyModal) {
+    if (closePolicyModalBtn) {
+      closePolicyModalBtn.addEventListener('click', () => policyModal.close());
+    }
+
+    policyTriggers.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const policyType = btn.getAttribute('data-policy') || 'privacy';
+        openPolicyTab(policyType);
+        policyModal.showModal();
+        if (window.lucide) window.lucide.createIcons();
+      });
+    });
+
+    policyTabBtns.forEach(tabBtn => {
+      tabBtn.addEventListener('click', () => {
+        const targetId = tabBtn.getAttribute('data-target');
+        const policyType = targetId ? targetId.replace('policy-', '') : 'privacy';
+        openPolicyTab(policyType);
+      });
+    });
+
+    function openPolicyTab(policyType) {
+      const targetId = `policy-${policyType}`;
+      policyTabBtns.forEach(btn => {
+        if (btn.getAttribute('data-target') === targetId) {
+          btn.className = 'policy-tab-btn active px-3 py-1.5 rounded-lg bg-white text-black transition-colors cursor-pointer whitespace-nowrap font-bold';
+        } else {
+          btn.className = 'policy-tab-btn px-3 py-1.5 rounded-lg bg-[#141414] text-neutral-400 hover:text-white border border-[#222] transition-colors cursor-pointer whitespace-nowrap font-bold';
+        }
+      });
+
+      document.querySelectorAll('#policyModalContent .policy-section').forEach(sec => {
+        if (sec.id === targetId) {
+          sec.classList.remove('hidden');
+        } else {
+          sec.classList.add('hidden');
+        }
+      });
+    }
+  }
+
+  // ================= 7. BACKDROP DISMISS FOR DIALOGS =================
+  [searchDialog, productModal, policyModal].forEach(dlg => {
+    if (!dlg) return;
+    dlg.addEventListener('click', (e) => {
+      const rect = dlg.getBoundingClientRect();
+      const isInDialog = (
+        rect.top <= e.clientY &&
+        e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX &&
+        e.clientX <= rect.left + rect.width
+      );
+      if (!isInDialog) {
+        dlg.close();
+      }
+    });
+  });
+
+  // Cross-tab / Cross-page Cart Sync
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'sokhm_noir_cart_v1') {
+      try {
+        cart = e.newValue ? JSON.parse(e.newValue) : [];
+        renderCart();
+      } catch (err) {}
+    }
+  });
+
+  // ================= 8. TOAST =================
   function showToast(msg) {
     if (!toastContainer) return;
     const toast = document.createElement('div');
@@ -483,7 +597,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 2400);
   }
 
-  // ================= 7. INITIALIZE =================
+  // ================= 9. INITIALIZE =================
   await loadProducts();
   renderCart();
 

@@ -598,6 +598,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeBtn && invoiceModal) {
       closeBtn.addEventListener('click', () => invoiceModal.close());
     }
+
+    if (invoiceModal) {
+      invoiceModal.addEventListener('click', (e) => {
+        const rect = invoiceModal.getBoundingClientRect();
+        const isInDialog = (
+          rect.top <= e.clientY &&
+          e.clientY <= rect.top + rect.height &&
+          rect.left <= e.clientX &&
+          e.clientX <= rect.left + rect.width
+        );
+        if (!isInDialog) {
+          invoiceModal.close();
+        }
+      });
+    }
   }
 
   // ================= 4. إدارة المحتوى (SITE CONTENT) =================
@@ -1688,6 +1703,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeBtn && productModal) closeBtn.addEventListener('click', () => productModal.close());
     if (cancelBtn && productModal) cancelBtn.addEventListener('click', () => productModal.close());
 
+    if (productModal) {
+      productModal.addEventListener('click', (e) => {
+        const rect = productModal.getBoundingClientRect();
+        const isInDialog = (
+          rect.top <= e.clientY &&
+          e.clientY <= rect.top + rect.height &&
+          rect.left <= e.clientX &&
+          e.clientX <= rect.left + rect.width
+        );
+        if (!isInDialog) {
+          productModal.close();
+        }
+      });
+    }
+
     // Size checkbox click styling
     document.querySelectorAll('input[name="pm_sizes"]').forEach(cb => {
       cb.addEventListener('change', () => updateSizeCheckboxStyle(cb));
@@ -1904,6 +1934,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (filter) {
       filter.innerHTML = '<option value="all">جميع التصنيفات</option>' + 
         categories.map(c => `<option value="${c.slug || c.id}">${c.name}</option>`).join('');
+    }
+    const pmCat = document.getElementById('pm_category');
+    if (pmCat && categories.length > 0) {
+      const prevVal = pmCat.value;
+      pmCat.innerHTML = categories.map(c => `<option value="${c.slug || c.id}">${c.name}</option>`).join('');
+      if (prevVal) pmCat.value = prevVal;
     }
   }
 

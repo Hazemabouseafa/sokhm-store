@@ -307,7 +307,31 @@
     if (continueBtn && modal) {
       continueBtn.addEventListener('click', () => {
         modal.close();
-        window.location.reload();
+        if (window.location.pathname.includes('product.html')) {
+          window.location.href = 'index.html#collection';
+        } else {
+          // If on index.html, scroll smoothly to collection
+          const colSec = document.getElementById('collection');
+          if (colSec) {
+            colSec.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      });
+    }
+
+    // Dismiss when clicking outside modal
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        const rect = modal.getBoundingClientRect();
+        const isInModal = (
+          rect.top <= e.clientY &&
+          e.clientY <= rect.top + rect.height &&
+          rect.left <= e.clientX &&
+          e.clientX <= rect.left + rect.width
+        );
+        if (!isInModal) {
+          modal.close();
+        }
       });
     }
 

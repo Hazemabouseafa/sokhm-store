@@ -230,6 +230,76 @@
       </div>
     </section>
 
+    <!-- ================= 5.5 JOURNAL / EDITORIAL SECTION ================= -->
+    <section id="journal" class="max-w-[1280px] mx-auto px-6 sm:px-12 pb-20 font-mono">
+      <div class="flex items-end justify-between mb-8 pb-3 border-b border-[#1A1A1A]">
+        <div>
+          <span class="text-[10px] font-semibold text-neutral-400 uppercase tracking-[0.25em] block">✦ EDITORIAL // ATELIER JOURNAL</span>
+          <h2 class="font-heading font-extrabold text-2xl sm:text-3xl text-white uppercase tracking-tight mt-1">THE PHILOSOPHY</h2>
+        </div>
+        <a href="#collection" class="text-[11px] font-bold uppercase tracking-wider text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer">
+          <span>EXPLORE DROP 01</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Story Card 1 -->
+        <article class="bg-[#0E0E0E] border border-[#1A1A1A] rounded-2xl p-6 space-y-4 hover:border-neutral-700 transition-colors flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-[10px] text-neutral-500">
+              <span class="text-white font-bold tracking-widest">VOL. 01 // ESSAY</span>
+              <span>2026 ATELIER</span>
+            </div>
+            <h3 class="font-heading font-bold text-base text-white uppercase leading-snug">BUILT DIFFERENT — BEYOND STREETWEAR</h3>
+            <p class="text-xs text-neutral-400 font-sans leading-relaxed font-light">
+              SOKHM was forged not as an apparel label, but as a silent code. In a culture saturated with disposable fashion, we engineered monolithic silhouettes built to endure.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-[#161616] flex items-center justify-between text-[11px] text-neutral-400">
+            <span>Read 3 min</span>
+            <span class="text-white font-bold">500 GSM COTTON →</span>
+          </div>
+        </article>
+
+        <!-- Story Card 2 -->
+        <article class="bg-[#0E0E0E] border border-[#1A1A1A] rounded-2xl p-6 space-y-4 hover:border-neutral-700 transition-colors flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-[10px] text-neutral-500">
+              <span class="text-white font-bold tracking-widest">VOL. 02 // ARCHITECTURE</span>
+              <span>CRAFT & FIBER</span>
+            </div>
+            <h3 class="font-heading font-bold text-base text-white uppercase leading-snug">ARCHITECTURAL DRAPE & COMBED FLEECE</h3>
+            <p class="text-xs text-neutral-400 font-sans leading-relaxed font-light">
+              Every curve is calculated: forward-rotated drop shoulder seams, dual-ply architectural hoods that stay structured without sagging, and pre-shrunk combed Egyptian yarns.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-[#161616] flex items-center justify-between text-[11px] text-neutral-400">
+            <span>Read 4 min</span>
+            <span class="text-white font-bold">THE SILHOUETTE →</span>
+          </div>
+        </article>
+
+        <!-- Story Card 3 -->
+        <article class="bg-[#0E0E0E] border border-[#1A1A1A] rounded-2xl p-6 space-y-4 hover:border-neutral-700 transition-colors flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-[10px] text-neutral-500">
+              <span class="text-white font-bold tracking-widest">VOL. 03 // MANIFESTO</span>
+              <span>MINDSET</span>
+            </div>
+            <h3 class="font-heading font-bold text-base text-white uppercase leading-snug">FOR THE ONES WHO KEEP GOING</h3>
+            <p class="text-xs text-neutral-400 font-sans leading-relaxed font-light">
+              Night shifts. Empty streets. Relentless pursuit of craft. When the noise fades, standard is no longer enough. SOKHM belongs to the relentless.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-[#161616] flex items-center justify-between text-[11px] text-neutral-400">
+            <span>Read 2 min</span>
+            <span class="text-white font-bold">THE EMBLEM →</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
   </main>
 
   <!-- ================= 6. MINIMAL DARK FOOTER ================= -->
@@ -247,15 +317,16 @@
           <a href="#hero" class="hover:text-white">HOME</a>
           <a href="#collection" class="hover:text-white">SHOP</a>
           <a href="#story" class="hover:text-white">ABOUT</a>
+          <a href="#journal" class="hover:text-white">JOURNAL</a>
         </div>
       </div>
 
       <div class="flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-4 font-mono">
         <p data-cms="homepage.footer.copyright">&copy; 2026 SOKHM ATELIER. All rights reserved.</p>
         <div class="flex items-center gap-6">
-          <span>PRIVACY POLICY</span>
-          <span>TERMS OF SALE</span>
-          <span>DOORSTEP EXPRESS DELIVERY</span>
+          <button type="button" class="policy-trigger hover:text-white transition-colors cursor-pointer" data-policy="privacy">PRIVACY POLICY</button>
+          <button type="button" class="policy-trigger hover:text-white transition-colors cursor-pointer" data-policy="terms">TERMS OF SALE</button>
+          <button type="button" class="policy-trigger hover:text-white transition-colors cursor-pointer" data-policy="delivery">DOORSTEP EXPRESS DELIVERY</button>
         </div>
       </div>
 
@@ -286,10 +357,10 @@
           <div class="space-y-2">
             <span class="text-xs font-semibold text-neutral-300 block uppercase tracking-wider">SELECT SIZE:</span>
             <div id="modalSizePicker" class="flex items-center gap-2 text-xs font-bold font-mono">
-              <button class="px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400" data-size="S">S</button>
-              <button class="px-3.5 py-2 rounded-lg border border-white bg-white text-black font-bold" data-size="M">M</button>
-              <button class="px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400" data-size="L">L</button>
-              <button class="px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400" data-size="XL">XL</button>
+              <button class="size-btn px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400 cursor-pointer transition-colors" data-size="S">S</button>
+              <button class="size-btn px-3.5 py-2 rounded-lg border border-white bg-white text-black font-bold cursor-pointer transition-colors" data-size="M">M</button>
+              <button class="size-btn px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400 cursor-pointer transition-colors" data-size="L">L</button>
+              <button class="size-btn px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400 cursor-pointer transition-colors" data-size="XL">XL</button>
             </div>
           </div>
 
@@ -354,6 +425,47 @@
       </div>
       <input id="searchInput" type="text" placeholder="Type to search (signature, combat, essential)..." class="w-full px-4 py-2.5 bg-neutral-900 rounded-lg border border-[#222] text-xs text-white focus:outline-none focus:border-white">
       <div id="searchResults" class="mt-4 space-y-2 max-h-60 overflow-y-auto"></div>
+    </div>
+  </dialog>
+
+  <!-- ================= BRAND POLICIES MODAL ================= -->
+  <dialog id="policyModal" class="bg-transparent p-0 max-w-xl w-[92%] border border-[#222] rounded-[16px] shadow-2xl overflow-hidden backdrop:bg-black/80 font-sans" dir="rtl">
+    <div class="bg-[#0E0E0E] text-white p-6 sm:p-8 relative max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-[#1A1A1A] mb-5">
+        <div class="flex items-center gap-2">
+          <svg viewBox="0 0 100 120" class="w-4 h-5 text-white fill-current" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
+          </svg>
+          <h3 id="policyModalTitle" class="font-bold text-sm uppercase tracking-wider text-white">✦ SOKHM POLICIES // سياسات المتجر</h3>
+        </div>
+        <button id="closePolicyModalBtn" class="p-1.5 text-neutral-400 hover:text-white cursor-pointer rounded-lg hover:bg-neutral-900 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 mb-6 border-b border-[#1A1A1A] pb-3 text-xs font-bold overflow-x-auto">
+        <button type="button" class="policy-tab-btn active px-3 py-1.5 rounded-lg bg-white text-black transition-colors cursor-pointer whitespace-nowrap" data-target="policy-privacy">الخصوصية (Privacy)</button>
+        <button type="button" class="policy-tab-btn px-3 py-1.5 rounded-lg bg-[#141414] text-neutral-400 hover:text-white border border-[#222] transition-colors cursor-pointer whitespace-nowrap" data-target="policy-terms">شروط البيع (Terms)</button>
+        <button type="button" class="policy-tab-btn px-3 py-1.5 rounded-lg bg-[#141414] text-neutral-400 hover:text-white border border-[#222] transition-colors cursor-pointer whitespace-nowrap" data-target="policy-delivery">الشحن والتوصيل (Delivery)</button>
+      </div>
+
+      <div id="policyModalContent" class="space-y-4 text-xs text-neutral-300 leading-relaxed font-sans">
+        <div id="policy-privacy" class="policy-section">
+          <h4 class="text-sm font-bold text-white mb-2">سياسة الخصوصية وحماية البيانات</h4>
+          <p class="text-neutral-400 mb-2">نحن في <strong>✦ SOKHM ATELIER</strong> نلتزم بأعلى معايير حماية بيانات عملائنا. لا نقوم بمشاركة بياناتك الشخصية (الاسم، الهاتف، العنوان) مع أي طرف ثالث سوى شركة الشحن الرسمية لإتمام التوصيل فقط.</p>
+          <p class="text-neutral-400">تُخزن بيانات الطلبات بأمان لتسهيل متابعة الشحنات والرد على استفساراتك عبر خدمة العملاء والواتساب.</p>
+        </div>
+        <div id="policy-terms" class="policy-section hidden">
+          <h4 class="text-sm font-bold text-white mb-2">شروط البيع والاستبدال</h4>
+          <p class="text-neutral-400 mb-2">جميع القطع مصممة بأعلى جودة من القطن المصري 500 GSM المعالج فائق الكثافة. يحق للعميل معاينة القطعة والتأكد من المقاس والجودة عند استلامها مع مندوب الشحن قبل دفع القيمة نقدياً.</p>
+          <p class="text-neutral-400">نوفر سياسة استبدال واسترجاع مرنة خلال 30 يوماً من تاريخ الاستلام بشرط بقاء القطعة بحالتها الأصلية غير المستخدمة وبالعلامات الأصلية.</p>
+        </div>
+        <div id="policy-delivery" class="policy-section hidden">
+          <h4 class="text-sm font-bold text-white mb-2">خدمة الشحن السريع لباب المنزل (Doorstep Express)</h4>
+          <p class="text-neutral-400 mb-2">يتم تجهيز وشحن الطلبات خلال 24 إلى 48 ساعة بحد أقصى لجميع محافظات جمهورية مصر العربية مع توفير رقم تتبع مباشر عبر الرسائل النصية والواتساب.</p>
+          <p class="text-neutral-400">الشحن مجاني بالكامل لجميع الطلبات التي تتجاوز قيمتها 2,500 ج.م، مع إمكانية الدفع عند الاستلام بجميع المحافظات.</p>
+        </div>
+      </div>
     </div>
   </dialog>
 
