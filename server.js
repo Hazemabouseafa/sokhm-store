@@ -343,10 +343,10 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/upload-image' && req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const filename = body.filename;
-        const base64 = body.base64 || body.image;
+        const filename = body.filename || 'upload';
+        const base64 = body.base64 || body.image || body.dataUrl;
         if (!base64) {
-          return sendJson(res, 400, { error: 'Missing base64 image data' });
+          return sendJson(res, 400, { success: false, error: 'Missing base64 image data' });
         }
 
         // Clean base64 data
@@ -362,23 +362,36 @@ const server = http.createServer(async (req, res) => {
           buffer = Buffer.from(base64, 'base64');
         }
 
-        const safeBaseName = (filename ? path.basename(filename, path.extname(filename)) : 'upload')
+        const safeBaseName = path.basename(filename, path.extname(filename))
           .replace(/[^a-zA-Z0-9_-]/g, '_')
-          .toLowerCase();
-        const safeName = `${safeBaseName}_${Date.now()}${ext}`;
-        const destPath = path.join(__dirname, 'assets', safeName);
+          .toLowerCase() || 'upload';
+        const safeName = `sokhm_${safeBaseName}_${Date.now()}${ext}`;
+        const assetsDir = path.join(__dirname, 'assets');
+        if (!fs.existsSync(assetsDir)) {
+          fs.mkdirSync(assetsDir, { recursive: true });
+        }
+        const destPath = path.join(assetsDir, safeName);
 
-        fs.writeFileSync(destPath, buffer);
-        console.log(`Image uploaded successfully: ${safeName} (${buffer.length} bytes)`);
-
-        return sendJson(res, 200, {
-          success: true,
-          url: `assets/${safeName}`,
-          path: `assets/${safeName}`,
-          name: safeName
-        });
+        try {
+          fs.writeFileSync(destPath, buffer);
+          console.log(`Image uploaded successfully: ${safeName} (${buffer.length} bytes)`);
+          return sendJson(res, 200, {
+            success: true,
+            url: `assets/${safeName}`,
+            path: `assets/${safeName}`,
+            name: safeName
+          });
+        } catch (writeErr) {
+          // If disk write is not permitted, return the dataUrl directly
+          console.warn('Disk write failed, returning base64 dataUrl:', writeErr.message);
+          return sendJson(res, 200, {
+            success: true,
+            url: base64,
+            name: safeName
+          });
+        }
       } catch (err) {
-        return sendJson(res, 500, { error: err.message });
+        return sendJson(res, 500, { success: false, error: err.message });
       }
     }
 

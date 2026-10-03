@@ -266,10 +266,11 @@ module.exports = async (req, res) => {
     // 7. Base64 Image Upload
     if (pathname === '/api/upload-image' && req.method === 'POST') {
       const body = await parseBody(req);
-      if (body.dataUrl) {
-        return sendJson(res, 200, { success: true, url: body.dataUrl });
+      const imgData = body.dataUrl || body.image || body.base64;
+      if (imgData) {
+        return sendJson(res, 200, { success: true, url: imgData });
       }
-      return sendJson(res, 200, { success: true, url: 'assets/sokhm-card-1.jpg' });
+      return sendJson(res, 400, { success: false, error: 'لم يتم استلام بيانات الصورة' });
     }
 
     return sendJson(res, 404, { error: 'API route not found: ' + pathname });

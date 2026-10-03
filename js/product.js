@@ -67,45 +67,68 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ================= 1. FETCH PRODUCTS & LOCATE TARGET =================
   try {
-    const res = await fetch('data/products.json');
-    if (res.ok) {
-      products = await res.json();
+    const apiRes = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-cache' });
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      if (Array.isArray(data) && data.length > 0) {
+        products = data;
+      }
     }
-  } catch (e) {
-    console.warn('Failed to fetch products.json:', e);
+  } catch (apiErr) {
+    console.warn('API fetch products failed, falling back to static json:', apiErr.message);
+  }
+
+  if (products.length === 0) {
+    try {
+      const res = await fetch(`data/products.json?_t=${Date.now()}`, { cache: 'no-cache' });
+      if (res.ok) {
+        products = await res.json();
+      }
+    } catch (e) {
+      console.warn('Failed to fetch products.json:', e);
+    }
   }
 
   // Find target product
-  currentProduct = products.find(p => p.id === targetId) || products[0];
+  currentProduct = products.find(p => p.id === targetId || p.slug === targetId) || products[0];
 
   if (!currentProduct) {
     console.error('No product found!');
     return;
   }
 
+  const pMainImage = currentProduct.image || (Array.isArray(currentProduct.images) && currentProduct.images[0]) || 'assets/sokhm-card-1.jpg';
+
   // Set active default color & size
   const productColors = Array.isArray(currentProduct.colors) && currentProduct.colors.length > 0
-    ? currentProduct.colors
-    : [{ name: 'Onyx Black', hex: '#0E0E0E', image: currentProduct.images?.[0] || 'assets/sokhm-card-1.jpg' }];
+    ? currentProduct.colors.map(c => ({
+        name: typeof c === 'object' ? (c.name || 'Standard') : c,
+        hex: typeof c === 'object' ? (c.hex || '#111') : '#111',
+        image: (typeof c === 'object' && c.image) ? c.image : pMainImage
+      }))
+    : [{ name: 'Onyx Black', hex: '#0E0E0E', image: pMainImage }];
   selectedColor = productColors[0];
 
   // ================= 2. POPULATE PRODUCT METADATA =================
   if (pageTitle) pageTitle.textContent = `✦ SOKHM | ${currentProduct.name}`;
   if (breadcrumbCurrent) breadcrumbCurrent.textContent = currentProduct.name;
   if (productTitle) productTitle.textContent = currentProduct.name;
-  if (productPrice) productPrice.textContent = currentProduct.formattedPrice || `${currentProduct.price.toLocaleString()} EGP`;
+  const pPriceNum = typeof currentProduct.price === 'number' ? currentProduct.price : (parseFloat(currentProduct.price) || 0);
+  if (productPrice) productPrice.textContent = currentProduct.formattedPrice || `${pPriceNum.toLocaleString('en-US')} EGP`;
   if (productDescription) productDescription.textContent = currentProduct.description;
-  if (productCategoryKicker) productCategoryKicker.textContent = `✦ SOKHM ATELIER // ${currentProduct.categoryLabel || 'DROP 01'}`;
+  if (productCategoryKicker) productCategoryKicker.textContent = `✦ SOKHM ATELIER // ${currentProduct.categoryLabel || currentProduct.category || 'DROP 01'}`;
   if (productBadge) productBadge.textContent = `✦ ${currentProduct.badge || 'SIGNATURE'}`;
   if (productRatingText) productRatingText.textContent = currentProduct.rating || '4.98';
 
-  if (accordionFitText) accordionFitText.textContent = currentProduct.fit || 'Sculpted drop-shoulder oversized boxy drape. Forward-rotated sleeves.';
+  if (accordionFitText) accordionFitText.textContent = currentProduct.fit || currentProduct.fit_advice || currentProduct.fitAdvice || 'Sculpted drop-shoulder oversized boxy drape. Forward-rotated sleeves.';
   if (accordionFabricText) accordionFabricText.textContent = currentProduct.fabric || '500 GSM Heavyweight French Terry, 100% Long-Staple Egyptian Cotton.';
-  if (accordionCareText) accordionCareText.textContent = currentProduct.care || 'Machine wash cold inside-out, hang dry.';
+  if (accordionCareText) accordionCareText.textContent = currentProduct.care || currentProduct.care_advice || currentProduct.careAdvice || 'Machine wash cold inside-out, hang dry.';
 
   // ================= 3. POPULATE GALLERY =================
-  const galleryImages = currentProduct.images || ['assets/sokhm-card-1.jpg'];
-  if (mainGalleryImg) mainGalleryImg.src = galleryImages[0];
+  const galleryImages = (Array.isArray(currentProduct.images) && currentProduct.images.length > 0)
+    ? currentProduct.images
+    : [pMainImage];
+  if (mainGalleryImg) mainGalleryImg.src = pMainImage;
 
   if (galleryThumbnails) {
     galleryThumbnails.innerHTML = '';

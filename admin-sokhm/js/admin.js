@@ -1229,7 +1229,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       // Colors
-      modalColorsList = Array.isArray(prod.colors) ? JSON.parse(JSON.stringify(prod.colors)) : [];
+      const rawColors = Array.isArray(prod.colors) ? prod.colors : [];
+      modalColorsList = rawColors.map(c => {
+        if (typeof c === 'string') return { name: c, hex: '#111111', image: prod.image || 'assets/sokhm-card-1.jpg' };
+        return {
+          name: c.name || 'Standard',
+          hex: c.hex || '#111111',
+          image: c.image || prod.image || 'assets/sokhm-card-1.jpg'
+        };
+      });
       renderModalColors();
 
       // Image preview
@@ -1250,8 +1258,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       setVal('pm_description', 'تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.');
       if (catSelect && activeCats.length > 0) catSelect.value = activeCats[0].slug || activeCats[0].id;
       modalColorsList = [
-        { name: 'Onyx Black', hex: '#0B0B0B' },
-        { name: 'Sand Cream', hex: '#D6CDBF' }
+        { name: 'Onyx Black', hex: '#0B0B0B', image: 'assets/sokhm-card-1.jpg' },
+        { name: 'Sand Cream', hex: '#D6CDBF', image: 'assets/sokhm-card-2.jpg' }
       ];
       renderModalColors();
 
@@ -1283,18 +1291,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!list) return;
 
     if (modalColorsList.length === 0) {
-      list.innerHTML = '<span class="text-[10px] text-neutral-500">لم يتم تحديد ألوان بعد.</span>';
+      list.innerHTML = '<span class="text-[10px] text-neutral-500">لم يتم تحديد ألوان بعد. اختر لونا وصورته واضغط "+ إضافة اللون".</span>';
       return;
     }
 
     list.innerHTML = modalColorsList.map((c, idx) => {
-      const hex = typeof c === 'object' ? c.hex : '#111';
-      const name = typeof c === 'object' ? c.name : c;
+      const hex = typeof c === 'object' ? (c.hex || '#111') : '#111';
+      const name = typeof c === 'object' ? (c.name || 'Color') : c;
+      const img = (typeof c === 'object' && c.image) ? c.image : 'assets/sokhm-card-1.jpg';
+      const imgSrc = img.startsWith('http') || img.startsWith('data:') ? img : '../' + img.replace(/^\.\.\//, '');
+
       return `
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#141414] border border-[#262626] text-xs text-white">
-          <span class="w-3 h-3 rounded-full border border-white/20 shadow-inner" style="background-color: ${hex}"></span>
-          <span>${name}</span>
-          <button type="button" class="remove-modal-color-btn text-neutral-500 hover:text-red-400 mr-1 cursor-pointer" data-idx="${idx}">
+        <span class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#141414] border border-[#262626] text-xs text-white">
+          <span class="w-3.5 h-3.5 rounded-full border border-white/20 shadow-inner flex-shrink-0" style="background-color: ${hex}"></span>
+          <img src="${imgSrc}" alt="${name}" class="w-5 h-5 rounded object-cover border border-[#333] flex-shrink-0" onerror="this.src='../assets/sokhm-card-1.jpg'">
+          <span class="font-bold text-[11px]">${name}</span>
+          <button type="button" class="remove-modal-color-btn text-neutral-500 hover:text-red-400 mr-1 cursor-pointer transition-colors p-0.5" data-idx="${idx}" title="حذف هذا اللون">
             <i data-lucide="x" class="w-3 h-3"></i>
           </button>
         </span>
@@ -1313,6 +1325,75 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Helper to convert File to optimized Base64 and upload to /api/upload-image
+  async function uploadImageFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const rawDataUrl = e.target.result;
+        const img = new Image();
+        img.onload = async () => {
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1600;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          let optimizedDataUrl = rawDataUrl;
+          try {
+            optimizedDataUrl = canvas.toDataURL('image/webp', 0.88);
+          } catch (canvasErr) {
+            optimizedDataUrl = rawDataUrl;
+          }
+
+          try {
+            const res = await fetch('/api/upload-image', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+                'x-admin-token': token
+              },
+              body: JSON.stringify({
+                image: optimizedDataUrl,
+                dataUrl: optimizedDataUrl,
+                filename: file.name
+              })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.url) {
+                return resolve(data.url);
+              }
+            }
+          } catch (netErr) {
+            console.warn('Server upload-image route offline, using dataUrl fallback:', netErr.message);
+          }
+
+          resolve(optimizedDataUrl);
+        };
+        img.onerror = () => resolve(rawDataUrl);
+        img.src = rawDataUrl;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   function setupModalHandlers() {
     const closeBtn = document.getElementById('closeProductModalBtn');
     const cancelBtn = document.getElementById('cancelProductModalBtn');
@@ -1324,27 +1405,78 @@ document.addEventListener('DOMContentLoaded', async () => {
       cb.addEventListener('change', () => updateSizeCheckboxStyle(cb));
     });
 
+    // Color hex input listener
+    const colorHexIn = document.getElementById('newColorHexInput');
+    const colorHexValText = document.getElementById('newColorHexValueText');
+    if (colorHexIn && colorHexValText) {
+      colorHexIn.addEventListener('input', () => {
+        colorHexValText.textContent = colorHexIn.value.toUpperCase();
+      });
+    }
+
+    // Color image file input listener
+    const colorImgFileInput = document.getElementById('newColorImgFileInput');
+    const colorImgIn = document.getElementById('newColorImgInput');
+    const colorPreviewThumb = document.getElementById('newColorPreviewThumb');
+
+    if (colorImgFileInput && colorImgIn) {
+      colorImgFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          showToast('جاري معالجة ورفع صورة اللون...');
+          const uploadedUrl = await uploadImageFile(file);
+          colorImgIn.value = uploadedUrl;
+          if (colorPreviewThumb) {
+            colorPreviewThumb.src = uploadedUrl.startsWith('http') || uploadedUrl.startsWith('data:')
+              ? uploadedUrl
+              : '../' + uploadedUrl.replace(/^\.\.\//, '');
+          }
+          showToast('تم اختيار ورفع صورة اللون بنجاح!');
+        } catch (err) {
+          alert('تعذر قراءة ملف الصورة');
+        }
+      });
+    }
+
+    if (colorImgIn && colorPreviewThumb) {
+      colorImgIn.addEventListener('input', () => {
+        const val = colorImgIn.value.trim();
+        if (val) {
+          colorPreviewThumb.src = val.startsWith('http') || val.startsWith('data:')
+            ? val
+            : '../' + val.replace(/^\.\.\//, '');
+        }
+      });
+    }
+
     // Add color button
     const addColorBtn = document.getElementById('addColorToModalBtn');
     const colorNameIn = document.getElementById('newColorNameInput');
-    const colorHexIn = document.getElementById('newColorHexInput');
 
     if (addColorBtn && colorNameIn && colorHexIn) {
       addColorBtn.addEventListener('click', () => {
         const name = colorNameIn.value.trim();
-        const hex = colorHexIn.value;
+        const hex = colorHexIn.value || '#111111';
+        const mainImgVal = getVal('pm_image') || 'assets/sokhm-card-1.jpg';
+        const colorImg = (colorImgIn ? colorImgIn.value.trim() : '') || mainImgVal;
+
         if (!name) {
-          alert('يرجى كتابة اسم اللون أولاً (مثال: أسود فحمي)');
+          alert('يرجى كتابة اسم اللون أولاً (مثال: أسود فحمي / Onyx Black)');
           colorNameIn.focus();
           return;
         }
-        modalColorsList.push({ name, hex });
+
+        modalColorsList.push({ name, hex, image: colorImg });
         renderModalColors();
         colorNameIn.value = '';
+        if (colorImgIn) colorImgIn.value = '';
+        if (colorPreviewThumb) colorPreviewThumb.src = '../assets/sokhm-card-1.jpg';
+        showToast(`تمت إضافة اللون "${name}" بصورته للقائمة`);
       });
     }
 
-    // 2K Image Upload handling
+    // Main 2K Image Upload handling
     const imgFileInput = document.getElementById('pm_image_file');
     const imgTextInput = document.getElementById('pm_image');
     const previewImg = document.getElementById('pm_image_preview');
@@ -1354,25 +1486,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const formData = new FormData();
-        formData.append('image', file);
-
         try {
           showToast('جاري رفع ومعالجة الصورة فائقة الدقة...');
-          const res = await fetch('/api/upload-image', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + token },
-            body: formData
-          });
-
-          if (!res.ok) throw new Error('فشل الرفع');
-
-          const data = await res.json();
-          imgTextInput.value = data.url;
-          if (previewImg) previewImg.src = '../' + data.url.replace(/^\.\.\//, '');
-          showToast('تم رفع الصورة بنجاح!');
+          const uploadedUrl = await uploadImageFile(file);
+          imgTextInput.value = uploadedUrl;
+          if (previewImg) {
+            previewImg.src = uploadedUrl.startsWith('http') || uploadedUrl.startsWith('data:')
+              ? uploadedUrl
+              : '../' + uploadedUrl.replace(/^\.\.\//, '');
+          }
+          showToast('تم رفع الصورة الرئيسية بنجاح!');
         } catch (err) {
-          alert('حدث خطأ أثناء رفع الصورة');
+          alert('حدث خطأ أثناء معالجة ورفع الصورة');
         }
       });
     }
@@ -1410,6 +1535,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
 
+        const colorImages = modalColorsList.map(c => c.image).filter(Boolean);
+        const imagesList = [image, ...colorImages.filter(ci => ci !== image)];
+
         const payload = {
           id,
           name,
@@ -1417,9 +1545,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           price,
           category,
           image,
+          images: imagesList,
           description,
           sizes: checkedSizes,
-          colors: modalColorsList.length > 0 ? modalColorsList : [{ name: 'Standard', hex: '#111' }],
+          colors: modalColorsList.length > 0 ? modalColorsList : [{ name: 'Standard', hex: '#111', image }],
           stock_status: 'in_stock'
         };
 

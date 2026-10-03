@@ -46,7 +46,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 1. FETCH SOKHM PRODUCTS =================
   async function loadProducts() {
     try {
-      const res = await fetch('data/products.json');
+      // 1. Fetch live database products first
+      const apiRes = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-cache' });
+      if (apiRes.ok) {
+        const data = await apiRes.json();
+        if (Array.isArray(data) && data.length > 0) {
+          products = data;
+          renderBestSellers();
+          return;
+        }
+      }
+    } catch (apiErr) {
+      console.warn('API fetch products failed, falling back to static data:', apiErr.message);
+    }
+
+    try {
+      // 2. Fallback to static JSON file
+      const res = await fetch(`data/products.json?_t=${Date.now()}`, { cache: 'no-cache' });
       if (res.ok) {
         products = await res.json();
       } else {
@@ -61,6 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           subtitle: 'HOODIE',
           price: 1850,
           formattedPrice: '1,850 EGP',
+          image: 'assets/sokhm-card-1.jpg',
           images: ['assets/sokhm-card-1.jpg'],
           colors: [
             { name: 'Onyx Black', hex: '#0E0E0E', image: 'assets/sokhm-card-1.jpg' },
@@ -73,6 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           subtitle: 'HOODIE',
           price: 1850,
           formattedPrice: '1,850 EGP',
+          image: 'assets/sokhm-card-2.jpg',
           images: ['assets/sokhm-card-2.jpg'],
           colors: [
             { name: 'Sand Cream', hex: '#D6D1C4', image: 'assets/sokhm-card-2.jpg' },
@@ -86,6 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           subtitle: 'HOODIE',
           price: 1850,
           formattedPrice: '1,850 EGP',
+          image: 'assets/sokhm-card-3.jpg',
           images: ['assets/sokhm-card-3.jpg'],
           colors: [
             { name: 'Tactical Olive', hex: '#2E362A', image: 'assets/sokhm-card-3.jpg' },
@@ -98,6 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           subtitle: 'HOODIE',
           price: 1850,
           formattedPrice: '1,850 EGP',
+          image: 'assets/sokhm-card-4.jpg',
           images: ['assets/sokhm-card-4.jpg'],
           colors: [
             { name: 'Pitch Black', hex: '#0E0E0E', image: 'assets/sokhm-card-4.jpg' },
@@ -119,18 +139,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       const card = document.createElement('div');
       card.className = 'sokhm-card flex flex-col group cursor-pointer';
 
-      const mainImg = prod.images[0] || 'assets/sokhm-card-1.jpg';
+      const mainImg = prod.image || (Array.isArray(prod.images) && prod.images[0]) || 'assets/sokhm-card-1.jpg';
+      const priceNum = typeof prod.price === 'number' ? prod.price : (parseFloat(prod.price) || 0);
 
       // Build swatches
-      const swatchesHtml = (prod.colors || []).map((col, idx) => `
+      const colorsList = Array.isArray(prod.colors) ? prod.colors : [];
+      const swatchesHtml = colorsList.map((col, idx) => {
+        const hex = typeof col === 'object' ? (col.hex || '#111') : '#111';
+        const name = typeof col === 'object' ? (col.name || 'Color') : col;
+        const img = (typeof col === 'object' && col.image) ? col.image : mainImg;
+        return `
         <button 
           type="button"
           class="swatch-dot-dark ${idx === 0 ? 'active' : ''}" 
-          style="background-color: ${col.hex}" 
-          title="${col.name}"
-          data-image="${col.image || mainImg}"
+          style="background-color: ${hex}" 
+          title="${name}"
+          data-image="${img}"
         ></button>
-      `).join('');
+      `;
+      }).join('');
 
       card.innerHTML = `
         <div class="sokhm-card-media">
@@ -147,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </h3>
 
           <span class="text-[9px] text-neutral-400 uppercase tracking-widest">
-            ${prod.subtitle || 'HOODIE'}
+            ${prod.subtitle || prod.category || 'HOODIE'}
           </span>
 
           <!-- Swatches -->
@@ -156,7 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
 
           <p class="text-xs font-semibold text-neutral-300 pt-0.5">
-            ${prod.formattedPrice || prod.price.toLocaleString() + ' EGP'}
+            ${prod.formattedPrice || (priceNum.toLocaleString('en-US') + ' EGP')}
           </p>
         </div>
       `;
@@ -212,10 +239,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeModalProduct = prod;
     selectedModalSize = 'M';
 
-    if (modalImg) modalImg.src = prod.images[0] || 'assets/sokhm-card-1.jpg';
-    if (modalKicker) modalKicker.textContent = prod.categoryLabel || '✦ SOKHM ATELIER';
+    if (modalImg) modalImg.src = prod.image || (Array.isArray(prod.images) && prod.images[0]) || 'assets/sokhm-card-1.jpg';
+    if (modalKicker) modalKicker.textContent = prod.categoryLabel || prod.category || '✦ SOKHM ATELIER';
     if (modalTitle) modalTitle.textContent = prod.name;
-    if (modalPrice) modalPrice.textContent = prod.formattedPrice || `${prod.price.toLocaleString()} EGP`;
+    const pNum = typeof prod.price === 'number' ? prod.price : (parseFloat(prod.price) || 0);
+    if (modalPrice) modalPrice.textContent = prod.formattedPrice || `${pNum.toLocaleString('en-US')} EGP`;
     if (modalDesc) modalDesc.textContent = prod.description || '500 GSM architectural heavyweight combed cotton fleece. Built different.';
 
     // Size buttons
