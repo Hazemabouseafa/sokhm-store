@@ -1518,14 +1518,17 @@
         </div>
       </div>
 
-      <!-- Available Colors Customizer -->
+      <!-- Available Colors Customizer & Main Image Selection -->
       <div>
         <div class="flex items-center justify-between mb-1.5">
-          <label class="cms-label mb-0">الألوان المتاحة للقطعة مع صورة مخصصة لكل لون (Colors & Specific Images) *</label>
-          <span class="text-[10px] text-neutral-500">اختر اسم اللون، رمزه، وصورته الخاصة</span>
+          <label class="cms-label mb-0 flex items-center gap-2">
+            <i data-lucide="palette" class="w-4 h-4 text-neutral-400"></i>
+            <span>ألوان القطعة وصورها (واختيار الصورة الرئيسية للواجهة) *</span>
+          </label>
+          <span class="text-[10px] text-neutral-500">ارفع صورة لكل لون وحدد منها الصورة الرئيسية</span>
         </div>
         
-        <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-3">
+        <div class="p-3.5 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-3.5">
           <!-- Color Add Inputs -->
           <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
             <!-- Name -->
@@ -1543,7 +1546,7 @@
                 <input type="text" id="newColorImgInput" placeholder="رابط صورة هذا اللون أو ارفع ملف..." class="cms-input w-full font-mono text-[11px] pr-8">
                 <img id="newColorPreviewThumb" src="../assets/sokhm-card-1.jpg" class="w-5 h-5 rounded object-cover absolute right-1.5 top-1/2 -translate-y-1/2 border border-[#333]">
               </div>
-              <label class="p-2 rounded-lg bg-[#141414] hover:bg-white hover:text-black border border-[#2A2A2A] text-white text-[11px] font-bold cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors" title="رفع صورة لهذا اللون">
+              <label class="p-2 rounded-lg bg-[#141414] hover:bg-white hover:text-black border border-[#2A2A2A] text-white text-[11px] font-bold cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors" title="رفع صورة لهذا اللون من جهازك">
                 <i data-lucide="upload" class="w-3.5 h-3.5"></i>
                 <input type="file" id="newColorImgFileInput" accept="image/*" class="hidden">
               </label>
@@ -1556,27 +1559,43 @@
             </div>
           </div>
 
-          <!-- Color Tags List -->
-          <div id="modalColorsBadgesList" class="flex flex-wrap items-center gap-2 pt-1 min-h-[36px]">
-            <!-- Badges populated dynamically with color swatch, name, image thumbnail, and remove button -->
+          <!-- Color Badges List -->
+          <div>
+            <div class="text-[11px] text-neutral-400 mb-1.5 flex items-center justify-between">
+              <span>الألوان المضافة (اضغط <strong class="text-amber-300">"★ تعيين كرئيسية"</strong> لاختيار صورة الواجهة):</span>
+            </div>
+            <div id="modalColorsBadgesList" class="flex flex-wrap items-center gap-2 pt-1 min-h-[40px]">
+              <!-- Badges populated dynamically with color swatch, name, image thumbnail, main badge/button, and remove button -->
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Image Upload & URL -->
+      <!-- Main Product Image Preview (Selected directly from colors) -->
       <div>
-        <label class="cms-label">صورة المنتج الرئيسية فائقة الدقة (2K Luxury Image) *</label>
-        <div class="space-y-2">
-          <div class="flex items-center gap-2">
-            <input type="text" id="pm_image" required placeholder="assets/sokhm-card-1.jpg أو رابط صورة..." class="cms-input flex-grow font-mono text-xs">
-            <label class="px-4 py-2 rounded-xl bg-[#141414] border border-[#2A2A2A] hover:border-white text-white font-bold text-xs cursor-pointer flex items-center gap-2 whitespace-nowrap transition-all">
-              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-              <span>رفع صورة 2K</span>
-              <input type="file" id="pm_image_file" accept="image/*" class="hidden">
-            </label>
+        <label class="cms-label flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="image" class="w-4 h-4 text-amber-400"></i>
+            <span>الصورة الرئيسية للواجهة (مختارة تلقائياً من الألوان المحددة) *</span>
+          </span>
+          <span id="pm_main_color_indicator" class="text-xs text-amber-400 font-bold"></span>
+        </label>
+        <input type="hidden" id="pm_image" name="pm_image" required value="assets/sokhm-card-1.jpg">
+        <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] flex items-center gap-4">
+          <div id="pm_image_preview_box" class="w-20 h-24 rounded-lg bg-[#141414] border border-[#2A2A2A] flex items-center justify-center overflow-hidden flex-shrink-0">
+            <img id="pm_image_preview" src="../assets/sokhm-card-1.jpg" alt="الصورة الرئيسية" class="w-full h-full object-cover">
           </div>
-          <div id="pm_image_preview_box" class="h-28 rounded-xl bg-[#080808] border border-[#1A1A1A] flex items-center justify-center overflow-hidden">
-            <img id="pm_image_preview" src="../assets/sokhm-card-1.jpg" alt="Preview" class="h-full object-contain">
+          <div class="space-y-1.5 text-xs">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                <i data-lucide="star" class="w-3 h-3 fill-amber-300"></i>
+                صورة الواجهة المعتمدة
+              </span>
+              <span id="pm_main_color_name_badge" class="font-bold text-white text-xs"></span>
+            </div>
+            <p class="text-[11px] text-neutral-400 leading-relaxed">
+              تُعتمد هذه الصورة تلقائياً كصورة رئيسية للمنتج في واجهة المتجر من لونك المفضل أعلاه. لا تحتاج لرفع صورة منفصلة؛ فقط اضغط على <span class="text-amber-300 font-bold">"★ تعيين كرئيسية"</span> بجانب أي لون.
+            </p>
           </div>
         </div>
       </div>

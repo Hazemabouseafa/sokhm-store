@@ -144,14 +144,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Build swatches
       const colorsList = Array.isArray(prod.colors) ? prod.colors : [];
+      const hasExplicitMain = colorsList.some(c => (typeof c === 'object' && c.isMain) || (typeof c === 'object' && c.image === mainImg));
       const swatchesHtml = colorsList.map((col, idx) => {
         const hex = typeof col === 'object' ? (col.hex || '#111') : '#111';
         const name = typeof col === 'object' ? (col.name || 'Color') : col;
         const img = (typeof col === 'object' && col.image) ? col.image : mainImg;
+        const isActive = hasExplicitMain
+          ? ((typeof col === 'object' && col.isMain) || (typeof col === 'object' && col.image === mainImg))
+          : (idx === 0);
         return `
         <button 
           type="button"
-          class="swatch-dot-dark ${idx === 0 ? 'active' : ''}" 
+          class="swatch-dot-dark ${isActive ? 'active' : ''}" 
           style="background-color: ${hex}" 
           title="${name}"
           data-image="${img}"

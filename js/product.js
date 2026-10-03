@@ -106,10 +106,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     ? currentProduct.colors.map(c => ({
         name: typeof c === 'object' ? (c.name || 'Standard') : c,
         hex: typeof c === 'object' ? (c.hex || '#111') : '#111',
-        image: (typeof c === 'object' && c.image) ? c.image : pMainImage
+        image: (typeof c === 'object' && c.image) ? c.image : pMainImage,
+        isMain: typeof c === 'object' ? Boolean(c.isMain) : false
       }))
-    : [{ name: 'Onyx Black', hex: '#0E0E0E', image: pMainImage }];
-  selectedColor = productColors[0];
+    : [{ name: 'Onyx Black', hex: '#0E0E0E', image: pMainImage, isMain: true }];
+  selectedColor = productColors.find(c => c.isMain || c.image === pMainImage) || productColors[0];
 
   // ================= 2. POPULATE PRODUCT METADATA =================
   if (pageTitle) pageTitle.textContent = `✦ SOKHM | ${currentProduct.name}`;
@@ -161,9 +162,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     colorSwatchesContainer.innerHTML = '';
     selectedColorLabel.textContent = selectedColor ? selectedColor.name : 'Onyx Black';
 
-    productColors.forEach((col, idx) => {
+    productColors.forEach((col) => {
       const swBtn = document.createElement('button');
-      swBtn.className = `swatch-dot-dark ${idx === 0 ? 'active' : ''}`;
+      swBtn.className = `swatch-dot-dark ${col === selectedColor ? 'active' : ''}`;
       swBtn.style.backgroundColor = col.hex || '#000000';
       swBtn.title = col.name;
 

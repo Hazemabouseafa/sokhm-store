@@ -1285,23 +1285,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Colors
       const rawColors = Array.isArray(prod.colors) ? prod.colors : [];
+      let matchedMain = false;
       modalColorsList = rawColors.map(c => {
-        if (typeof c === 'string') return { name: c, hex: '#111111', image: prod.image || 'assets/sokhm-card-1.jpg' };
-        return {
-          name: c.name || 'Standard',
-          hex: c.hex || '#111111',
-          image: c.image || prod.image || 'assets/sokhm-card-1.jpg'
-        };
+        const name = typeof c === 'object' ? (c.name || 'Standard') : c;
+        const hex = typeof c === 'object' ? (c.hex || '#111111') : '#111111';
+        const image = typeof c === 'object' ? (c.image || prod.image || 'assets/sokhm-card-1.jpg') : (prod.image || 'assets/sokhm-card-1.jpg');
+        const isMain = (!matchedMain && (image === prod.image || (typeof c === 'object' && c.isMain)));
+        if (isMain) matchedMain = true;
+        return { name, hex, image, isMain };
       });
-      renderModalColors();
 
-      // Image preview
-      const previewImg = document.getElementById('pm_image_preview');
-      if (previewImg && prod.image) {
-        previewImg.src = prod.image.startsWith('http') || prod.image.startsWith('data:') 
-          ? prod.image 
-          : '../' + prod.image.replace(/^\.\.\//, '');
+      if (modalColorsList.length === 0) {
+        modalColorsList = [{ name: 'اللون الرئيسي', hex: '#111111', image: prod.image || 'assets/sokhm-card-1.jpg', isMain: true }];
+        matchedMain = true;
+      } else if (!matchedMain) {
+        modalColorsList[0].isMain = true;
       }
+      renderModalColors();
 
     } else {
       form.reset();
@@ -1313,8 +1313,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       setVal('pm_description', 'تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.');
       if (catSelect && activeCats.length > 0) catSelect.value = activeCats[0].slug || activeCats[0].id;
       modalColorsList = [
-        { name: 'Onyx Black', hex: '#0B0B0B', image: 'assets/sokhm-card-1.jpg' },
-        { name: 'Sand Cream', hex: '#D6CDBF', image: 'assets/sokhm-card-2.jpg' }
+        { name: 'أسود فحمي / Onyx Black', hex: '#0B0B0B', image: 'assets/sokhm-card-1.jpg', isMain: true },
+        { name: 'بيج رملي / Sand Cream', hex: '#D6CDBF', image: 'assets/sokhm-card-2.jpg', isMain: false }
       ];
       renderModalColors();
 
@@ -1322,9 +1322,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         cb.checked = ['M', 'L', 'XL'].includes(cb.value);
         updateSizeCheckboxStyle(cb);
       });
-
-      const previewImg = document.getElementById('pm_image_preview');
-      if (previewImg) previewImg.src = '../assets/sokhm-card-1.jpg';
     }
 
     setupLucide();
@@ -1345,36 +1342,105 @@ document.addEventListener('DOMContentLoaded', async () => {
     const list = document.getElementById('modalColorsBadgesList');
     if (!list) return;
 
+    const imgInput = document.getElementById('pm_image');
+    const previewImg = document.getElementById('pm_image_preview');
+    const mainColorBadge = document.getElementById('pm_main_color_name_badge');
+    const mainColorIndicator = document.getElementById('pm_main_color_indicator');
+
     if (modalColorsList.length === 0) {
-      list.innerHTML = '<span class="text-[10px] text-neutral-500">لم يتم تحديد ألوان بعد. اختر لونا وصورته واضغط "+ إضافة اللون".</span>';
+      if (imgInput) imgInput.value = '';
+      if (previewImg) previewImg.src = '../assets/sokhm-card-1.jpg';
+      if (mainColorBadge) mainColorBadge.textContent = 'لم يتم تحديد لون بعد';
+      if (mainColorIndicator) mainColorIndicator.textContent = '(لا توجد ألوان مضافة)';
+
+      list.innerHTML = `
+        <div class="w-full py-2.5 px-3 text-center border border-dashed border-[#222] rounded-xl text-neutral-500 text-xs">
+          لم تقم بإضافة ألوان بعد. اختر اسم اللون وكوده وصورته واضغط <strong class="text-white">+ إضافة اللون</strong>.
+        </div>
+      `;
+      setupLucide();
       return;
     }
+
+    // Ensure exactly one color is marked isMain
+    const hasMain = modalColorsList.some(c => c.isMain);
+    if (!hasMain) {
+      modalColorsList[0].isMain = true;
+    } else {
+      let foundFirst = false;
+      modalColorsList.forEach(c => {
+        if (c.isMain) {
+          if (!foundFirst) foundFirst = true;
+          else c.isMain = false;
+        }
+      });
+    }
+
+    const mainColor = modalColorsList.find(c => c.isMain) || modalColorsList[0];
+    const mainImgUrl = (mainColor && mainColor.image) ? mainColor.image : 'assets/sokhm-card-1.jpg';
+
+    if (imgInput) imgInput.value = mainImgUrl;
+    if (previewImg) {
+      previewImg.src = mainImgUrl.startsWith('http') || mainImgUrl.startsWith('data:')
+        ? mainImgUrl
+        : '../' + mainImgUrl.replace(/^\.\.\//, '');
+    }
+    if (mainColorBadge) mainColorBadge.textContent = mainColor ? `اللون: ${mainColor.name}` : '';
+    if (mainColorIndicator) mainColorIndicator.textContent = mainColor ? `(اللون المعتمد: ${mainColor.name})` : '';
 
     list.innerHTML = modalColorsList.map((c, idx) => {
       const hex = typeof c === 'object' ? (c.hex || '#111') : '#111';
       const name = typeof c === 'object' ? (c.name || 'Color') : c;
       const img = (typeof c === 'object' && c.image) ? c.image : 'assets/sokhm-card-1.jpg';
       const imgSrc = img.startsWith('http') || img.startsWith('data:') ? img : '../' + img.replace(/^\.\.\//, '');
+      const isMain = Boolean(c.isMain);
 
       return `
-        <span class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#141414] border border-[#262626] text-xs text-white">
+        <div class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl ${isMain ? 'bg-[#181818] border-amber-500/60 ring-1 ring-amber-500/30' : 'bg-[#121212] border-[#222]'} border text-xs text-white transition-all shadow-sm">
           <span class="w-3.5 h-3.5 rounded-full border border-white/20 shadow-inner flex-shrink-0" style="background-color: ${hex}"></span>
-          <img src="${imgSrc}" alt="${name}" class="w-5 h-5 rounded object-cover border border-[#333] flex-shrink-0" onerror="this.src='../assets/sokhm-card-1.jpg'">
-          <span class="font-bold text-[11px]">${name}</span>
-          <button type="button" class="remove-modal-color-btn text-neutral-500 hover:text-red-400 mr-1 cursor-pointer transition-colors p-0.5" data-idx="${idx}" title="حذف هذا اللون">
+          <img src="${imgSrc}" alt="${name}" class="w-6 h-6 rounded-md object-cover border border-[#333] flex-shrink-0" onerror="this.src='../assets/sokhm-card-1.jpg'">
+          <span class="font-bold text-[11px] leading-tight">${name}</span>
+          ${isMain ? `
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
+              <i data-lucide="star" class="w-2.5 h-2.5 fill-amber-300"></i>
+              الرئيسية
+            </span>
+          ` : `
+            <button type="button" class="set-main-color-btn text-[10px] text-neutral-400 hover:text-white bg-[#1A1A1A] hover:bg-[#252525] px-2 py-0.5 rounded-full border border-[#2D2D2D] hover:border-amber-500/40 transition-colors cursor-pointer flex items-center gap-1" data-idx="${idx}" title="تعيين صورة هذا اللون كصورة رئيسية للواجهة">
+              <i data-lucide="star" class="w-2.5 h-2.5"></i>
+              <span>تعيين كرئيسية</span>
+            </button>
+          `}
+          <button type="button" class="remove-modal-color-btn text-neutral-500 hover:text-red-400 mr-0.5 cursor-pointer transition-colors p-1" data-idx="${idx}" title="حذف هذا اللون">
             <i data-lucide="x" class="w-3 h-3"></i>
           </button>
-        </span>
+        </div>
       `;
     }).join('');
 
     setupLucide();
 
+    list.querySelectorAll('.set-main-color-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        modalColorsList.forEach((col, i) => {
+          col.isMain = (i === idx);
+        });
+        renderModalColors();
+        showToast(`تم تعيين صورة "${modalColorsList[idx].name}" كصورة رئيسية للمنتج ★`);
+      });
+    });
+
     list.querySelectorAll('.remove-modal-color-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const idx = parseInt(btn.getAttribute('data-idx'), 10);
+        const wasMain = modalColorsList[idx] && modalColorsList[idx].isMain;
         modalColorsList.splice(idx, 1);
+        if (wasMain && modalColorsList.length > 0) {
+          modalColorsList[0].isMain = true;
+        }
         renderModalColors();
       });
     });
@@ -1513,8 +1579,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       addColorBtn.addEventListener('click', () => {
         const name = colorNameIn.value.trim();
         const hex = colorHexIn.value || '#111111';
-        const mainImgVal = getVal('pm_image') || 'assets/sokhm-card-1.jpg';
-        const colorImg = (colorImgIn ? colorImgIn.value.trim() : '') || mainImgVal;
+        const colorImg = (colorImgIn ? colorImgIn.value.trim() : '') || 'assets/sokhm-card-1.jpg';
 
         if (!name) {
           alert('يرجى كتابة اسم اللون أولاً (مثال: أسود فحمي / Onyx Black)');
@@ -1522,47 +1587,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
 
-        modalColorsList.push({ name, hex, image: colorImg });
+        const isMain = modalColorsList.length === 0;
+        modalColorsList.push({ name, hex, image: colorImg, isMain });
         renderModalColors();
         colorNameIn.value = '';
         if (colorImgIn) colorImgIn.value = '';
         if (colorPreviewThumb) colorPreviewThumb.src = '../assets/sokhm-card-1.jpg';
-        showToast(`تمت إضافة اللون "${name}" بصورته للقائمة`);
-      });
-    }
-
-    // Main 2K Image Upload handling
-    const imgFileInput = document.getElementById('pm_image_file');
-    const imgTextInput = document.getElementById('pm_image');
-    const previewImg = document.getElementById('pm_image_preview');
-
-    if (imgFileInput && imgTextInput) {
-      imgFileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        try {
-          showToast('جاري رفع ومعالجة الصورة فائقة الدقة...');
-          const uploadedUrl = await uploadImageFile(file);
-          imgTextInput.value = uploadedUrl;
-          if (previewImg) {
-            previewImg.src = uploadedUrl.startsWith('http') || uploadedUrl.startsWith('data:')
-              ? uploadedUrl
-              : '../' + uploadedUrl.replace(/^\.\.\//, '');
-          }
-          showToast('تم رفع الصورة الرئيسية بنجاح!');
-        } catch (err) {
-          alert('حدث خطأ أثناء معالجة ورفع الصورة');
-        }
-      });
-    }
-
-    if (imgTextInput && previewImg) {
-      imgTextInput.addEventListener('input', () => {
-        const url = imgTextInput.value.trim();
-        if (url) {
-          previewImg.src = url.startsWith('http') || url.startsWith('data:') ? url : '../' + url.replace(/^\.\.\//, '');
-        }
+        showToast(`تمت إضافة اللون "${name}" بنجاح`);
       });
     }
 
@@ -1579,8 +1610,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const rawPrice = getVal('pm_price').toString().replace(/[^0-9.]/g, '');
         const price = parseFloat(rawPrice) || 0;
         const category = getVal('pm_category') || 'hoodies';
-        const image = getVal('pm_image') || 'assets/sokhm-card-1.jpg';
-        const description = getVal('pm_description') || '';
 
         const checkedSizes = [];
         document.querySelectorAll('input[name="pm_sizes"]:checked').forEach(cb => checkedSizes.push(cb.value));
@@ -1589,6 +1618,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           alert('يرجى اختيار مقاس واحد على الأقل متاح للطلب.');
           return;
         }
+
+        if (modalColorsList.length === 0) {
+          alert('يرجى إضافة لون واحد على الأقل مع صورته لتحديد الصورة الرئيسية للمنتج.');
+          if (colorNameIn) colorNameIn.focus();
+          return;
+        }
+
+        const mainColor = modalColorsList.find(c => c.isMain) || modalColorsList[0];
+        const image = (mainColor && mainColor.image) ? mainColor.image : (getVal('pm_image') || 'assets/sokhm-card-1.jpg');
+        const description = getVal('pm_description') || '';
 
         const colorImages = modalColorsList.map(c => c.image).filter(Boolean);
         const imagesList = [image, ...colorImages.filter(ci => ci !== image)];
