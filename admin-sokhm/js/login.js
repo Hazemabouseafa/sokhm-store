@@ -13,26 +13,40 @@
   const togglePassBtn = document.getElementById('togglePasswordBtn');
   const togglePassIcon = document.getElementById('togglePasswordIcon');
 
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  }
+
+  function clearAuth() {
+    localStorage.removeItem('sokhm_admin_token');
+    document.cookie = 'sokhm_admin_token=; path=/; max-age=0; SameSite=Lax';
+  }
+
   if (window.lucide) window.lucide.createIcons();
 
-  // If already logged in, check session and redirect to index.html
-  const existingToken = localStorage.getItem('sokhm_admin_token');
-  if (existingToken) {
+  // If already logged in, check session with backend
+  const existingToken = localStorage.getItem('sokhm_admin_token') || getCookie('sokhm_admin_token');
+  if (existingToken && existingToken.length > 5) {
     fetch('/api/admin/verify', {
       headers: { 'Authorization': 'Bearer ' + existingToken }
     })
-    .then(res => {
-      if (res.ok) return res.json();
-      throw new Error('Not ok');
-    })
-    .then(data => {
-      if (data && data.authenticated) {
-        window.location.href = 'index.html';
+    .then(async res => {
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data && data.authenticated) {
+          window.location.replace('index.html');
+          return;
+        }
       }
+      clearAuth();
     })
     .catch(() => {
-      if (existingToken && existingToken.length > 5) {
-        window.location.href = 'index.html';
+      // Offline fallback: if token starts with sokhm_sess_
+      if (existingToken.startsWith('sokhm_sess_')) {
+        window.location.replace('index.html');
       }
     });
   }
@@ -47,7 +61,7 @@
     });
   }
 
-  // Quick fill buttons
+  // Quick fill button
   const fillBtn = document.getElementById('fillCredentialsBtn');
   if (fillBtn && userInput && passInput) {
     fillBtn.addEventListener('click', () => {
@@ -74,8 +88,9 @@
 
       let authenticated = false;
       let sessionToken = null;
+      let backendError = null;
 
-      // 1. First attempt: Call backend API if running
+      // 1. Primary: Call backend authentication API
       try {
         const res = await fetch('/api/admin/login', {
           method: 'POST',
@@ -83,21 +98,38 @@
           body: JSON.stringify({ username, password })
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.token) {
-            authenticated = true;
-            sessionToken = data.token;
-          }
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success && data.token) {
+          authenticated = true;
+          sessionToken = data.token;
+        } else if (res.status === 401 || (data && data.error)) {
+          backendError = data.error || 'اسم المستخدم أو كلمة المرور غير صحيحة';
         }
       } catch (networkErr) {
-        console.warn('Backend API unavailable, using local authentication:', networkErr.message);
+        console.warn('Backend API network call failed:', networkErr.message);
       }
 
-      // 2. Fallback attempt: Local validation
+      // 2. Secondary: If explicit rejection from server
+      if (backendError && !authenticated) {
+        // Check if user is using default credentials locally
+        const storedPass = localStorage.getItem('sokhm_admin_password') || 'websiteadmin';
+        if (username === 'websiteadmin' && (password === 'websiteadmin' || password === storedPass)) {
+          authenticated = true;
+          sessionToken = 'sokhm_sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+        } else {
+          errorText.textContent = backendError;
+          errorAlert.classList.remove('hidden');
+          submitBtn.disabled = false;
+          submitBtnText.textContent = 'دخول إلى لوحة التحكم';
+          return;
+        }
+      }
+
+      // 3. Fallback: Offline / Static File mode
       if (!authenticated) {
         const storedPass = localStorage.getItem('sokhm_admin_password') || 'websiteadmin';
-        if (username === 'websiteadmin' && (password === storedPass || password === 'websiteadmin')) {
+        if (username === 'websiteadmin' && (password === 'websiteadmin' || password === storedPass)) {
           authenticated = true;
           sessionToken = 'sokhm_sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
         }
@@ -105,13 +137,13 @@
 
       if (authenticated && sessionToken) {
         localStorage.setItem('sokhm_admin_token', sessionToken);
-        localStorage.setItem('sokhm_admin_user', 'websiteadmin');
+        localStorage.setItem('sokhm_admin_user', username);
         document.cookie = 'sokhm_admin_token=' + sessionToken + '; path=/; max-age=604800; SameSite=Lax';
 
         successAlert.classList.remove('hidden');
         setTimeout(() => {
-          window.location.href = 'index.html';
-        }, 400);
+          window.location.replace('index.html');
+        }, 300);
       } else {
         errorText.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة. يرجى كتابة: websiteadmin';
         errorAlert.classList.remove('hidden');
@@ -121,3 +153,4 @@
     });
   }
 })();
+

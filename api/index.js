@@ -6,7 +6,12 @@ function getDb() {
   if (process.env.TURSO_DATABASE_URL) {
     return require('../database/turso.js');
   }
-  return require('../database/db.js');
+  try {
+    return require('../database/db.js');
+  } catch (err) {
+    console.warn('Native SQLite unavailable, falling back to Turso adapter:', err.message);
+    return require('../database/turso.js');
+  }
 }
 
 function parseBody(req) {

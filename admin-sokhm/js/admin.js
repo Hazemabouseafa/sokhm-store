@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 0. التحقق من الهوية والأمان (AUTH GUARD) =================
   const token = localStorage.getItem('sokhm_admin_token') || getCookie('sokhm_admin_token');
   if (!token) {
-    window.location.href = 'login.html';
+    window.location.replace('login.html');
     return;
   }
 
@@ -24,11 +24,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     } else if (authRes.status === 401) {
-      // Backend online and explicitly rejected token
-      localStorage.removeItem('sokhm_admin_token');
-      document.cookie = 'sokhm_admin_token=; path=/; max-age=0;';
-      window.location.href = 'login.html';
-      return;
+      // Only redirect if this is not a valid client-side fallback token
+      if (!token.startsWith('sokhm_sess_')) {
+        localStorage.removeItem('sokhm_admin_token');
+        document.cookie = 'sokhm_admin_token=; path=/; max-age=0;';
+        window.location.replace('login.html');
+        return;
+      }
     }
   } catch (err) {
     // Backend offline / static mode (GitHub Pages / file://): allow session from localStorage
