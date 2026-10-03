@@ -2,10 +2,13 @@
   {
     "id": "sokhm-noir-02",
     "name": "ESSENTIAL HOODIE",
+    "slug": "sokhm-noir-02",
     "subtitle": "HOODIE",
     "category": "hoodies",
+    "category_id": "hoodies",
     "price": 1851,
     "badge": "CORE",
+    "image": "assets/whatsapp_image_2026-10-02_at_10_50_13_1791051937239.jpg",
     "images": [
       "assets/whatsapp_image_2026-10-02_at_10_50_13_1791051937239.jpg",
       "assets/sokhm-hoodie-back.jpg",
@@ -20,10 +23,13 @@
       "XL"
     ],
     "shortDesc": "Built for raw everyday presence. Crafted in unbleached sand cream fleece with bold high-density black SOKHM typographic branding emblazoned across the shoulders.",
+    "short_desc": "Built for raw everyday presence. Crafted in unbleached sand cream fleece with bold high-density black SOKHM typographic branding emblazoned across the shoulders.",
     "description": "Built for raw everyday presence. Crafted in unbleached sand cream fleece with bold high-density black SOKHM typographic branding emblazoned across the shoulders.",
     "fabric": "480 GSM Heavy Combed Cotton Fleece",
     "fitAdvice": "Oversized boxy drape",
+    "fit_advice": "Oversized boxy drape",
     "careAdvice": "Cold machine wash",
+    "care_advice": "Cold machine wash",
     "colors": [
       {
         "name": "Onyx Noir",
@@ -42,17 +48,24 @@
       }
     ],
     "modelInfo": "",
+    "model_info": "",
     "stockStatus": "in_stock",
+    "stock_status": "in_stock",
     "createdAt": "2026-10-03 18:34:18",
-    "updatedAt": "2026-10-03 18:34:18"
+    "created_at": "2026-10-03 18:34:18",
+    "updatedAt": "2026-10-03 18:34:18",
+    "updated_at": "2026-10-03 18:34:18"
   },
   {
     "id": "sokhm-noir-03",
     "name": "COMBAT HOODIE",
+    "slug": "sokhm-noir-03",
     "subtitle": "HOODIE",
     "category": "hoodies",
+    "category_id": "hoodies",
     "price": 1850,
     "badge": "LIMITED",
+    "image": "assets/sokhm-card-3.jpg",
     "images": [
       "assets/sokhm-card-3.jpg",
       "assets/sokhm-hoodie-back.jpg",
@@ -66,10 +79,13 @@
       "XL"
     ],
     "shortDesc": "",
+    "short_desc": "",
     "description": "Engineered for stealth and motion. Dyed in tactical military dark olive with micro-embroidered silver SOKHM chest star and ergonomic articulated raglan sleeves.",
     "fabric": "500 GSM Heavyweight Terry Fleece with water-repellent treatment",
     "fitAdvice": "",
+    "fit_advice": "",
     "careAdvice": "",
+    "care_advice": "",
     "colors": [
       {
         "name": "Tactical Olive",
@@ -83,17 +99,24 @@
       }
     ],
     "modelInfo": "",
+    "model_info": "",
     "stockStatus": "in_stock",
+    "stock_status": "in_stock",
     "createdAt": "2026-10-03 18:34:18",
-    "updatedAt": "2026-10-03 18:34:18"
+    "created_at": "2026-10-03 18:34:18",
+    "updatedAt": "2026-10-03 18:34:18",
+    "updated_at": "2026-10-03 18:34:18"
   },
   {
     "id": "sokhm-noir-04",
     "name": "CORE HOODIE",
+    "slug": "sokhm-noir-04",
     "subtitle": "HOODIE",
     "category": "hoodies",
+    "category_id": "hoodies",
     "price": 1850,
     "badge": "RESTOCKED",
+    "image": "assets/sokhm-card-4.jpg",
     "images": [
       "assets/sokhm-card-4.jpg",
       "assets/sokhm-hoodie-back.jpg",
@@ -109,10 +132,13 @@
       "XXL"
     ],
     "shortDesc": "",
+    "short_desc": "",
     "description": "The definitive daily uniform. Ultra-dense jet-black loopback cotton with antique gunmetal hardware eyelets, thick cotton drawstrings, and center chest ✦ SOKHM embroidery.",
     "fabric": "520 GSM Brushed Egyptian Cotton Fleece",
     "fitAdvice": "",
+    "fit_advice": "",
     "careAdvice": "",
+    "care_advice": "",
     "colors": [
       {
         "name": "Slate Charcoal",
@@ -126,8 +152,12 @@
       }
     ],
     "modelInfo": "",
+    "model_info": "",
     "stockStatus": "in_stock",
+    "stock_status": "in_stock",
     "createdAt": "2026-10-03 18:34:18",
-    "updatedAt": "2026-10-03 18:34:18"
+    "created_at": "2026-10-03 18:34:18",
+    "updatedAt": "2026-10-03 18:34:18",
+    "updated_at": "2026-10-03 18:34:18"
   }
 ]

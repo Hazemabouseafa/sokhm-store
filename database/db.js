@@ -402,53 +402,83 @@ function saveSiteContent(content) {
  */
 function getProducts() {
   const rows = db.prepare("SELECT * FROM products ORDER BY created_at DESC").all();
-  return rows.map(r => ({
-    id: r.id,
-    name: r.name,
-    subtitle: r.subtitle,
-    category: r.category_id,
-    price: r.price,
-    badge: r.badge,
-    images: JSON.parse(r.images_json || '[]'),
-    sizes: JSON.parse(r.sizes_json || '[]'),
-    shortDesc: r.short_desc,
-    description: r.description,
-    fabric: r.fabric,
-    fitAdvice: r.fit_advice,
-    careAdvice: r.care_advice,
-    colors: JSON.parse(r.colors_json || '[]'),
-    modelInfo: r.model_info,
-    stockStatus: r.stock_status,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at
-  }));
+  return rows.map(r => {
+    const images = JSON.parse(r.images_json || '[]');
+    const mainImage = images[0] || 'assets/sokhm-card-1.jpg';
+    const sizes = JSON.parse(r.sizes_json || '[]');
+    const colors = JSON.parse(r.colors_json || '[]');
+    return {
+      id: r.id,
+      name: r.name,
+      slug: r.id,
+      subtitle: r.subtitle || '',
+      category: r.category_id,
+      category_id: r.category_id,
+      price: r.price,
+      badge: r.badge || '',
+      image: mainImage,
+      images: images.length > 0 ? images : [mainImage],
+      sizes: sizes,
+      shortDesc: r.short_desc || '',
+      short_desc: r.short_desc || '',
+      description: r.description || '',
+      fabric: r.fabric || '',
+      fitAdvice: r.fit_advice || '',
+      fit_advice: r.fit_advice || '',
+      careAdvice: r.care_advice || '',
+      care_advice: r.care_advice || '',
+      colors: colors,
+      modelInfo: r.model_info || '',
+      model_info: r.model_info || '',
+      stockStatus: r.stock_status || 'in_stock',
+      stock_status: r.stock_status || 'in_stock',
+      createdAt: r.created_at,
+      created_at: r.created_at,
+      updatedAt: r.updated_at,
+      updated_at: r.updated_at
+    };
+  });
 }
 
 /**
  * Products: Get single product by ID
  */
 function getProductById(id) {
-  const r = db.prepare("SELECT * FROM products WHERE id = ?").get(id);
+  const r = db.prepare("SELECT * FROM products WHERE id = ?").get(String(id));
   if (!r) return null;
+  const images = JSON.parse(r.images_json || '[]');
+  const mainImage = images[0] || 'assets/sokhm-card-1.jpg';
+  const sizes = JSON.parse(r.sizes_json || '[]');
+  const colors = JSON.parse(r.colors_json || '[]');
   return {
     id: r.id,
     name: r.name,
-    subtitle: r.subtitle,
+    slug: r.id,
+    subtitle: r.subtitle || '',
     category: r.category_id,
+    category_id: r.category_id,
     price: r.price,
-    badge: r.badge,
-    images: JSON.parse(r.images_json || '[]'),
-    sizes: JSON.parse(r.sizes_json || '[]'),
-    shortDesc: r.short_desc,
-    description: r.description,
-    fabric: r.fabric,
-    fitAdvice: r.fit_advice,
-    careAdvice: r.care_advice,
-    colors: JSON.parse(r.colors_json || '[]'),
-    modelInfo: r.model_info,
-    stockStatus: r.stock_status,
+    badge: r.badge || '',
+    image: mainImage,
+    images: images.length > 0 ? images : [mainImage],
+    sizes: sizes,
+    shortDesc: r.short_desc || '',
+    short_desc: r.short_desc || '',
+    description: r.description || '',
+    fabric: r.fabric || '',
+    fitAdvice: r.fit_advice || '',
+    fit_advice: r.fit_advice || '',
+    careAdvice: r.care_advice || '',
+    care_advice: r.care_advice || '',
+    colors: colors,
+    modelInfo: r.model_info || '',
+    model_info: r.model_info || '',
+    stockStatus: r.stock_status || 'in_stock',
+    stock_status: r.stock_status || 'in_stock',
     createdAt: r.created_at,
-    updatedAt: r.updated_at
+    created_at: r.created_at,
+    updatedAt: r.updated_at,
+    updated_at: r.updated_at
   };
 }
 
@@ -505,6 +535,23 @@ function saveProducts(productsList) {
  * Products: Add or Update single product
  */
 function upsertProduct(p) {
+  const id = String(p.id || p.slug || ('sokhm-' + Date.now()));
+  const category = p.category || p.category_id || 'hoodies';
+  const price = typeof p.price === 'number' ? p.price : (parseFloat(p.price) || 0);
+  const image = p.image || (Array.isArray(p.images) && p.images[0]) || 'assets/sokhm-card-1.jpg';
+  const images = Array.isArray(p.images) && p.images.length > 0 ? p.images : [image];
+  const sizes = Array.isArray(p.sizes) ? p.sizes : (typeof p.sizes === 'string' ? p.sizes.split(',').map(s => s.trim()) : ['M', 'L']);
+  const colors = Array.isArray(p.colors) ? p.colors : [{ name: 'Standard', hex: '#111' }];
+  const modelInfo = p.model_info || p.modelInfo || '';
+  const stockStatus = p.stock_status || p.stockStatus || 'in_stock';
+  const description = p.description || '';
+  const shortDesc = p.shortDesc || p.short_desc || '';
+  const subtitle = p.subtitle || '';
+  const badge = p.badge || '';
+  const fabric = p.fabric || '';
+  const fitAdvice = p.fitAdvice || p.fit_advice || '';
+  const careAdvice = p.careAdvice || p.care_advice || '';
+
   const insert = db.prepare(`
     INSERT INTO products (
       id, name, subtitle, category_id, price, badge,
@@ -531,34 +578,35 @@ function upsertProduct(p) {
   `);
 
   insert.run(
-    p.id,
-    p.name,
-    p.subtitle || '',
-    p.category || 'hoodies',
-    typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
-    p.badge || '',
-    JSON.stringify(p.images || []),
-    JSON.stringify(p.sizes || []),
-    p.shortDesc || '',
-    p.description || '',
-    p.fabric || '',
-    p.fitAdvice || '',
-    p.careAdvice || '',
-    JSON.stringify(p.colors || []),
-    p.modelInfo || '',
-    p.stockStatus || 'in_stock'
+    id,
+    p.name || 'منتج SOKHM',
+    subtitle,
+    category,
+    price,
+    badge,
+    JSON.stringify(images),
+    JSON.stringify(sizes),
+    shortDesc,
+    description,
+    fabric,
+    fitAdvice,
+    careAdvice,
+    JSON.stringify(colors),
+    modelInfo,
+    stockStatus
   );
 
   const updated = getProducts();
   syncJsonBackups(null, updated);
-  return getProductById(p.id);
+  return getProductById(id);
 }
 
 /**
  * Products: Delete product
  */
 function deleteProduct(id) {
-  db.prepare("DELETE FROM products WHERE id = ?").run(id);
+  const sid = String(id);
+  db.prepare("DELETE FROM products WHERE id = ?").run(sid);
   const updated = getProducts();
   syncJsonBackups(null, updated);
   return true;

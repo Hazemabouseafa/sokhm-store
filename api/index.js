@@ -162,27 +162,27 @@ module.exports = async (req, res) => {
           return sendJson(res, 200, { success: true, count: prods.length, data: prods });
         }
         const created = await db.upsertProduct(body);
-        return sendJson(res, 201, created);
+        return sendJson(res, 201, { success: true, product: created });
       }
     }
 
     const prodMatch = pathname.match(/^\/api\/products\/([^\/]+)$/);
     if (prodMatch) {
-      const id = prodMatch[1];
+      const id = decodeURIComponent(prodMatch[1]);
       if (req.method === 'GET') {
         const prod = await db.getProductById(id);
-        if (!prod) return sendJson(res, 404, { error: 'المنتج غير موجود' });
+        if (!prod) return sendJson(res, 404, { success: false, error: 'المنتج غير موجود' });
         return sendJson(res, 200, prod);
       }
       if (req.method === 'PUT') {
         const body = await parseBody(req);
         body.id = id;
         const updated = await db.upsertProduct(body);
-        return sendJson(res, 200, updated);
+        return sendJson(res, 200, { success: true, product: updated });
       }
       if (req.method === 'DELETE') {
         await db.deleteProduct(id);
-        return sendJson(res, 200, { success: true, id });
+        return sendJson(res, 200, { success: true, message: 'تم حذف المنتج بنجاح', id });
       }
     }
 

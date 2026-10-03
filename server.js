@@ -44,7 +44,7 @@ function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=UTF-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token'
   });
   res.end(JSON.stringify(data));
@@ -69,8 +69,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token'
     });
     return res.end();
   }
@@ -208,7 +208,7 @@ const server = http.createServer(async (req, res) => {
     // 4.1 REST: /api/products/:id
     const prodMatch = pathname.match(/^\/api\/products\/([^\/]+)$/);
     if (prodMatch) {
-      const pid = prodMatch[1];
+      const pid = decodeURIComponent(prodMatch[1]);
       if (req.method === 'GET') {
         try {
           const prod = await db.getProductById(pid);

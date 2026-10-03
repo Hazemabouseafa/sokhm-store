@@ -1134,18 +1134,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         const id = btn.getAttribute('data-id');
         if (!confirm(`هل أنت متأكد من حذف القطعة ${id} من قاعدة البيانات؟`)) return;
         try {
-          const res = await fetch(`/api/products/${id}`, { 
+          const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { 
             method: 'DELETE',
-            headers: { 'Authorization': 'Bearer ' + token }
+            headers: { 
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            }
           });
           if (res.ok) {
-            products = products.filter(p => p.id !== id);
+            products = products.filter(p => p.id !== id && p.slug !== id);
             renderProductsTable();
             loadDbStats();
             showToast('تم حذف المنتج بنجاح');
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            alert(errData.error || errData.message || 'تعذر حذف المنتج من السيرفر');
           }
         } catch (err) {
-          alert('تعذر حذف المنتج');
+          // If network error/offline
+          products = products.filter(p => p.id !== id && p.slug !== id);
+          renderProductsTable();
+          loadDbStats();
+          showToast('تم حذف المنتج محلياً');
         }
       });
     });
@@ -1381,14 +1391,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const id = getVal('pm_id') || getVal('pm_slug');
-        const name = getVal('pm_name');
-        const slug = getVal('pm_slug') || id;
+        const formId = getVal('pm_id');
+        const formSlug = getVal('pm_slug');
+        const id = editingProductId || formId || formSlug || ('sokhm-' + Date.now());
+        const slug = formSlug || id;
+        const name = getVal('pm_name') || 'قطعة جديدة';
         const rawPrice = getVal('pm_price').toString().replace(/[^0-9.]/g, '');
         const price = parseFloat(rawPrice) || 0;
-        const category = getVal('pm_category');
-        const image = getVal('pm_image');
-        const description = getVal('pm_description');
+        const category = getVal('pm_category') || 'hoodies';
+        const image = getVal('pm_image') || 'assets/sokhm-card-1.jpg';
+        const description = getVal('pm_description') || '';
 
         const checkedSizes = [];
         document.querySelectorAll('input[name="pm_sizes"]:checked').forEach(cb => checkedSizes.push(cb.value));
@@ -1411,27 +1423,57 @@ document.addEventListener('DOMContentLoaded', async () => {
           stock_status: 'in_stock'
         };
 
+        const saveBtn = document.getElementById('saveProductModalSubmitBtn');
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = '<span class="inline-block animate-spin mr-2">✦</span> جاري الحفظ في قاعدة البيانات...';
+        }
+
         try {
           const isEdit = Boolean(editingProductId);
-          const url = isEdit ? `/api/products/${editingProductId}` : '/api/products';
+          const url = isEdit ? `/api/products/${encodeURIComponent(editingProductId)}` : '/api/products';
           const method = isEdit ? 'PUT' : 'POST';
 
           const res = await fetch(url, {
             method,
             headers: { 
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + token
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
             },
             body: JSON.stringify(payload)
           });
 
-          if (!res.ok) throw new Error('فشل حفظ المنتج');
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || errData.message || 'فشل حفظ المنتج في السيرفر');
+          }
+
+          let savedProd = payload;
+          try {
+            const resData = await res.json();
+            if (resData && resData.product) savedProd = resData.product;
+            else if (resData && resData.id) savedProd = resData;
+          } catch (e) {}
+
+          if (!savedProd.image && savedProd.images && savedProd.images[0]) {
+            savedProd.image = savedProd.images[0];
+          }
 
           if (isEdit) {
-            const idx = products.findIndex(p => p.id === editingProductId);
-            if (idx !== -1) products[idx] = payload;
+            const idx = products.findIndex(p => p.id === editingProductId || p.slug === editingProductId);
+            if (idx !== -1) {
+              products[idx] = { ...products[idx], ...savedProd };
+            } else {
+              products.unshift(savedProd);
+            }
           } else {
-            products.unshift(payload);
+            const existingIdx = products.findIndex(p => p.id === savedProd.id || p.slug === savedProd.slug);
+            if (existingIdx !== -1) {
+              products[existingIdx] = savedProd;
+            } else {
+              products.unshift(savedProd);
+            }
           }
 
           renderProductsTable();
@@ -1440,7 +1482,26 @@ document.addEventListener('DOMContentLoaded', async () => {
           showToast(isEdit ? 'تم تحديث بيانات القطعة بنجاح' : 'تمت إضافة القطعة بنجاح إلى الكتالوج');
 
         } catch (err) {
-          alert('تعذر حفظ القطعة في قاعدة البيانات');
+          // If offline / static fallback
+          if (err.message && (err.message.includes('fetch') || err.message.includes('Network') || err.message.includes('Failed'))) {
+            if (editingProductId) {
+              const idx = products.findIndex(p => p.id === editingProductId || p.slug === editingProductId);
+              if (idx !== -1) products[idx] = payload;
+            } else {
+              products.unshift(payload);
+            }
+            renderProductsTable();
+            productModal.close();
+            showToast('تم حفظ المنتج محلياً');
+          } else {
+            alert('تعذر حفظ القطعة: ' + err.message);
+          }
+        } finally {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i><span>حفظ القطعة في قاعدة البيانات</span>';
+            setupLucide();
+          }
         }
       });
     }
