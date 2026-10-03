@@ -155,14 +155,49 @@ const server = http.createServer(async (req, res) => {
       try {
         const body = await readBody(req);
         const order = db.createOrder(body);
-        return sendJson(res, 201, { success: true, order });
+        return sendJson(res, 201, { success: true, orderId: order.id, order });
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
       }
     }
     if (pathname === '/api/orders' && req.method === 'GET') {
       try {
-        return sendJson(res, 200, db.getOrders());
+        const statusFilter = parsedUrl.searchParams.get('status') || 'all';
+        return sendJson(res, 200, db.getOrders(statusFilter));
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 10. Orders: Status Update POST /api/orders/status
+    if (pathname === '/api/orders/status' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const { id, status } = body;
+        if (!id || !status) return sendJson(res, 400, { error: 'Missing order id or status' });
+        const updated = db.updateOrderStatus(id, status);
+        return sendJson(res, 200, { success: true, order: updated });
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 11. Orders: DELETE /api/orders
+    if (pathname === '/api/orders' && req.method === 'DELETE') {
+      try {
+        const id = parsedUrl.searchParams.get('id');
+        if (!id) return sendJson(res, 400, { error: 'Missing order id' });
+        db.deleteOrder(id);
+        return sendJson(res, 200, { success: true, message: 'Order deleted successfully' });
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    // 12. Orders: GET /api/orders/stats
+    if (pathname === '/api/orders/stats' && req.method === 'GET') {
+      try {
+        return sendJson(res, 200, db.getOrderStats());
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
       }

@@ -65,16 +65,23 @@ function initSchema() {
     -- Orders Table (E-commerce Order Infrastructure)
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
-      customer_name TEXT,
-      customer_phone TEXT,
-      customer_city TEXT,
-      customer_address TEXT,
+      customer_name TEXT NOT NULL,
+      customer_phone TEXT NOT NULL,
+      customer_city TEXT NOT NULL,
+      customer_address TEXT NOT NULL,
+      customer_notes TEXT,
       items_json TEXT NOT NULL,
       total_price REAL NOT NULL,
       status TEXT DEFAULT 'pending',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try {
+    db.exec('ALTER TABLE orders ADD COLUMN customer_notes TEXT;');
+  } catch (e) {
+    // Column already exists
+  }
 }
 
 /**
@@ -147,6 +154,72 @@ function autoSeed() {
     } catch (err) {
       console.error('Failed to seed products:', err);
     }
+  }
+
+  // Check if orders are empty and seed sample initial orders
+  const orderCount = db.prepare('SELECT COUNT(*) AS count FROM orders').get();
+  if (orderCount.count === 0) {
+    const insertOrder = db.prepare(`
+      INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, customer_notes, items_json, total_price, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', ?))
+    `);
+
+    insertOrder.run(
+      'SKM-8491',
+      'أحمد حسن الشريف',
+      '01098765432',
+      'القاهرة',
+      'شارع مصدق، عمارة 14، الدور الخامس، الدقي',
+      'يرجى الاتصال قبل الوصول بنصف ساعة',
+      JSON.stringify([
+        {
+          id: 'sokhm-noir-01',
+          name: 'SIGNATURE HOODIE',
+          size: 'L',
+          color: 'Onyx Black',
+          quantity: 1,
+          price: 1850,
+          image: 'assets/sokhm-card-1.jpg'
+        }
+      ]),
+      1850,
+      'pending',
+      '-2 hours'
+    );
+
+    insertOrder.run(
+      'SKM-8492',
+      'عمر مصطفى عبد العزيز',
+      '01123456789',
+      'الإسكندرية',
+      'طريق الحرية، برج النصر، الدور الثالث، سموحة',
+      'التسليم في المساء بعد الساعة 5',
+      JSON.stringify([
+        {
+          id: 'sokhm-noir-02',
+          name: 'ESSENTIAL HOODIE',
+          size: 'XL',
+          color: 'Sand Cream',
+          quantity: 1,
+          price: 1850,
+          image: 'assets/sokhm-card-2.jpg'
+        },
+        {
+          id: 'sokhm-noir-03',
+          name: 'COMBAT HOODIE',
+          size: 'XL',
+          color: 'Tactical Olive',
+          quantity: 1,
+          price: 1850,
+          image: 'assets/sokhm-card-3.jpg'
+        }
+      ]),
+      3700,
+      'confirmed',
+      '-5 hours'
+    );
+
+    console.log('✓ Initial sample orders seeded successfully');
   }
 }
 
@@ -423,38 +496,108 @@ function deleteCategory(slug) {
  * Orders: Create Order
  */
 function createOrder(order) {
-  const id = 'order-' + Date.now();
+  const id = order.id || 'SKM-' + Math.floor(10000 + Math.random() * 90000);
+  const status = order.status || 'pending';
+  
   db.prepare(`
-    INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, items_json, total_price, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+    INSERT INTO orders (id, customer_name, customer_phone, customer_city, customer_address, customer_notes, items_json, total_price, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
   `).run(
     id,
-    order.customerName || 'Customer',
+    order.customerName || 'عميل المتجر',
     order.customerPhone || '',
-    order.customerCity || 'Cairo',
+    order.customerCity || order.governorate || 'القاهرة',
     order.customerAddress || '',
+    order.customerNotes || order.notes || '',
     JSON.stringify(order.items || []),
-    order.totalPrice || 0
+    typeof order.totalPrice === 'number' ? order.totalPrice : (parseFloat(order.totalPrice) || parseFloat(order.total) || 0),
+    status
   );
-  return { id, ...order, status: 'pending' };
+
+  return getOrderById(id);
 }
 
 /**
- * Orders: Get all orders
+ * Orders: Get single order by ID
  */
-function getOrders() {
-  const rows = db.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
+function getOrderById(id) {
+  const r = db.prepare("SELECT * FROM orders WHERE id = ?").get(id);
+  if (!r) return null;
+  return {
+    id: r.id,
+    customerName: r.customer_name,
+    customerPhone: r.customer_phone,
+    customerCity: r.customer_city,
+    customerAddress: r.customer_address,
+    customerNotes: r.customer_notes || '',
+    items: JSON.parse(r.items_json || '[]'),
+    totalPrice: r.total_price,
+    status: r.status,
+    createdAt: r.created_at
+  };
+}
+
+/**
+ * Orders: Get all orders (with optional status filter)
+ */
+function getOrders(statusFilter = 'all') {
+  let rows;
+  if (statusFilter && statusFilter !== 'all') {
+    rows = db.prepare("SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC").all(statusFilter);
+  } else {
+    rows = db.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
+  }
+
   return rows.map(r => ({
     id: r.id,
     customerName: r.customer_name,
     customerPhone: r.customer_phone,
     customerCity: r.customer_city,
     customerAddress: r.customer_address,
+    customerNotes: r.customer_notes || '',
     items: JSON.parse(r.items_json || '[]'),
     totalPrice: r.total_price,
     status: r.status,
     createdAt: r.created_at
   }));
+}
+
+/**
+ * Orders: Update Status
+ */
+function updateOrderStatus(id, newStatus) {
+  db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(newStatus, id);
+  return getOrderById(id);
+}
+
+/**
+ * Orders: Delete
+ */
+function deleteOrder(id) {
+  db.prepare("DELETE FROM orders WHERE id = ?").run(id);
+  return true;
+}
+
+/**
+ * Orders: Summary Metrics
+ */
+function getOrderStats() {
+  const totalOrders = db.prepare("SELECT COUNT(*) AS count FROM orders").get().count;
+  const pendingOrders = db.prepare("SELECT COUNT(*) AS count FROM orders WHERE status = 'pending'").get().count;
+  const inDeliveryOrders = db.prepare("SELECT COUNT(*) AS count FROM orders WHERE status IN ('confirmed', 'shipped')").get().count;
+  const deliveredOrders = db.prepare("SELECT COUNT(*) AS count FROM orders WHERE status = 'delivered'").get().count;
+  
+  const revenueRow = db.prepare("SELECT SUM(total_price) AS sum FROM orders WHERE status != 'cancelled'").get();
+  const totalRevenue = revenueRow && revenueRow.sum ? revenueRow.sum : 0;
+
+  return {
+    totalOrders,
+    pendingOrders,
+    inDeliveryOrders,
+    deliveredOrders,
+    totalRevenue,
+    totalRevenueFormatted: totalRevenue.toLocaleString('en-US') + ' ج.م'
+  };
 }
 
 /**
@@ -464,6 +607,7 @@ function getStats() {
   const catCount = db.prepare("SELECT COUNT(*) AS count FROM categories").get().count;
   const prodCount = db.prepare("SELECT COUNT(*) AS count FROM products").get().count;
   const orderCount = db.prepare("SELECT COUNT(*) AS count FROM orders").get().count;
+  const orderStats = getOrderStats();
   
   let dbSizeBytes = 0;
   if (fs.existsSync(dbPath)) {
@@ -480,6 +624,7 @@ function getStats() {
       products: prodCount,
       orders: orderCount
     },
+    orderStats,
     status: 'online',
     timestamp: new Date().toISOString()
   };
@@ -498,6 +643,10 @@ module.exports = {
   addCategory,
   deleteCategory,
   createOrder,
+  getOrderById,
   getOrders,
+  updateOrderStatus,
+  deleteOrder,
+  getOrderStats,
   getStats
 };

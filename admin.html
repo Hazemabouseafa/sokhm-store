@@ -128,11 +128,23 @@
 
     </div>
 
-    <!-- ================= SUB-NAVIGATION TABS ================= -->
+    <!-- ================= SUB-NAVIGATION TABS (ORDERS FIRST!) ================= -->
     <div class="border-t border-[#141414] bg-[#070707] px-6 sm:px-10 overflow-x-auto">
       <div class="max-w-[1400px] mx-auto flex items-center gap-2 sm:gap-6 text-xs font-bold">
         
-        <button class="admin-tab-btn active px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-homepage">
+        <!-- التبويب الأهم: الاوردرات -->
+        <button class="admin-tab-btn active px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer relative" data-tab="tab-orders">
+          <i data-lucide="shopping-cart" class="w-4 h-4 text-emerald-400"></i>
+          <span class="font-bold text-white">الاوردرات والطلبات (Orders)</span>
+          <span id="ordersHeaderCountBadge" class="px-2 py-0.5 rounded-full bg-emerald-500 text-black font-extrabold text-[10px]">0</span>
+        </button>
+
+        <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-products">
+          <i data-lucide="shirt" class="w-4 h-4"></i>
+          <span>كتالوج المنتجات (Products Catalog)</span>
+        </button>
+
+        <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-homepage">
           <i data-lucide="home" class="w-4 h-4"></i>
           <span>نصوص الرئيسية (Homepage Texts)</span>
         </button>
@@ -140,11 +152,6 @@
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-product-page">
           <i data-lucide="file-text" class="w-4 h-4"></i>
           <span>نصوص صفحة المنتج (Product Page)</span>
-        </button>
-
-        <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-products">
-          <i data-lucide="shirt" class="w-4 h-4"></i>
-          <span>كتالوج المنتجات (Products Catalog)</span>
         </button>
 
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-categories">
@@ -165,9 +172,141 @@
   <main class="flex-grow max-w-[1400px] w-full mx-auto px-6 sm:px-10 py-8">
 
     <!-- ========================================================
-         التبويب 1: نصوص الصفحة الرئيسية (HOMEPAGE TEXTS)
+         التبويب الأهم: الاوردرات والطلبات الحية (ORDERS TAB)
          ======================================================== -->
-    <section id="tab-homepage" class="tab-pane space-y-8">
+    <section id="tab-orders" class="tab-pane space-y-6">
+      
+      <!-- Top Bar: Title & Refresh Button -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1A1A1A]">
+        <div>
+          <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">إدارة المبيعات والتوصيل الفوري</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1 flex items-center gap-3">
+            <span>سجل الاوردرات والطلبات</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-400 border border-emerald-800 font-mono font-bold">LIVE SQLITE</span>
+          </h2>
+          <p class="text-xs text-neutral-400 mt-1">
+            متابعة فورية لطلبات العملاء، أرقام الهواتف، العناوين، والتواصل بنقرة واحدة عبر WhatsApp وتحديث حالات التوصيل.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="refreshOrdersBtn" class="px-4 py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>تحديث الطلبات</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Top Metrics Cards (Sales & Orders KPI) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Card 1: Total Orders -->
+        <div class="cms-card p-5 border-[#222] flex items-center justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-neutral-400 block mb-1">إجمالي الطلبات</span>
+            <span id="statTotalOrders" class="text-3xl font-extrabold text-white font-mono">0</span>
+            <span class="text-[10px] text-neutral-500 block mt-1">كافة الطلبات المسجلة</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-[#141414] border border-[#2A2A2A] flex items-center justify-center text-white">
+            <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 2: Pending Orders -->
+        <div class="cms-card p-5 border-amber-950/50 bg-[#0E0E0E] flex items-center justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-amber-300 block mb-1">قيد المراجعة</span>
+            <span id="statPendingOrders" class="text-3xl font-extrabold text-amber-400 font-mono">0</span>
+            <span class="text-[10px] text-neutral-500 block mt-1">تحتاج لتأكيد العميل هاتفياً</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-amber-950/40 border border-amber-800/60 flex items-center justify-center text-amber-400">
+            <i data-lucide="clock" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 3: In Delivery -->
+        <div class="cms-card p-5 border-blue-950/50 bg-[#0E0E0E] flex items-center justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-blue-300 block mb-1">جاري الشحن والتوصيل</span>
+            <span id="statInDeliveryOrders" class="text-3xl font-extrabold text-blue-400 font-mono">0</span>
+            <span class="text-[10px] text-neutral-500 block mt-1">خرجت مع مندوب التوصيل</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-blue-950/40 border border-blue-800/60 flex items-center justify-center text-blue-400">
+            <i data-lucide="truck" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 4: Total Revenue (EGP) -->
+        <div class="cms-card p-5 border-emerald-950/60 bg-gradient-to-br from-[#0E0E0E] to-[#121814] flex items-center justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-emerald-300 block mb-1">إجمالي المبيعات</span>
+            <span id="statTotalRevenue" class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">0 ج.م</span>
+            <span class="text-[10px] text-neutral-500 block mt-1">بالجنيه المصري (EGP)</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-950/50 border border-emerald-800/70 flex items-center justify-center text-emerald-400">
+            <i data-lucide="coins" class="w-6 h-6"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search & Status Filter Controls -->
+      <div class="cms-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-sans">
+        <div class="relative w-full sm:w-96">
+          <i data-lucide="search" class="w-4 h-4 text-neutral-400 absolute right-3 top-1/2 -translate-y-1/2"></i>
+          <input 
+            type="text" 
+            id="orderSearchInput" 
+            placeholder="البحث برقم الأوردر، اسم العميل، الهاتف، أو المحافظة..." 
+            class="cms-input w-full pr-9 pl-4 py-2 text-xs"
+          >
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <span class="text-neutral-400 font-bold text-[12px] whitespace-nowrap">تصفية بالحالة:</span>
+          <select id="orderStatusFilter" class="cms-input py-2 text-xs font-bold">
+            <option value="all">جميع الطلبات (All Orders)</option>
+            <option value="pending">🟡 قيد المراجعة (Pending)</option>
+            <option value="confirmed">🔵 تم التأكيد (Confirmed)</option>
+            <option value="shipped">🟣 جاري الشحن (Shipped)</option>
+            <option value="delivered">🟢 تم التسليم (Delivered)</option>
+            <option value="cancelled">🔴 ملغي (Cancelled)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Orders Master Table -->
+      <div class="cms-card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-[#080808] border-b border-[#1A1A1A] text-[11px] text-neutral-400 font-bold">
+              <tr>
+                <th class="py-3.5 px-6">كود الأوردر والتاريخ</th>
+                <th class="py-3.5 px-4">العميل والتواصل</th>
+                <th class="py-3.5 px-4">عنوان الشحن</th>
+                <th class="py-3.5 px-4">القطع المطلوبة</th>
+                <th class="py-3.5 px-4">المبلغ المستحق</th>
+                <th class="py-3.5 px-4">حالة الطلب</th>
+                <th class="py-3.5 px-6 text-left">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody" class="divide-y divide-[#141414]">
+              <!-- Dynamically populated via js/admin.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="ordersEmptyState" class="hidden py-16 text-center text-xs text-neutral-500 font-sans">
+          <i data-lucide="shopping-bag" class="w-10 h-10 mx-auto mb-2 text-neutral-600 stroke-[1.2]"></i>
+          <p class="font-bold text-white text-sm">لا توجد طلبات مطابقة للبحث أو الفلتر المحدد</p>
+          <p class="text-[11px] text-neutral-500 mt-1">ستظهر طلبات العملاء هنا فور إتمام الشراء من المتجر.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================
+         التبويب 2: نصوص الصفحة الرئيسية (HOMEPAGE TEXTS)
+         ======================================================== -->
+    <section id="tab-homepage" class="tab-pane hidden space-y-8">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#1A1A1A] gap-4">
         <div>
           <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">إدارة محتوى المتجر</span>
@@ -331,7 +470,7 @@
     </section>
 
     <!-- ========================================================
-         التبويب 2: نصوص صفحة المنتج (PRODUCT PAGE TEXTS)
+         التبويب 3: نصوص صفحة المنتج (PRODUCT PAGE TEXTS)
          ======================================================== -->
     <section id="tab-product-page" class="tab-pane hidden space-y-8">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#1A1A1A] gap-4">
@@ -488,7 +627,7 @@
     </section>
 
     <!-- ========================================================
-         التبويب 3: كتالوج المنتجات الكامل (PRODUCTS CATALOG)
+         التبويب 4: كتالوج المنتجات الكامل (PRODUCTS CATALOG)
          ======================================================== -->
     <section id="tab-products" class="tab-pane hidden space-y-6">
       
@@ -559,7 +698,7 @@
     </section>
 
     <!-- ========================================================
-         التبويب 4: إدارة الأقسام (CATEGORIES)
+         التبويب 5: إدارة الأقسام (CATEGORIES)
          ======================================================== -->
     <section id="tab-categories" class="tab-pane hidden space-y-6">
       
@@ -621,7 +760,7 @@
     </section>
 
     <!-- ========================================================
-         التبويب 5: النظام وقواعد البيانات (SYSTEM & DATABASE)
+         التبويب 6: النظام وقواعد البيانات (SYSTEM & DATABASE)
          ======================================================== -->
     <section id="tab-settings" class="tab-pane hidden space-y-6">
       <div class="pb-4 border-b border-[#1A1A1A]">
@@ -667,7 +806,7 @@
               <h4 class="font-bold text-sm">تصدير نسخة احتياطية (JSON)</h4>
             </div>
             <p class="text-xs text-neutral-400 leading-relaxed">
-              تنزيل لقطة كاملة بتنسيق JSON تحتوي على جميع النصوص الحالية والمنتجات والأقسام المحفوظة في قاعدة البيانات.
+              تنزيل لقطة كاملة بتنسيق JSON تحتوي على جميع النصوص الحالية والمنتجات والأقسام والطلبات المحفوظة في قاعدة البيانات.
             </p>
           </div>
 
@@ -716,8 +855,79 @@
 
   </main>
 
+  <!-- ================= نافذة تفاصيل / بوليصة الأوردر (INVOICE MODAL) ================= -->
+  <dialog id="orderInvoiceModal" class="bg-[#0E0E0E] text-white p-0 max-w-2xl w-[92%] border border-[#222] rounded-[18px] shadow-2xl overflow-hidden backdrop:bg-black/85 font-sans" dir="rtl">
+    <div class="p-5 border-b border-[#1A1A1A] flex items-center justify-between bg-[#080808]">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+        <h3 id="invModalTitle" class="font-bold text-sm text-white">تفاصيل وبوليصة الطلب</h3>
+      </div>
+      <button id="closeInvoiceModalBtn" class="text-neutral-400 hover:text-white p-1 cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div id="invoicePrintArea" class="p-6 space-y-5 max-h-[80vh] overflow-y-auto text-xs font-sans">
+      <!-- Order Header Card -->
+      <div class="flex items-center justify-between pb-4 border-b border-[#1A1A1A]">
+        <div>
+          <span class="font-gothic font-bold text-lg text-white">✦ SOKHM ATELIER</span>
+          <p class="text-[10px] text-neutral-400">بوليصة توصيل وفاتورة شحن معتمدة</p>
+        </div>
+        <div class="text-left font-mono">
+          <span id="invOrderId" class="font-bold text-sm text-white block">#SKM-00000</span>
+          <span id="invOrderDate" class="text-[10px] text-neutral-400">2026-10-03</span>
+        </div>
+      </div>
+
+      <!-- Customer & Shipping Box -->
+      <div class="p-4 bg-[#080808] rounded-xl border border-[#1A1A1A] grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <span class="text-[10px] text-neutral-400 block mb-0.5">اسم العميل:</span>
+          <span id="invCustomerName" class="font-bold text-white text-sm block">-</span>
+          <span class="text-[10px] text-neutral-400 block mt-2 mb-0.5">رقم الهاتف:</span>
+          <span id="invCustomerPhone" class="font-mono font-bold text-emerald-400 text-sm block">-</span>
+        </div>
+        <div>
+          <span class="text-[10px] text-neutral-400 block mb-0.5">المحافظة والعنوان بالتفصيل:</span>
+          <p id="invCustomerAddress" class="text-neutral-200 leading-relaxed font-semibold">-</p>
+          <div id="invNotesBox" class="mt-2 text-[11px] text-amber-300 hidden">
+            <span>ملاحظات: </span><span id="invCustomerNotes">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ordered Items Breakdown -->
+      <div>
+        <h4 class="font-bold text-xs text-white mb-2 flex items-center gap-1.5">
+          <i data-lucide="package" class="w-3.5 h-3.5 text-neutral-400"></i>
+          <span>القطع والملابس المطلوبة في الشحنة</span>
+        </h4>
+        <div id="invItemsList" class="space-y-2 divide-y divide-[#141414]">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+
+      <!-- Financial Total Box -->
+      <div class="p-4 rounded-xl bg-[#121212] border border-[#222] flex items-center justify-between font-mono">
+        <div>
+          <span class="text-[11px] text-neutral-400 block">المبلغ المطلوب تحصيله (الدفع عند الاستلام):</span>
+          <span class="text-[10px] text-emerald-400">شامل مصاريف الشحن والمعاينة</span>
+        </div>
+        <span id="invTotalAmount" class="text-xl font-extrabold text-white">0 ج.م</span>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-3">
+        <button id="printInvoiceBtn" type="button" class="px-5 py-2.5 rounded-xl bg-white text-black font-bold text-xs flex items-center gap-2 hover:bg-neutral-200 cursor-pointer">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span>طباعة البوليصة</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- ================= نافذة إضافة / تعديل قطعة ملابس (MODAL) ================= -->
-  <dialog id="productEditModal" class="bg-[#0E0E0E] text-white p-0 max-w-2xl w-[92%] border border-[#222] rounded-[16px] shadow-2xl overflow-hidden backdrop:bg-black/80">
+  <dialog id="productEditModal" class="bg-[#0E0E0E] text-white p-0 max-w-2xl w-[92%] border border-[#222] rounded-[16px] shadow-2xl overflow-hidden backdrop:bg-black/80 font-sans" dir="rtl">
     <div class="p-5 border-b border-[#1A1A1A] flex items-center justify-between bg-[#080808]">
       <div class="flex items-center gap-2.5">
         <i data-lucide="package" class="w-4 h-4 text-white"></i>

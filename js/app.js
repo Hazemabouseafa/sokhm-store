@@ -369,15 +369,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (checkoutBtn) {
     checkoutBtn.addEventListener('click', () => {
-      showToast('Dispatching order to SOKHM Atelier...');
-      setTimeout(() => {
-        alert('Order Confirmed with ✦ SOKHM! Reference #SKM-' + Math.floor(1000 + Math.random() * 9000));
-        cart = [];
-        renderCart();
-        closeCart();
-      }, 500);
+      if (cart.length === 0) {
+        showToast('سلة المشتريات فارغة');
+        return;
+      }
+      closeCart();
+      if (typeof window.openCheckoutModal === 'function') {
+        window.openCheckoutModal(cart);
+      }
     });
   }
+
+  window.addEventListener('sokhm:cart-cleared', () => {
+    cart = [];
+    renderCart();
+  });
 
   // ================= 5. SEARCH =================
   if (searchBtn && searchDialog && closeSearchBtn && searchInput) {

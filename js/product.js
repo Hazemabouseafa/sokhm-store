@@ -212,8 +212,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (buyNowBtn) {
     buyNowBtn.addEventListener('click', () => {
-      addToBag(currentProduct, selectedSize, selectedColor?.name || 'Standard', quantity);
-      openCart();
+      const expressItem = {
+        id: currentProduct.id,
+        name: currentProduct.name,
+        price: currentProduct.price,
+        size: selectedSize,
+        color: selectedColor?.name || 'Standard',
+        quantity: quantity,
+        image: currentProduct.images?.[0] || 'assets/sokhm-card-1.jpg'
+      };
+      if (typeof window.openCheckoutModal === 'function') {
+        window.openCheckoutModal([expressItem]);
+      } else {
+        addToBag(currentProduct, selectedSize, selectedColor?.name || 'Standard', quantity);
+        openCart();
+      }
     });
   }
 
@@ -400,16 +413,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (checkoutBtn) {
     checkoutBtn.addEventListener('click', () => {
-      showToast('Dispatching order to SOKHM Atelier...');
-      setTimeout(() => {
-        alert('Order Confirmed with ✦ SOKHM! Reference #SKM-' + Math.floor(1000 + Math.random() * 9000));
-        cart = [];
-        saveCart();
-        renderCart();
-        closeCart();
-      }, 500);
+      if (cart.length === 0) {
+        showToast('سلة المشتريات فارغة');
+        return;
+      }
+      closeCart();
+      if (typeof window.openCheckoutModal === 'function') {
+        window.openCheckoutModal(cart);
+      }
     });
   }
+
+  window.addEventListener('sokhm:cart-cleared', () => {
+    cart = [];
+    saveCart();
+    renderCart();
+  });
 
   // ================= 9. TOAST =================
   function showToast(msg) {

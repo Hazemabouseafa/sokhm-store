@@ -1,23 +1,28 @@
 /**
  * ✦ SOKHM STORE - لوحة التحكم الإدارية ونظام إدارة المحتوى (CMS Controller)
  * تدير بالكامل:
- * ١. نصوص الصفحة الرئيسية (الهيرو، شريط المزايا، التشكيلات، البانر، والفوتر)
- * ٢. نصوص صفحة تفاصيل المنتج (مسار التصفح، الأزرار، شارات الثقة، القوائم المطوية، والسلة)
- * ٣. كتالوج المنتجات (إضافة، تعديل، حذف، رفع صور بدقة 2K، المقاسات، والأسعار بالجنيه المصري)
- * ٤. تصنيفات وأقسام المتجر (إضافة، عرض، حذف، وربط تلقائي)
- * ٥. البنية التحتية وقاعدة بيانات SQLite العلائقية والنسخ الاحتياطي
+ * ١. الاوردرات والمبيعات الحية (إدارة الطلبات، الحالات، التواصل المباشر WhatsApp، وبوالص الشحن)
+ * ٢. كتالوج المنتجات (إضافة، تعديل، حذف، رفع صور 2K، المقاسات، والأسعار بالجنيه المصري)
+ * ٣. نصوص الصفحة الرئيسية (الهيرو، شريط المزايا، التشكيلات، البانر، والفوتر)
+ * ٤. نصوص صفحة تفاصيل المنتج (مسار التصفح، الأزرار، شارات الثقة، القوائم المطوية، والسلة)
+ * ٥. تصنيفات وأقسام المتجر (إضافة، عرض، حذف، وربط تلقائي)
+ * ٦. البنية التحتية وقاعدة بيانات SQLite العلائقية والنسخ الاحتياطي
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
   // حالة التطبيق (Application State)
+  let orders = [];
   let siteContent = null;
   let products = [];
   let editingProductId = null;
   let productSearchTerm = '';
   let productCategoryFilterValue = 'all';
+  let orderSearchTerm = '';
+  let orderStatusFilterValue = 'all';
 
-  // عنصر النافذة المنبثقة
+  // عناصر النوافذ المنبثقة
   const productModal = document.getElementById('productEditModal');
+  const invoiceModal = document.getElementById('orderInvoiceModal');
 
   // ================= 1. التهيئة الأولية (INITIALIZATION) =================
   async function init() {
@@ -25,9 +30,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupLucide();
 
     // تحميل البيانات من قاعدة بيانات السيرفر
-    await Promise.all([loadSiteContent(), loadProducts(), loadDbStats()]);
+    await Promise.all([loadOrders(), loadSiteContent(), loadProducts(), loadDbStats()]);
 
     // تعبئة النماذج والجداول
+    renderOrdersTable();
+    renderOrderStats();
     populateHomepageForm();
     populateProductPageForm();
     populateCategoryDropdowns();
@@ -35,11 +42,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderProductsTable();
 
     // تفعيل معالجات الأحداث
+    setupOrdersHandlers();
     setupHomepageFormHandlers();
     setupProductPageFormHandlers();
     setupCategoriesHandlers();
     setupProductsHandlers();
     setupModalHandlers();
+    setupInvoiceHandlers();
     setupSettingsHandlers();
   }
 
@@ -74,7 +83,360 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ================= 3. جلب وحفظ البيانات (DATA & SQLITE SYNC) =================
+  // ================= 3. إدارة الاوردرات والمبيعات (ORDERS TAB) =================
+  async function loadOrders() {
+    try {
+      const res = await fetch('/api/orders');
+      if (res.ok) {
+        const data = await res.json();
+        orders = Array.isArray(data) ? data : (data.orders || []);
+      }
+    } catch (e) {
+      console.warn('تعذر جلب الطلبات من السيرفر:', e);
+    }
+    updateOrdersBadge();
+  }
+
+  function updateOrdersBadge() {
+    const badge = document.getElementById('ordersHeaderCountBadge');
+    if (!badge) return;
+    const pendingCount = orders.filter(o => o.status === 'pending').length;
+    badge.textContent = pendingCount > 0 ? pendingCount : orders.length;
+    if (pendingCount > 0) {
+      badge.className = 'px-2 py-0.5 rounded-full bg-amber-400 text-black font-extrabold text-[10px] animate-pulse';
+    } else {
+      badge.className = 'px-2 py-0.5 rounded-full bg-emerald-500 text-black font-extrabold text-[10px]';
+    }
+  }
+
+  function renderOrderStats() {
+    const totalOrdersEl = document.getElementById('statTotalOrders');
+    const pendingOrdersEl = document.getElementById('statPendingOrders');
+    const inDeliveryOrdersEl = document.getElementById('statInDeliveryOrders');
+    const totalRevenueEl = document.getElementById('statTotalRevenue');
+
+    const total = orders.length;
+    const pending = orders.filter(o => o.status === 'pending').length;
+    const inDelivery = orders.filter(o => o.status === 'confirmed' || o.status === 'shipped').length;
+    const revenue = orders.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+
+    if (totalOrdersEl) totalOrdersEl.textContent = total;
+    if (pendingOrdersEl) pendingOrdersEl.textContent = pending;
+    if (inDeliveryOrdersEl) inDeliveryOrdersEl.textContent = inDelivery;
+    if (totalRevenueEl) totalRevenueEl.textContent = revenue.toLocaleString('en-US') + ' ج.م';
+  }
+
+  function renderOrdersTable() {
+    const tbody = document.getElementById('ordersTableBody');
+    const emptyState = document.getElementById('ordersEmptyState');
+    if (!tbody) return;
+
+    const term = orderSearchTerm.toLowerCase();
+    const filtered = orders.filter(o => {
+      const matchTerm = !term ||
+        (o.id && o.id.toLowerCase().includes(term)) ||
+        (o.customerName && o.customerName.toLowerCase().includes(term)) ||
+        (o.customerPhone && o.customerPhone.includes(term)) ||
+        (o.customerCity && o.customerCity.toLowerCase().includes(term)) ||
+        (o.customerAddress && o.customerAddress.toLowerCase().includes(term));
+
+      const matchStatus = orderStatusFilterValue === 'all' || o.status === orderStatusFilterValue;
+      return matchTerm && matchStatus;
+    });
+
+    tbody.innerHTML = '';
+
+    if (filtered.length === 0) {
+      if (emptyState) emptyState.classList.remove('hidden');
+      return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+
+    filtered.forEach(order => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-[#101010] transition-colors border-b border-[#141414] group';
+
+      // Clean phone number for WhatsApp (format: 2010xxxxxxxx)
+      let cleanPhone = (order.customerPhone || '').replace(/[^0-9]/g, '');
+      if (cleanPhone.startsWith('0')) cleanPhone = '2' + cleanPhone;
+
+      // Status color styles
+      let statusBadgeClass = 'bg-amber-950/60 text-amber-300 border-amber-800';
+      if (order.status === 'confirmed') statusBadgeClass = 'bg-blue-950/60 text-blue-300 border-blue-800';
+      else if (order.status === 'shipped') statusBadgeClass = 'bg-purple-950/60 text-purple-300 border-purple-800';
+      else if (order.status === 'delivered') statusBadgeClass = 'bg-emerald-950/60 text-emerald-300 border-emerald-800';
+      else if (order.status === 'cancelled') statusBadgeClass = 'bg-red-950/60 text-red-300 border-red-800';
+
+      // Format items thumbnail list
+      const itemsList = Array.isArray(order.items) ? order.items : [];
+      const itemsSummaryHtml = itemsList.map(item => `
+        <div class="flex items-center gap-2 py-0.5">
+          <img src="${item.image || 'assets/sokhm-card-1.jpg'}" class="w-6 h-7 rounded object-cover border border-[#222]">
+          <span class="font-bold text-white text-[11px] truncate max-w-[120px]">${escapeHtml(item.name || 'هودي')}</span>
+          <span class="px-1 py-0.2 rounded bg-[#161616] text-[9px] font-mono text-neutral-300 border border-[#262626]">${escapeHtml(item.size || 'M')}</span>
+          <span class="text-[10px] text-neutral-400">×${item.quantity || 1}</span>
+        </div>
+      `).join('');
+
+      // WhatsApp message template
+      const waText = encodeURIComponent(
+        `مرحباً أستاذ ${order.customerName}، معكم فريق خدمة عملاء ✦ SOKHM ATELIER بخصوص طلبكم رقم #${order.id} بقيمة ${order.totalPrice} ج.م...`
+      );
+
+      tr.innerHTML = `
+        <!-- كود الأوردر والتاريخ -->
+        <td class="py-4 px-6">
+          <div class="font-mono font-bold text-white text-xs tracking-wider">#${escapeHtml(order.id)}</div>
+          <div class="text-[10px] text-neutral-400 mt-0.5">${formatDate(order.createdAt)}</div>
+        </td>
+
+        <!-- بيانات العميل والتواصل -->
+        <td class="py-4 px-4">
+          <div class="font-bold text-white text-xs">${escapeHtml(order.customerName)}</div>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="font-mono text-[11px] text-emerald-400 font-bold">${escapeHtml(order.customerPhone)}</span>
+            
+            <!-- زر الاتصال -->
+            <a href="tel:${escapeHtml(order.customerPhone)}" class="p-1 rounded bg-[#161616] hover:bg-white hover:text-black text-neutral-400 transition-colors" title="اتصال تليفوني">
+              <i data-lucide="phone" class="w-3 h-3"></i>
+            </a>
+
+            <!-- زر WhatsApp المباشر -->
+            <a href="https://wa.me/${cleanPhone}?text=${waText}" target="_blank" class="p-1 rounded bg-[#122218] hover:bg-emerald-600 text-emerald-300 hover:text-white transition-colors" title="محادثة واتساب مباشرة">
+              <i data-lucide="message-circle" class="w-3 h-3"></i>
+            </a>
+          </div>
+        </td>
+
+        <!-- عنوان الشحن -->
+        <td class="py-4 px-4 max-w-[200px]">
+          <span class="inline-block px-2 py-0.5 rounded bg-[#161616] border border-[#222] text-[10px] text-neutral-300 font-bold mb-1">
+            ${escapeHtml(order.customerCity || 'القاهرة')}
+          </span>
+          <p class="text-[11px] text-neutral-300 leading-tight truncate" title="${escapeHtml(order.customerAddress)}">
+            ${escapeHtml(order.customerAddress)}
+          </p>
+          ${order.customerNotes ? `<p class="text-[9px] text-amber-300/90 mt-0.5 truncate">ملاحظة: ${escapeHtml(order.customerNotes)}</p>` : ''}
+        </td>
+
+        <!-- القطع المطلوبة -->
+        <td class="py-4 px-4">
+          <div class="space-y-0.5">
+            ${itemsSummaryHtml}
+          </div>
+        </td>
+
+        <!-- الإجمالي المستحق -->
+        <td class="py-4 px-4 font-bold text-white text-xs font-mono">
+          <span class="text-sm font-extrabold text-emerald-400">${(order.totalPrice || 0).toLocaleString('en-US')}</span> 
+          <span class="text-[10px] text-neutral-400 font-normal">ج.م</span>
+        </td>
+
+        <!-- حالة الطلب (Live Status Dropdown) -->
+        <td class="py-4 px-4">
+          <select 
+            data-order-id="${escapeHtml(order.id)}" 
+            class="order-status-select px-2.5 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-colors focus:outline-none ${statusBadgeClass}"
+          >
+            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>🟡 قيد المراجعة</option>
+            <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>🔵 تم التأكيد</option>
+            <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>🟣 جاري الشحن</option>
+            <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>🟢 تم التسليم</option>
+            <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>🔴 ملغي</option>
+          </select>
+        </td>
+
+        <!-- الإجراءات -->
+        <td class="py-4 px-6 text-left">
+          <div class="flex items-center justify-start gap-2">
+            <!-- عرض البوليصة والفاتورة -->
+            <button 
+              data-invoice-id="${escapeHtml(order.id)}" 
+              class="open-invoice-btn p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+              title="عرض وطباعة بوليصة الطلب"
+            >
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <!-- حذف الطلب -->
+            <button 
+              data-delete-order-id="${escapeHtml(order.id)}" 
+              class="delete-order-btn p-2 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer"
+              title="حذف الأوردر"
+            >
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    // Attach Order Event Handlers
+    tbody.querySelectorAll('.order-status-select').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const orderId = select.getAttribute('data-order-id');
+        const newStatus = select.value;
+        await updateOrderStatus(orderId, newStatus);
+      });
+    });
+
+    tbody.querySelectorAll('.open-invoice-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const orderId = btn.getAttribute('data-invoice-id');
+        openInvoiceModal(orderId);
+      });
+    });
+
+    tbody.querySelectorAll('.delete-order-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const orderId = btn.getAttribute('data-delete-order-id');
+        if (!confirm(`هل أنت متأكد من حذف الأوردر رقم #${orderId} نهائياً؟`)) return;
+
+        try {
+          const res = await fetch(`/api/orders?id=${encodeURIComponent(orderId)}`, { method: 'DELETE' });
+          if (res.ok) {
+            orders = orders.filter(o => o.id !== orderId);
+            renderOrdersTable();
+            renderOrderStats();
+            updateOrdersBadge();
+            loadDbStats();
+            showToast(`تم حذف الأوردر #${orderId} بنجاح.`);
+          }
+        } catch (err) {
+          showToast('فشل في حذف الأوردر', 'error');
+        }
+      });
+    });
+
+    setupLucide();
+  }
+
+  async function updateOrderStatus(orderId, newStatus) {
+    try {
+      const res = await fetch('/api/orders/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orderId, status: newStatus })
+      });
+
+      if (res.ok) {
+        const index = orders.findIndex(o => o.id === orderId);
+        if (index !== -1) {
+          orders[index].status = newStatus;
+        }
+        renderOrdersTable();
+        renderOrderStats();
+        updateOrdersBadge();
+        showToast(`تم تحديث حالة الأوردر #${orderId} إلى: ${getStatusLabel(newStatus)}`);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('تعذر تحديث حالة الطلب', 'error');
+    }
+  }
+
+  function setupOrdersHandlers() {
+    const searchInput = document.getElementById('orderSearchInput');
+    const statusFilter = document.getElementById('orderStatusFilter');
+    const refreshBtn = document.getElementById('refreshOrdersBtn');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        orderSearchTerm = e.target.value;
+        renderOrdersTable();
+      });
+    }
+
+    if (statusFilter) {
+      statusFilter.addEventListener('change', (e) => {
+        orderStatusFilterValue = e.target.value;
+        renderOrdersTable();
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
+        await loadOrders();
+        renderOrdersTable();
+        renderOrderStats();
+        showToast('تم تحديث قائمة الاوردرات لحظياً من قاعدة البيانات!');
+      });
+    }
+  }
+
+  // ================= 4. نافذة وطباعة بوليصة الأوردر (INVOICE MODAL) =================
+  function setupInvoiceHandlers() {
+    const closeBtn = document.getElementById('closeInvoiceModalBtn');
+    const printBtn = document.getElementById('printInvoiceBtn');
+
+    if (closeBtn && invoiceModal) {
+      closeBtn.addEventListener('click', () => invoiceModal.close());
+    }
+
+    if (printBtn) {
+      printBtn.addEventListener('click', () => {
+        window.print();
+      });
+    }
+  }
+
+  function openInvoiceModal(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || !invoiceModal) return;
+
+    document.getElementById('invOrderId').textContent = '#' + order.id;
+    document.getElementById('invOrderDate').textContent = formatDate(order.createdAt);
+    document.getElementById('invCustomerName').textContent = order.customerName;
+    document.getElementById('invCustomerPhone').textContent = order.customerPhone;
+    document.getElementById('invCustomerAddress').textContent = `${order.customerCity} — ${order.customerAddress}`;
+
+    const notesBox = document.getElementById('invNotesBox');
+    const notesEl = document.getElementById('invCustomerNotes');
+    if (order.customerNotes) {
+      notesBox.classList.remove('hidden');
+      notesEl.textContent = order.customerNotes;
+    } else {
+      notesBox.classList.add('hidden');
+    }
+
+    // Populate items list
+    const itemsListEl = document.getElementById('invItemsList');
+    itemsListEl.innerHTML = '';
+    const items = Array.isArray(order.items) ? order.items : [];
+    items.forEach(item => {
+      const price = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0;
+      const qty = item.quantity || 1;
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between py-2 text-xs';
+      row.innerHTML = `
+        <div class="flex items-center gap-3">
+          <img src="${item.image || 'assets/sokhm-card-1.jpg'}" class="w-9 h-11 rounded object-cover border border-[#222]">
+          <div>
+            <h5 class="font-bold text-white text-xs">${escapeHtml(item.name || 'قطعة ملابس')}</h5>
+            <div class="text-[10px] text-neutral-400 mt-0.5">
+              <span>المقاس: <strong class="text-white">${escapeHtml(item.size || 'M')}</strong></span>
+              <span>•</span>
+              <span>الكمية: <strong class="text-white">${qty}</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="font-mono font-bold text-white text-xs">
+          ${(price * qty).toLocaleString('en-US')} ج.م
+        </div>
+      `;
+      itemsListEl.appendChild(row);
+    });
+
+    document.getElementById('invTotalAmount').textContent = `${(order.totalPrice || 0).toLocaleString('en-US')} ج.م`;
+
+    invoiceModal.showModal();
+    setupLucide();
+  }
+
+  // ================= 5. جلب وحفظ البيانات (DATA & SQLITE SYNC) =================
   async function loadSiteContent() {
     try {
       const res = await fetch('/api/site-content');
@@ -141,10 +503,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const badgeEl = document.getElementById('dbBadgeText');
         const summaryEl = document.getElementById('dbStatsSummary');
         if (badgeEl) {
-          badgeEl.textContent = `قاعدة بيانات SQLite • ${stats.dbSizeFormatted} • ${stats.counts?.products || 0} منتجات`;
+          badgeEl.textContent = `قاعدة بيانات SQLite • ${stats.dbSizeFormatted} • ${stats.counts?.orders || 0} طلبات`;
         }
         if (summaryEl) {
-          summaryEl.innerHTML = `المحرك: <strong>${stats.engine}</strong> • مسار الملف: <code>${stats.dbPath}</code> • الحجم: <strong>${stats.dbSizeFormatted}</strong> • إجمالي المنتجات: <strong>${stats.counts?.products}</strong> • الأقسام: <strong>${stats.counts?.categories}</strong>.`;
+          summaryEl.innerHTML = `المحرك: <strong>${stats.engine}</strong> • مسار الملف: <code>${stats.dbPath}</code> • الحجم: <strong>${stats.dbSizeFormatted}</strong> • الطلبات: <strong>${stats.counts?.orders}</strong> • المنتجات: <strong>${stats.counts?.products}</strong> • الأقسام: <strong>${stats.counts?.categories}</strong>.`;
         }
       }
     } catch (e) {
@@ -186,7 +548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ================= 4. تبويب الصفحة الرئيسية (HOMEPAGE) =================
+  // ================= 6. تبويب الصفحة الرئيسية (HOMEPAGE) =================
   function populateHomepageForm() {
     if (!siteContent || !siteContent.homepage) return;
     const hp = siteContent.homepage;
@@ -288,7 +650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ================= 5. تبويب صفحة المنتج (PRODUCT PAGE) =================
+  // ================= 7. تبويب صفحة المنتج (PRODUCT PAGE) =================
   function populateProductPageForm() {
     if (!siteContent || !siteContent.productPage) return;
     const pp = siteContent.productPage;
@@ -396,7 +758,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ================= 6. تبويب الأقسام (CATEGORIES) =================
+  // ================= 8. تبويب الأقسام (CATEGORIES) =================
   function populateCategoryDropdowns() {
     const filterSelect = document.getElementById('productCategoryFilter');
     const modalSelect = document.getElementById('modalProdCategory');
@@ -537,7 +899,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ================= 7. جدول كتالوج المنتجات (PRODUCTS TABLE) =================
+  // ================= 9. جدول كتالوج المنتجات (PRODUCTS TABLE) =================
   function renderProductsTable() {
     const tbody = document.getElementById('productsTableBody');
     const emptyState = document.getElementById('productsEmptyState');
@@ -605,7 +967,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </td>
 
         <!-- السعر (ج.م) -->
-        <td class="py-4 px-4 font-bold text-white text-xs">
+        <td class="py-4 px-4 font-bold text-white text-xs font-mono">
           ${priceEgp} <span class="text-[10px] text-neutral-400 font-normal">ج.م</span>
         </td>
 
@@ -710,7 +1072,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ================= 8. نافذة إضافة / تعديل قطعة ملابس (MODAL) =================
+  // ================= 10. نافذة إضافة / تعديل قطعة ملابس (MODAL) =================
   function setupModalHandlers() {
     const closeBtn = document.getElementById('closeProductModalBtn');
     const cancelBtn = document.getElementById('cancelModalBtn');
@@ -947,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupLucide();
   }
 
-  // ================= 9. تبويب قاعدة البيانات والنسخ الاحتياطي (SETTINGS & BACKUP) =================
+  // ================= 11. تبويب قاعدة البيانات والنسخ الاحتياطي (SETTINGS & BACKUP) =================
   function setupSettingsHandlers() {
     const exportBtn = document.getElementById('exportBackupBtn');
     const importInput = document.getElementById('importBackupInput');
@@ -969,7 +1331,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           brand: '✦ SOKHM ATELIER',
           databaseEngine: 'SQLite 3 (node:sqlite)',
           siteContent,
-          products
+          products,
+          orders
         };
 
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1010,6 +1373,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             populateCategoryDropdowns();
             renderCategoriesList();
             renderProductsTable();
+            await loadOrders();
+            renderOrdersTable();
+            renderOrderStats();
             await loadDbStats();
 
             showToast('تمت استعادة كافة البيانات وحفظها في قاعدة البيانات بنجاح!');
@@ -1045,6 +1411,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           populateCategoryDropdowns();
           renderCategoriesList();
           renderProductsTable();
+          await loadOrders();
+          renderOrdersTable();
+          renderOrderStats();
           await loadDbStats();
 
           showToast('تمت استعادة الإعدادات والمنتجات الأصلية للبراند بنجاح!');
@@ -1056,7 +1425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ================= 10. التنبيهات المنبثقة (TOAST NOTIFICATIONS) =================
+  // ================= 12. التنبيهات المنبثقة (TOAST NOTIFICATIONS) =================
   function showToast(message, type = 'success') {
     const container = document.getElementById('adminToastContainer');
     if (!container) return;
@@ -1087,7 +1456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 3500);
   }
 
-  // ================= 11. دوال مساعدة (HELPERS) =================
+  // ================= 13. دوال مساعدة (HELPERS) =================
   function setVal(id, val) {
     const el = document.getElementById(id);
     if (el) el.value = val !== undefined && val !== null ? val : '';
@@ -1106,6 +1475,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  function formatDate(isoStr) {
+    if (!isoStr) return 'اليوم';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return isoStr;
+    }
+  }
+
+  function getStatusLabel(status) {
+    switch (status) {
+      case 'pending': return 'قيد المراجعة';
+      case 'confirmed': return 'تم التأكيد';
+      case 'shipped': return 'جاري الشحن';
+      case 'delivered': return 'تم التسليم';
+      case 'cancelled': return 'ملغي';
+      default: return status;
+    }
   }
 
   // انطلاق التشغيل
