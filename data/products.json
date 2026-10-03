@@ -1,59 +1,5 @@
 [
   {
-    "id": "sokhm-garment-291",
-    "name": "saassasa",
-    "slug": "sokhm-garment-291",
-    "subtitle": "",
-    "category": "jackets",
-    "category_id": "jackets",
-    "price": 1850,
-    "badge": "",
-    "image": "assets/sokhm-card-1.jpg",
-    "images": [
-      "assets/sokhm-card-1.jpg",
-      "assets/sokhm-card-2.jpg"
-    ],
-    "sizes": [
-      "M",
-      "L",
-      "XL"
-    ],
-    "shortDesc": "",
-    "short_desc": "",
-    "description": "تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.",
-    "fabric": "",
-    "fitAdvice": "",
-    "fit_advice": "",
-    "careAdvice": "",
-    "care_advice": "",
-    "colors": [
-      {
-        "name": "أسود فحمي / Onyx Black",
-        "hex": "#0B0B0B",
-        "image": "assets/sokhm-card-1.jpg",
-        "isMain": true
-      },
-      {
-        "name": "بيج رملي / Sand Cream",
-        "hex": "#D6CDBF",
-        "image": "assets/sokhm-card-2.jpg",
-        "isMain": false
-      }
-    ],
-    "modelInfo": "",
-    "model_info": "",
-    "stockStatus": "in_stock",
-    "stock_status": "in_stock",
-    "sortOrder": 0,
-    "sort_order": 0,
-    "show_on_homepage": true,
-    "showOnHomepage": true,
-    "createdAt": "2026-10-03 22:09:25",
-    "created_at": "2026-10-03 22:09:25",
-    "updatedAt": "2026-10-03 22:09:25",
-    "updated_at": "2026-10-03 22:09:25"
-  },
-  {
     "id": "sokhm-noir-03",
     "name": "COMBAT HOODIE",
     "slug": "sokhm-noir-03",
@@ -107,6 +53,60 @@
     "created_at": "2026-10-03 18:34:18",
     "updatedAt": "2026-10-03 18:34:18",
     "updated_at": "2026-10-03 18:34:18"
+  },
+  {
+    "id": "sokhm-garment-291",
+    "name": "saassasa",
+    "slug": "sokhm-garment-291",
+    "subtitle": "",
+    "category": "jackets",
+    "category_id": "jackets",
+    "price": 1850,
+    "badge": "",
+    "image": "assets/sokhm-card-1.jpg",
+    "images": [
+      "assets/sokhm-card-1.jpg",
+      "assets/sokhm-card-2.jpg"
+    ],
+    "sizes": [
+      "M",
+      "L",
+      "XL"
+    ],
+    "shortDesc": "",
+    "short_desc": "",
+    "description": "تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.",
+    "fabric": "",
+    "fitAdvice": "",
+    "fit_advice": "",
+    "careAdvice": "",
+    "care_advice": "",
+    "colors": [
+      {
+        "name": "أسود فحمي / Onyx Black",
+        "hex": "#0B0B0B",
+        "image": "assets/sokhm-card-1.jpg",
+        "isMain": true
+      },
+      {
+        "name": "بيج رملي / Sand Cream",
+        "hex": "#D6CDBF",
+        "image": "assets/sokhm-card-2.jpg",
+        "isMain": false
+      }
+    ],
+    "modelInfo": "",
+    "model_info": "",
+    "stockStatus": "in_stock",
+    "stock_status": "in_stock",
+    "sortOrder": 0,
+    "sort_order": 0,
+    "show_on_homepage": true,
+    "showOnHomepage": true,
+    "createdAt": "2026-10-03 22:09:25",
+    "created_at": "2026-10-03 22:09:25",
+    "updatedAt": "2026-10-03 22:09:25",
+    "updated_at": "2026-10-03 22:09:25"
   },
   {
     "id": "sokhm-garment-657",

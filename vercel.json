@@ -6,5 +6,25 @@
     { "source": "/admin-sokhm", "destination": "/admin-sokhm/index.html" },
     { "source": "/admin-sokhm/", "destination": "/admin-sokhm/index.html" },
     { "source": "/admin.html", "destination": "/admin-sokhm/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(js|admin-sokhm/js)/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate" }
+      ]
+    }
   ]
 }
