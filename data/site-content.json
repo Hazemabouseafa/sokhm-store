@@ -134,6 +134,29 @@
       "checkout": "CHECKOUT"
     }
   },
+  "checkout": {
+    "title": "✦ SOKHM ATELIER // إتمام الشراء الفاخر",
+    "subtitle": "يرجى استيفاء بيانات التوصيل بدقة لضمان سرعة وصول الشحنة",
+    "codTitle": "الدفع نقدياً عند الاستلام (COD)",
+    "codSubtitle": "معاينة القطع قبل الدفع متاحة مع مندوب التوصيل.",
+    "shippingRuleText": "شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر",
+    "freeShippingThreshold": 2500,
+    "standardShippingFee": 75,
+    "submitButtonText": "تأكيد الطلب الآن",
+    "trustHighlights": [
+      "500 GSM قطن مصري فاخر فائق الكثافة",
+      "شحن سريع لجميع المحافظات خلال 24-48 ساعة",
+      "سياسة استبدال واسترجاع سلسة لمدة 30 يوم"
+    ],
+    "successTitle": "تم استلام وتأكيد طلبك بنجاح!",
+    "successSubtitle": "شكراً لاختيارك ✦ SOKHM ATELIER. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.",
+    "whatsappPhone": "01098765432",
+    "whatsappButtonText": "متابعة الطلب عبر WhatsApp"
+  },
+  "visibility": {
+    "homepage.hero.subtitle": true,
+    "checkout.codBox": true
+  },
   "categories": [
     {
       "id": "hoodies",

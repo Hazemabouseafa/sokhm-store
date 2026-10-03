@@ -53,12 +53,12 @@
             </svg>
             <div>
               <h3 class="font-bold text-sm text-white flex items-center gap-2">
-                <span>✦ SOKHM ATELIER // إتمام الشراء</span>
-                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#161616] text-neutral-400 border border-[#262626]">الدفع عند الاستلام</span>
+                <span id="coModalHeaderTitle" data-cms="checkout.title">✦ SOKHM ATELIER // إتمام الشراء</span>
+                <span id="coModalHeaderBadge" data-cms="checkout.codTitle" data-cms-vis="checkout.codTitle" class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#161616] text-neutral-400 border border-[#262626]">الدفع عند الاستلام</span>
               </h3>
             </div>
           </div>
-          <button id="closeCheckoutModalBtn" type="button" class="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-[#1A1A1A] transition-colors cursor-pointer">
+          <button id="closeCheckoutModalBtn" type="button" class="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-[#1A1A1A] transition-colors cursor-pointer" aria-label="إغلاق">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
@@ -72,9 +72,9 @@
               <div class="pb-2 border-b border-[#1A1A1A]">
                 <h4 class="font-bold text-sm text-white flex items-center gap-2">
                   <i data-lucide="user" class="w-4 h-4 text-neutral-300"></i>
-                  <span>بيانات العميل وعنوان الشحن</span>
+                  <span id="coFormTitle" data-cms="checkout.title">بيانات العميل وعنوان الشحن</span>
                 </h4>
-                <p class="text-[11px] text-neutral-400 mt-0.5">يرجى كتابة البيانات بدقة لضمان سرعة تواصل مندوب الشحن وتوصيل الطلب.</p>
+                <p id="coFormSubtitle" data-cms="checkout.subtitle" class="text-[11px] text-neutral-400 mt-0.5">يرجى كتابة البيانات بدقة لضمان سرعة تواصل مندوب الشحن وتوصيل الطلب.</p>
               </div>
 
               <!-- Full Name -->
@@ -133,7 +133,7 @@
               </div>
 
               <!-- Delivery Notes -->
-              <div>
+              <div id="coNotesContainer" data-cms-vis="checkout.notesContainer">
                 <label class="block text-[11px] font-bold text-neutral-300 mb-1.5">ملاحظات التوصيل (اختياري)</label>
                 <input 
                   type="text" 
@@ -144,14 +144,14 @@
               </div>
 
               <!-- Payment Method Box -->
-              <div class="p-3.5 rounded-xl bg-[#080808] border border-[#222] flex items-center justify-between">
+              <div id="coCodBox" data-cms-vis="checkout.codBox" class="p-3.5 rounded-xl bg-[#080808] border border-[#222] flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-lg bg-emerald-950/40 border border-emerald-800/60 flex items-center justify-center text-emerald-400">
                     <i data-lucide="banknote" class="w-4 h-4"></i>
                   </div>
                   <div>
-                    <h5 class="font-bold text-xs text-white">الدفع نقدياً عند الاستلام (COD)</h5>
-                    <p class="text-[10px] text-neutral-400 mt-0.5">معاينة القطع قبل الدفع متاحة مع مندوب التوصيل.</p>
+                    <h5 id="coCodTitle" data-cms="checkout.codTitle" class="font-bold text-xs text-white">الدفع نقدياً عند الاستلام (COD)</h5>
+                    <p id="coCodSubtitle" data-cms="checkout.codSubtitle" class="text-[10px] text-neutral-400 mt-0.5">معاينة القطع قبل الدفع متاحة مع مندوب التوصيل.</p>
                   </div>
                 </div>
                 <span class="text-[10px] font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-900/60">مفعل</span>
@@ -178,32 +178,33 @@
                 <div class="pt-3 border-t border-[#1A1A1A] space-y-2 text-xs">
                   <div class="flex items-center justify-between text-neutral-400">
                     <span>المجموع الفرعي:</span>
-                    <span id="coSubtotal" class="font-bold text-white font-mono">1,850 ج.م</span>
+                    <span id="coSubtotal" class="font-bold text-white font-mono">0 ج.م</span>
                   </div>
                   <div class="flex items-center justify-between text-neutral-400">
-                    <span>مصاريف الشحن:</span>
+                    <span id="coShippingLabel">مصاريف الشحن:</span>
                     <span id="coShipping" class="font-bold text-emerald-400 font-mono">مجاناً</span>
                   </div>
+                  <p id="coShippingRuleNotice" data-cms="checkout.shippingRuleText" class="text-[10px] text-neutral-400 text-left"></p>
                   <div class="pt-2 border-t border-[#1C1C1C] flex items-center justify-between text-sm font-bold text-white">
                     <span>الإجمالي المستحق:</span>
-                    <span id="coTotal" class="text-base font-extrabold font-mono">1,850 ج.م</span>
+                    <span id="coTotal" class="text-base font-extrabold font-mono">0 ج.م</span>
                   </div>
                 </div>
               </div>
 
               <!-- Trust Highlights -->
-              <div class="space-y-1.5 pt-1 text-[10px] text-neutral-400">
-                <div class="flex items-center gap-1.5 text-neutral-300">
+              <div id="coTrustHighlightsContainer" data-cms-vis="checkout.trustHighlightsContainer" class="space-y-1.5 pt-1 text-[10px] text-neutral-400">
+                <div id="coTrustItem1" data-cms-vis="checkout.trustHighlight1" class="flex items-center gap-1.5 text-neutral-300">
                   <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-                  <span>500 GSM قطن مصري فاخر فائق الكثافة</span>
+                  <span id="coTrustHighlight1" data-cms="checkout.trustHighlights.0">500 GSM قطن مصري فاخر فائق الكثافة</span>
                 </div>
-                <div class="flex items-center gap-1.5 text-neutral-300">
+                <div id="coTrustItem2" data-cms-vis="checkout.trustHighlight2" class="flex items-center gap-1.5 text-neutral-300">
                   <i data-lucide="truck" class="w-3.5 h-3.5 text-emerald-400"></i>
-                  <span>شحن سريع لجميع المحافظات خلال 24-48 ساعة</span>
+                  <span id="coTrustHighlight2" data-cms="checkout.trustHighlights.1">شحن سريع لجميع المحافظات خلال 24-48 ساعة</span>
                 </div>
-                <div class="flex items-center gap-1.5 text-neutral-300">
+                <div id="coTrustItem3" data-cms-vis="checkout.trustHighlight3" class="flex items-center gap-1.5 text-neutral-300">
                   <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-emerald-400"></i>
-                  <span>سياسة استبدال واسترجاع سلسة لمدة 30 يوم</span>
+                  <span id="coTrustHighlight3" data-cms="checkout.trustHighlights.2">سياسة استبدال واسترجاع سلسة لمدة 30 يوم</span>
                 </div>
               </div>
 
@@ -214,7 +215,7 @@
                 class="w-full py-4 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wider hover:bg-neutral-200 transition-all cursor-pointer shadow-xl flex items-center justify-center gap-2"
               >
                 <i data-lucide="check" class="w-4 h-4"></i>
-                <span id="coSubmitBtnText">تأكيد الطلب الآن</span>
+                <span id="coSubmitBtnText" data-cms="checkout.submitButtonText">تأكيد الطلب الآن</span>
               </button>
             </div>
 
@@ -229,8 +230,8 @@
 
           <div class="space-y-1">
             <span class="text-[11px] font-mono tracking-widest text-emerald-400 uppercase font-bold">ORDER CONFIRMED</span>
-            <h3 class="text-2xl font-extrabold text-white">تم استلام وتأكيد طلبك بنجاح!</h3>
-            <p class="text-xs text-neutral-400 max-w-md mx-auto">
+            <h3 id="coSuccessTitle" data-cms="checkout.successTitle" class="text-2xl font-extrabold text-white">تم استلام وتأكيد طلبك بنجاح!</h3>
+            <p id="coSuccessSubtitle" data-cms="checkout.successSubtitle" class="text-xs text-neutral-400 max-w-md mx-auto">
               شكراً لاختيارك <strong class="text-white">✦ SOKHM ATELIER</strong>. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.
             </p>
           </div>
@@ -275,7 +276,7 @@
               class="w-full sm:w-auto px-6 py-3 rounded-full border border-[#2A2A2A] hover:border-emerald-500 bg-[#111] hover:bg-emerald-950/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <i data-lucide="message-circle" class="w-4 h-4"></i>
-              <span>متابعة الطلب عبر WhatsApp</span>
+              <span id="coWhatsappBtnText" data-cms="checkout.whatsappButtonText">متابعة الطلب عبر WhatsApp</span>
             </a>
           </div>
         </div>
@@ -314,10 +315,21 @@
     }
   }
 
+  function getCheckoutConfig() {
+    if (window.sokhmContent && typeof window.sokhmContent.getCheckout === 'function') {
+      return window.sokhmContent.getCheckout() || {};
+    }
+    return {};
+  }
+
   function openCheckoutModal(items) {
     initCheckoutModal();
     const modal = document.getElementById('checkoutModal');
     if (!modal) return;
+
+    if (window.sokhmContent && typeof window.sokhmContent.applyToDOM === 'function') {
+      window.sokhmContent.applyToDOM();
+    }
 
     // Use passed items or read from localStorage cart
     if (Array.isArray(items) && items.length > 0) {
@@ -355,6 +367,7 @@
     const shippingEl = document.getElementById('coShipping');
     const totalEl = document.getElementById('coTotal');
     const btnTextEl = document.getElementById('coSubmitBtnText');
+    const shippingNoticeEl = document.getElementById('coShippingRuleNotice');
 
     if (!listEl) return;
 
@@ -391,19 +404,32 @@
       listEl.appendChild(row);
     });
 
-    // Shipping rules: Free if >= 2500 EGP, else 75 EGP
-    const isFreeShipping = subtotal >= 2500;
-    const shippingFee = isFreeShipping ? 0 : 75;
+    const cfg = getCheckoutConfig();
+    const threshold = typeof cfg.freeShippingThreshold === 'number' ? cfg.freeShippingThreshold : (parseFloat(cfg.freeShippingThreshold) || 2500);
+    const standardFee = typeof cfg.standardShippingFee === 'number' ? cfg.standardShippingFee : (parseFloat(cfg.standardShippingFee) || 75);
+
+    // Shipping calculation
+    const isFreeShipping = subtotal >= threshold;
+    const shippingFee = isFreeShipping ? 0 : standardFee;
     const finalTotal = subtotal + shippingFee;
 
     if (badgeEl) badgeEl.textContent = `${totalCount} ${totalCount === 1 ? 'قطعة' : 'قطع'}`;
     if (subtotalEl) subtotalEl.textContent = `${subtotal.toLocaleString('en-US')} ج.م`;
     if (shippingEl) {
-      shippingEl.textContent = isFreeShipping ? 'مجاناً' : '75 ج.م';
+      shippingEl.textContent = isFreeShipping ? 'مجاناً' : `${shippingFee.toLocaleString('en-US')} ج.م`;
       shippingEl.className = isFreeShipping ? 'font-bold text-emerald-400 font-mono' : 'font-bold text-neutral-300 font-mono';
     }
+    if (shippingNoticeEl) {
+      if (cfg.shippingRuleText) {
+        shippingNoticeEl.textContent = cfg.shippingRuleText;
+      } else {
+        shippingNoticeEl.textContent = `شحن سريع مجاني لجميع الطلبات بقيمة ${threshold.toLocaleString('en-US')} ج.م أو أكثر`;
+      }
+    }
     if (totalEl) totalEl.textContent = `${finalTotal.toLocaleString('en-US')} ج.م`;
-    if (btnTextEl) btnTextEl.textContent = `تأكيد الطلب الآن — ${finalTotal.toLocaleString('en-US')} ج.م`;
+    
+    const baseBtnText = cfg.submitButtonText || 'تأكيد الطلب الآن';
+    if (btnTextEl) btnTextEl.textContent = `${baseBtnText} — ${finalTotal.toLocaleString('en-US')} ج.م`;
   }
 
   async function submitCheckoutOrder() {
@@ -433,12 +459,16 @@
       return;
     }
 
+    const cfg = getCheckoutConfig();
+    const threshold = typeof cfg.freeShippingThreshold === 'number' ? cfg.freeShippingThreshold : (parseFloat(cfg.freeShippingThreshold) || 2500);
+    const standardFee = typeof cfg.standardShippingFee === 'number' ? cfg.standardShippingFee : (parseFloat(cfg.standardShippingFee) || 75);
+
     let subtotal = 0;
     currentOrderItems.forEach(i => {
       const p = typeof i.price === 'number' ? i.price : parseFloat(i.price) || 0;
       subtotal += p * (i.quantity || 1);
     });
-    const shippingFee = subtotal >= 2500 ? 0 : 75;
+    const shippingFee = subtotal >= threshold ? 0 : standardFee;
     const totalPrice = subtotal + shippingFee;
 
     const payload = {
@@ -486,12 +516,14 @@
       document.getElementById('coSuccessTotal').textContent = `${totalPrice.toLocaleString('en-US')} ج.م`;
 
       // WhatsApp Button URL
+      const rawWaPhone = (cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
+      const intlWaPhone = rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : (rawWaPhone.startsWith('2') ? rawWaPhone : ('20' + rawWaPhone));
       const waMsg = encodeURIComponent(
-        `مرحباً SOKHM ATELIER، أود متابعة طلبي رقم: #${orderId}\nالاسم: ${customerName}\nالإجمالي: ${totalPrice} ج.م`
+        `مرحباً SOKHM ATELIER، أود متابعة طلبي رقم: #${orderId}\nالاسم: ${customerName}\nالإجمالي: ${totalPrice.toLocaleString('en-US')} ج.م`
       );
       const waBtn = document.getElementById('coWhatsappBtn');
       if (waBtn) {
-        waBtn.href = `https://wa.me/201098765432?text=${waMsg}`;
+        waBtn.href = `https://wa.me/${intlWaPhone}?text=${waMsg}`;
       }
 
       if (window.lucide) window.lucide.createIcons();

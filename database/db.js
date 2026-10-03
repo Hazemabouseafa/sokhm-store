@@ -7,6 +7,7 @@
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('node:crypto');
 
 // Ensure database directory exists
 const dbDir = path.join(__dirname);
@@ -74,6 +75,24 @@ function initSchema() {
       total_price REAL NOT NULL,
       status TEXT DEFAULT 'pending',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Admin Users Table (Credentials & Authentication)
+    CREATE TABLE IF NOT EXISTS admin_users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      salt TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Admin Sessions Table (Persistent Auth Tokens)
+    CREATE TABLE IF NOT EXISTS admin_sessions (
+      token TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      expires_at DATETIME NOT NULL
     );
   `);
 
@@ -221,6 +240,49 @@ function autoSeed() {
 
     console.log('✓ Initial sample orders seeded successfully');
   }
+
+  // Check if admin user exists, seed default websiteadmin / websiteadmin
+  const userCount = db.prepare('SELECT COUNT(*) AS count FROM admin_users').get();
+  if (userCount.count === 0) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync('websiteadmin', salt, 64).toString('hex');
+    db.prepare(`
+      INSERT INTO admin_users (username, password_hash, salt, created_at, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).run('websiteadmin', hash, salt);
+    console.log('✓ Admin user "websiteadmin" initialized successfully with default credentials.');
+  }
+
+  // Check default checkout content
+  const checkoutCount = db.prepare("SELECT COUNT(*) AS count FROM site_content WHERE section_key = 'checkout'").get();
+  if (checkoutCount.count === 0) {
+    const defaultCheckout = {
+      title: "إتمام الطلب والشحن الفاخر",
+      subtitle: "يرجى استيفاء بيانات التوصيل بدقة لضمان سرعة وصول الشحنة",
+      codTitle: "الدفع نقدياً عند الاستلام (COD)",
+      codSubtitle: "معاينة القطع قبل الدفع متاحة مع مندوب التوصيل.",
+      shippingRuleText: "شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر",
+      freeShippingThreshold: 2500,
+      standardShippingFee: 75,
+      submitButtonText: "تأكيد الطلب الآن",
+      trustHighlights: [
+        "500 GSM قطن مصري فاخر فائق الكثافة",
+        "شحن سريع لجميع المحافظات خلال 24-48 ساعة",
+        "سياسة استبدال واسترجاع سلسة لمدة 30 يوم"
+      ],
+      successTitle: "تم استلام وتأكيد طلبك بنجاح!",
+      successSubtitle: "شكراً لاختيارك ✦ SOKHM ATELIER. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.",
+      whatsappPhone: "01098765432",
+      whatsappButtonText: "متابعة الطلب عبر WhatsApp"
+    };
+    db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('checkout', ?, CURRENT_TIMESTAMP)").run(JSON.stringify(defaultCheckout));
+    console.log('✓ Default checkout configurations initialized');
+  }
+
+  const visCount = db.prepare("SELECT COUNT(*) AS count FROM site_content WHERE section_key = 'visibility'").get();
+  if (visCount.count === 0) {
+    db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('visibility', '{}', CURRENT_TIMESTAMP)").run();
+  }
 }
 
 // Execute initial setup
@@ -247,16 +309,40 @@ function syncJsonBackups(siteContent, productsList) {
 // ================= CRUD REPOSITORY METHODS =================
 
 /**
- * Get unified site content object (homepage, productPage, categories)
+ * Get unified site content object (homepage, productPage, checkout, visibility, categories)
  */
 function getSiteContent() {
   const hpRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'homepage'").get();
   const ppRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'productPage'").get();
+  const chkRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'checkout'").get();
+  const visRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'visibility'").get();
   const catRows = db.prepare("SELECT id, name, slug FROM categories ORDER BY created_at ASC").all();
+
+  const defaultCheckout = {
+    title: "إتمام الطلب والشحن الفاخر",
+    subtitle: "يرجى استيفاء بيانات التوصيل بدقة لضمان سرعة وصول الشحنة",
+    codTitle: "الدفع نقدياً عند الاستلام (COD)",
+    codSubtitle: "معاينة القطع قبل الدفع متاحة مع مندوب التوصيل.",
+    shippingRuleText: "شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر",
+    freeShippingThreshold: 2500,
+    standardShippingFee: 75,
+    submitButtonText: "تأكيد الطلب الآن",
+    trustHighlights: [
+      "500 GSM قطن مصري فاخر فائق الكثافة",
+      "شحن سريع لجميع المحافظات خلال 24-48 ساعة",
+      "سياسة استبدال واسترجاع سلسة لمدة 30 يوم"
+    ],
+    successTitle: "تم استلام وتأكيد طلبك بنجاح!",
+    successSubtitle: "شكراً لاختيارك ✦ SOKHM ATELIER. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.",
+    whatsappPhone: "01098765432",
+    whatsappButtonText: "متابعة الطلب عبر WhatsApp"
+  };
 
   return {
     homepage: hpRow ? JSON.parse(hpRow.content_json) : {},
     productPage: ppRow ? JSON.parse(ppRow.content_json) : {},
+    checkout: chkRow ? JSON.parse(chkRow.content_json) : defaultCheckout,
+    visibility: visRow ? JSON.parse(visRow.content_json) : {},
     categories: catRows.map(c => ({ id: c.id, name: c.name, slug: c.slug }))
   };
 }
@@ -277,6 +363,20 @@ function saveSiteContent(content) {
       INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
       VALUES ('productPage', ?, CURRENT_TIMESTAMP)
     `).run(JSON.stringify(content.productPage));
+  }
+
+  if (content.checkout) {
+    db.prepare(`
+      INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
+      VALUES ('checkout', ?, CURRENT_TIMESTAMP)
+    `).run(JSON.stringify(content.checkout));
+  }
+
+  if (content.visibility) {
+    db.prepare(`
+      INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
+      VALUES ('visibility', ?, CURRENT_TIMESTAMP)
+    `).run(JSON.stringify(content.visibility));
   }
 
   if (Array.isArray(content.categories)) {
@@ -630,6 +730,93 @@ function getStats() {
   };
 }
 
+// ================= AUTHENTICATION & SECURITY =================
+
+function hashPassword(password, salt) {
+  return crypto.scryptSync(password, salt, 64).toString('hex');
+}
+
+/**
+ * Verify admin login credentials
+ */
+function verifyAdminCredentials(username, password) {
+  if (!username || !password) return null;
+  const user = db.prepare('SELECT * FROM admin_users WHERE username = ?').get(username);
+  if (!user) return null;
+
+  try {
+    const testHash = hashPassword(password, user.salt);
+    if (crypto.timingSafeEqual(Buffer.from(testHash, 'hex'), Buffer.from(user.password_hash, 'hex'))) {
+      return { id: user.id, username: user.username };
+    }
+  } catch (e) {
+    console.error('Password verification error:', e);
+  }
+  return null;
+}
+
+/**
+ * Update admin password
+ */
+function updateAdminPassword(username, currentPassword, newPassword) {
+  const verified = verifyAdminCredentials(username, currentPassword);
+  if (!verified) {
+    throw new Error('كلمة المرور الحالية غير صحيحة');
+  }
+
+  if (!newPassword || newPassword.trim().length < 4) {
+    throw new Error('كلمة المرور الجديدة يجب أن تحتوي على 4 خانات على الأقل');
+  }
+
+  const newSalt = crypto.randomBytes(16).toString('hex');
+  const newHash = hashPassword(newPassword.trim(), newSalt);
+
+  db.prepare(`
+    UPDATE admin_users 
+    SET password_hash = ?, salt = ?, updated_at = CURRENT_TIMESTAMP 
+    WHERE username = ?
+  `).run(newHash, newSalt, username);
+
+  return true;
+}
+
+/**
+ * Create a new admin session token (valid for 7 days)
+ */
+function createSession(username) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  
+  db.prepare(`
+    INSERT INTO admin_sessions (token, username, expires_at)
+    VALUES (?, ?, ?)
+  `).run(token, username, expiresAt);
+
+  return { token, username, expiresAt };
+}
+
+/**
+ * Validate an admin session token
+ */
+function validateSession(token) {
+  if (!token) return null;
+  const session = db.prepare(`
+    SELECT * FROM admin_sessions 
+    WHERE token = ? AND expires_at > datetime('now')
+  `).get(token);
+
+  if (!session) return null;
+  return { token: session.token, username: session.username };
+}
+
+/**
+ * Revoke/delete an admin session
+ */
+function revokeSession(token) {
+  if (!token) return;
+  db.prepare('DELETE FROM admin_sessions WHERE token = ?').run(token);
+}
+
 module.exports = {
   db,
   getSiteContent,
@@ -648,5 +835,10 @@ module.exports = {
   updateOrderStatus,
   deleteOrder,
   getOrderStats,
-  getStats
+  getStats,
+  verifyAdminCredentials,
+  updateAdminPassword,
+  createSession,
+  validateSession,
+  revokeSession
 };

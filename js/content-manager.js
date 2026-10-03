@@ -67,17 +67,45 @@
 
   function applyToDOM() {
     if (!siteContent) return;
+    const visibility = siteContent.visibility || {};
+
+    // 1. Apply text content and visibility to [data-cms] elements
     const elements = document.querySelectorAll('[data-cms]');
     elements.forEach(el => {
       const key = el.getAttribute('data-cms');
       const val = getNested(siteContent, key);
+
+      // Check visibility flag
+      const isVisible = visibility[key] !== false;
+      if (!isVisible) {
+        el.style.display = 'none';
+        el.setAttribute('data-cms-hidden', 'true');
+      } else {
+        el.style.display = '';
+        el.removeAttribute('data-cms-hidden');
+      }
+
       if (val !== undefined && val !== null) {
-        // If element has icon inside or children we only replace text node or content
+        // If element has input or textarea
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
           el.value = val;
         } else {
           el.textContent = val;
         }
+      }
+    });
+
+    // 2. Apply visibility to container elements [data-cms-vis]
+    const visContainers = document.querySelectorAll('[data-cms-vis]');
+    visContainers.forEach(container => {
+      const visKey = container.getAttribute('data-cms-vis');
+      const isVisible = visibility[visKey] !== false;
+      if (!isVisible) {
+        container.style.display = 'none';
+        container.setAttribute('data-cms-hidden', 'true');
+      } else {
+        container.style.display = '';
+        container.removeAttribute('data-cms-hidden');
       }
     });
   }
@@ -108,7 +136,12 @@
     set: (path, val) => setNested(siteContent, path, val),
     getAll: () => siteContent,
     applyToDOM: applyToDOM,
-    save: saveContent
+    save: saveContent,
+    isVisible: (key) => {
+      if (!siteContent || !siteContent.visibility) return true;
+      return siteContent.visibility[key] !== false;
+    },
+    getCheckout: () => (siteContent && siteContent.checkout) || {}
   };
 
   if (document.readyState === 'loading') {

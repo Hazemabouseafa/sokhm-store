@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✦ SOKHM ATELIER | تسجيل الدخول للوحة التحكم</title>
+
+  <!-- Google Fonts: Cairo, Tajawal, Cinzel, Space Grotesk -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Cinzel:wght@600;700;800;900&family=Space+Grotesk:wght@500;700&family=Space+Mono:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            noirBg: '#070707',
+            noirCard: '#0E0E0E',
+            noirBorder: '#1A1A1A'
+          },
+          fontFamily: {
+            sans: ['Cairo', 'Tajawal', 'sans-serif'],
+            gothic: ['Cinzel', 'Cairo', 'serif'],
+            mono: ['Space Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      font-family: 'Cairo', 'Tajawal', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #151515 0%, #070707 70%);
+    }
+    ::selection {
+      background-color: #ffffff;
+      color: #000000;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-white flex flex-col justify-between p-4 sm:p-8">
+
+  <!-- Header / Back to store -->
+  <header class="w-full max-w-md mx-auto flex items-center justify-between py-2">
+    <a href="../index.html" class="flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-colors group">
+      <i data-lucide="arrow-right" class="w-4 h-4 transform group-hover:translate-x-1 transition-transform"></i>
+      <span>العودة إلى المتجر</span>
+    </a>
+
+    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#111] border border-[#222] text-[10px] text-neutral-400 font-mono">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+      PORTAL V2.4
+    </span>
+  </header>
+
+  <!-- Center Card -->
+  <main class="w-full max-w-md mx-auto my-auto py-8">
+    <div class="bg-[#0D0D0D] border border-[#1F1F1F] rounded-2xl p-8 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+      
+      <!-- Subtle Accent Border Glow -->
+      <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
+
+      <!-- Brand Logo / Emblem -->
+      <div class="text-center space-y-3 mb-8">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#141414] border border-[#262626] text-white mx-auto shadow-inner">
+          <svg viewBox="0 0 100 120" class="w-7 h-8 text-white fill-current" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-gothic font-bold text-2xl tracking-[0.2em] text-white uppercase">✦ SOKHM</h1>
+          <p class="text-xs text-neutral-400 mt-1 font-medium">بوابة إدارة المتجر ونظام التحكم بالمحتوى</p>
+        </div>
+      </div>
+
+      <!-- Error Message Banner -->
+      <div id="loginErrorAlert" class="hidden mb-6 p-3.5 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs flex items-center gap-3">
+        <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 text-red-400"></i>
+        <span id="loginErrorText">اسم المستخدم أو كلمة المرور غير صحيحة.</span>
+      </div>
+
+      <!-- Success Message Banner -->
+      <div id="loginSuccessAlert" class="hidden mb-6 p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs flex items-center gap-3">
+        <i data-lucide="check-circle" class="w-4 h-4 flex-shrink-0 text-emerald-400"></i>
+        <span>تم تسجيل الدخول بنجاح! جاري الانتقال للوحة التحكم...</span>
+      </div>
+
+      <!-- Login Form -->
+      <form id="adminLoginForm" class="space-y-5">
+        
+        <!-- Username -->
+        <div>
+          <label for="usernameInput" class="block text-xs font-bold text-neutral-300 mb-2">اسم المستخدم (Username)</label>
+          <div class="relative">
+            <input 
+              type="text" 
+              id="usernameInput" 
+              name="username"
+              required 
+              autocomplete="username"
+              placeholder="websiteadmin" 
+              class="w-full bg-[#070707] border border-[#242424] rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-white text-xs font-mono transition-colors"
+            >
+            <i data-lucide="user" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label for="passwordInput" class="block text-xs font-bold text-neutral-300">كلمة المرور (Password)</label>
+            <span class="text-[10px] text-neutral-500 font-mono">الافتراضي: websiteadmin</span>
+          </div>
+          <div class="relative">
+            <input 
+              type="password" 
+              id="passwordInput" 
+              name="password"
+              required 
+              autocomplete="current-password"
+              placeholder="••••••••••••" 
+              class="w-full bg-[#070707] border border-[#242424] rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-white text-xs font-mono transition-colors pl-10"
+            >
+            <button 
+              type="button" 
+              id="togglePasswordBtn" 
+              class="text-neutral-500 hover:text-white p-1 rounded transition-colors absolute left-3 top-1/2 -translate-y-1/2 cursor-pointer"
+              aria-label="إظهار كلمة المرور"
+            >
+              <i id="togglePasswordIcon" data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember Me -->
+        <div class="flex items-center justify-between text-xs text-neutral-400 pt-1">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input 
+              type="checkbox" 
+              id="rememberMeCheckbox" 
+              checked 
+              class="rounded bg-[#111] border-[#333] text-white focus:ring-0 cursor-pointer w-3.5 h-3.5"
+            >
+            <span class="text-[11px]">حفظ الجلسة في هذا المتصفح</span>
+          </label>
+        </div>
+
+        <!-- Submit Button -->
+        <button 
+          type="submit" 
+          id="loginSubmitBtn" 
+          class="w-full py-3.5 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wider hover:bg-neutral-200 transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2 font-sans mt-2"
+        >
+          <i data-lucide="lock" class="w-4 h-4"></i>
+          <span id="loginSubmitBtnText">دخول إلى لوحة التحكم</span>
+        </button>
+
+      </form>
+
+      <!-- Default credentials helper card -->
+      <div class="mt-6 pt-5 border-t border-[#191919] text-center text-[11px] text-neutral-400 space-y-1">
+        <p>بيانات الدخول الافتراضية:</p>
+        <div class="flex items-center justify-center gap-3 font-mono text-[11px] text-white">
+          <span class="bg-[#141414] px-2.5 py-1 rounded border border-[#242424]">user: websiteadmin</span>
+          <span class="bg-[#141414] px-2.5 py-1 rounded border border-[#242424]">pass: websiteadmin</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full max-w-md mx-auto text-center py-4 text-[11px] text-neutral-400">
+    ✦ SOKHM ATELIER &copy; 2026. كل الحقوق محفوظة.
+  </footer>
+
+  <script src="js/login.js"></script>
+</body>
+</html>

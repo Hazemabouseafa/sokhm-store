@@ -45,9 +45,23 @@ function sendJson(res, statusCode, data) {
     'Content-Type': 'application/json; charset=UTF-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token'
   });
   res.end(JSON.stringify(data));
+}
+
+function getBearerToken(req) {
+  const authHeader = req.headers['authorization'] || '';
+  if (authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7).trim();
+  }
+  if (req.headers['x-admin-token']) {
+    return String(req.headers['x-admin-token']).trim();
+  }
+  const cookies = req.headers['cookie'] || '';
+  const match = cookies.match(/sokhm_admin_token=([^;]+)/);
+  if (match) return decodeURIComponent(match[1].trim());
+  return null;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -67,6 +81,84 @@ const server = http.createServer(async (req, res) => {
   // ================= REST API ENDPOINTS (SQLITE DATABASE) =================
   if (pathname.startsWith('/api/')) {
     
+    // 0.1 Admin Login: POST /api/admin/login
+    if (pathname === '/api/admin/login' && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const { username, password } = body;
+        if (!username || !password) {
+          return sendJson(res, 400, { success: false, error: 'يرجى إدخال اسم المستخدم وكلمة المرور' });
+        }
+
+        const verified = db.verifyAdminCredentials(username, password);
+        if (!verified) {
+          return sendJson(res, 401, { success: false, error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+        }
+
+        const session = db.createSession(username);
+        return sendJson(res, 200, {
+          success: true,
+          message: 'تم تسجيل الدخول بنجاح',
+          token: session.token,
+          username: session.username,
+          expiresAt: session.expiresAt
+        });
+      } catch (err) {
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
+    }
+
+    // 0.2 Admin Session Verification: GET /api/admin/verify
+    if (pathname === '/api/admin/verify' && req.method === 'GET') {
+      try {
+        const token = getBearerToken(req);
+        const session = db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { authenticated: false, error: 'انتهت صلاحية الجلسة أو غير مسجل' });
+        }
+        return sendJson(res, 200, { 
+          authenticated: true, 
+          username: session.username,
+          user: { username: session.username }
+        });
+      } catch (err) {
+        return sendJson(res, 500, { authenticated: false, error: err.message });
+      }
+    }
+
+    // 0.3 Admin Change Password: POST /api/admin/change-password
+    if (pathname === '/api/admin/change-password' && req.method === 'POST') {
+      try {
+        const token = getBearerToken(req);
+        const session = db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { success: false, error: 'غير مصرح: يجب تسجيل الدخول أولاً' });
+        }
+
+        const body = await readBody(req);
+        const { currentPassword, newPassword } = body;
+        if (!currentPassword || !newPassword) {
+          return sendJson(res, 400, { success: false, error: 'يرجى تقديم كلمة المرور الحالية والجديدة' });
+        }
+
+        db.updateAdminPassword(session.username, currentPassword, newPassword);
+        return sendJson(res, 200, { success: true, message: 'تم تحديث كلمة المرور بنجاح في قاعدة البيانات' });
+      } catch (err) {
+        return sendJson(res, 400, { success: false, error: err.message });
+      }
+    }
+
+    // 0.4 Admin Logout: POST /api/admin/logout
+    if (pathname === '/api/admin/logout' && req.method === 'POST') {
+      try {
+        const token = getBearerToken(req);
+        if (token) db.revokeSession(token);
+        return sendJson(res, 200, { success: true, message: 'تم تسجيل الخروج بنجاح' });
+      } catch (err) {
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
+    }
+
     // 1. GET /api/site-content
     if (pathname === '/api/site-content' && req.method === 'GET') {
       try {
@@ -253,6 +345,11 @@ const server = http.createServer(async (req, res) => {
   let reqPath = pathname;
   if (reqPath === '/' || reqPath === '') {
     reqPath = '/index.html';
+  } else if (reqPath === '/admin.html' || reqPath === '/admin-sokhm') {
+    res.writeHead(302, { Location: '/admin-sokhm/' });
+    return res.end();
+  } else if (reqPath === '/admin-sokhm/') {
+    reqPath = '/admin-sokhm/index.html';
   }
 
   const filePath = path.join(__dirname, reqPath);
@@ -262,10 +359,10 @@ const server = http.createServer(async (req, res) => {
   fs.readFile(filePath, (err, content) => {
     if (err) {
       if (err.code === 'ENOENT') {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=UTF-8' });
         res.end('404 Not Found: ' + reqPath);
       } else {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=UTF-8' });
         res.end('500 Server Error: ' + err.code);
       }
     } else {
@@ -278,5 +375,5 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`SOKHM STORE with CMS API is live at http://localhost:${PORT}`);
   console.log(`Storefront: http://localhost:${PORT}/index.html`);
-  console.log(`Admin Panel: http://localhost:${PORT}/admin.html`);
+  console.log(`Admin Portal: http://localhost:${PORT}/admin-sokhm/`);
 });
