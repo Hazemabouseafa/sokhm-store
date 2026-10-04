@@ -793,6 +793,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     setVal('hp_hero_desc', hp.hero?.description || hp.hero?.narrative);
     setVal('hp_hero_scroll', hp.hero?.scrollLabel || hp.hero?.scroll);
 
+    // صورة خلفية الهيرو (Hero Background Image)
+    const heroImg = hp.hero?.image || hp.hero?.backgroundImage || 'assets/sokhm-noir-hero.jpg';
+    setVal('hp_hero_image', heroImg);
+    const heroPrevEl = document.getElementById('hpHeroImagePreview');
+    if (heroPrevEl) {
+      const displaySrc = heroImg.startsWith('http') || heroImg.startsWith('data:') 
+        ? heroImg 
+        : (heroImg.startsWith('../') ? heroImg : '../' + heroImg.replace(/^\//, ''));
+      heroPrevEl.src = displaySrc;
+    }
+
     bindVisCheckbox('vis_hp_hero_kicker', 'homepage.hero.kicker');
     bindVisCheckbox('vis_hp_hero_title', 'homepage.hero.title');
     bindVisCheckbox('vis_hp_hero_subtitle', 'homepage.hero.subtitle');
@@ -842,6 +853,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     const saveBtn = document.getElementById('saveHomepageBtn');
     if (!saveBtn) return;
 
+    // تحكم رفع وتغيير صورة خلفية الهيرو
+    const heroFileInput = document.getElementById('hpHeroImageFileInput');
+    const heroImageInput = document.getElementById('hp_hero_image');
+    const heroPreview = document.getElementById('hpHeroImagePreview');
+    const resetHeroBtn = document.getElementById('resetHeroImageBtn');
+
+    if (heroFileInput) {
+      heroFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+          showToast('جاري ضغط ورفع صورة الهيرو...');
+          const uploadedUrl = await uploadImageFile(file);
+          if (uploadedUrl) {
+            if (heroImageInput) heroImageInput.value = uploadedUrl;
+            if (heroPreview) {
+              heroPreview.src = uploadedUrl.startsWith('http') || uploadedUrl.startsWith('data:')
+                ? uploadedUrl
+                : (uploadedUrl.startsWith('../') ? uploadedUrl : '../' + uploadedUrl.replace(/^\//, ''));
+            }
+            showToast('تم رفع صورة الهيرو بنجاح! لا تنسَ الضغط على حفظ التعديلات.');
+          }
+        } catch (err) {
+          console.error('Error uploading hero image:', err);
+          showToast('حدث خطأ أثناء رفع صورة الهيرو');
+        }
+      });
+    }
+
+    if (heroImageInput && heroPreview) {
+      heroImageInput.addEventListener('input', () => {
+        const val = heroImageInput.value.trim();
+        if (val) {
+          heroPreview.src = val.startsWith('http') || val.startsWith('data:')
+            ? val
+            : (val.startsWith('../') ? val : '../' + val.replace(/^\//, ''));
+        } else {
+          heroPreview.src = '../assets/sokhm-noir-hero.jpg';
+        }
+      });
+    }
+
+    if (resetHeroBtn) {
+      resetHeroBtn.addEventListener('click', () => {
+        const defaultImg = 'assets/sokhm-noir-hero.jpg';
+        if (heroImageInput) heroImageInput.value = defaultImg;
+        if (heroPreview) heroPreview.src = '../' + defaultImg;
+        showToast('تمت استعادة صورة الهيرو الافتراضية. اضغط حفظ لتطبيق التغيير.');
+      });
+    }
+
     saveBtn.addEventListener('click', async () => {
       if (!siteContent.homepage) siteContent.homepage = {};
       const hp = siteContent.homepage;
@@ -854,6 +916,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       hp.hero.cta = hp.hero.ctaText = getVal('hp_hero_cta');
       hp.hero.narrative = hp.hero.description = getVal('hp_hero_desc');
       hp.hero.scroll = hp.hero.scrollLabel = getVal('hp_hero_scroll');
+      hp.hero.image = hp.hero.backgroundImage = getVal('hp_hero_image') || 'assets/sokhm-noir-hero.jpg';
 
       // 2. شريط المزايا
       hp.valueBar = hp.valueBar || [];

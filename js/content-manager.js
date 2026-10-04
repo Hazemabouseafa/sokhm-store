@@ -108,6 +108,25 @@
         container.removeAttribute('data-cms-hidden');
       }
     });
+
+    // 3. Apply background images [data-cms-bg]
+    const bgElements = document.querySelectorAll('[data-cms-bg]');
+    bgElements.forEach(el => {
+      const key = el.getAttribute('data-cms-bg');
+      const val = getNested(siteContent, key, null);
+      if (val && typeof val === 'string' && val.trim() !== '') {
+        el.style.backgroundImage = `url('${val}')`;
+      }
+    });
+
+    // 4. Guaranteed Hero Background Image Binding
+    const heroEl = document.getElementById('hero');
+    if (heroEl) {
+      const heroBg = getNested(siteContent, 'homepage.hero.image', null) || getNested(siteContent, 'homepage.hero.backgroundImage', null);
+      if (heroBg && typeof heroBg === 'string' && heroBg.trim() !== '') {
+        heroEl.style.backgroundImage = `url('${heroBg}')`;
+      }
+    }
   }
 
   async function saveContent(updatedContent) {

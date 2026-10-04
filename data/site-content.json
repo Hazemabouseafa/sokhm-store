@@ -26,7 +26,8 @@
       "scrollLabel": "SCROLL",
       "cta": "SHOP NOW",
       "narrative": "Premium streetwear for those who move different. Timeless designs. Superior quality. A mindset, not just a brand.",
-      "scroll": "SCROLL"
+      "scroll": "SCROLL",
+      "image": "assets/sokhm-noir-hero.jpg"
     },
     "valueBar": [
       {
