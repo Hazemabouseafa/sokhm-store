@@ -302,3 +302,20 @@ dialog::backdrop {
   background-color: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(5px);
 }
+
+/* Products Dropdown & Mobile Nav Drawer */
+#navCategoriesDropdown.show-dropdown {
+  opacity: 1 !important;
+  transform: translate(-50%, 0) !important;
+  pointer-events: auto !important;
+}
+
+#mobileNavDrawer.open {
+  transform: translateX(0) !important;
+}
+
+#mobileNavBackdrop.open {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+

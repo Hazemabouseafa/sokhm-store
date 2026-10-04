@@ -365,6 +365,19 @@ module.exports = async (req, res) => {
       }
     }
 
+    const discResetMatch = pathname.match(/^\/api\/discounts\/([^\/]+)\/reset$/);
+    if ((discResetMatch || pathname === '/api/discounts/reset') && (req.method === 'PUT' || req.method === 'POST')) {
+      const body = await parseBody(req);
+      const id = discResetMatch ? discResetMatch[1] : body.id;
+      if (!id) return sendJson(res, 400, { error: 'Missing discount id' });
+      try {
+        const resObj = await db.resetDiscountUsage(id);
+        return sendJson(res, 200, { success: true, ...resObj });
+      } catch (e) {
+        return sendJson(res, 400, { error: e.message });
+      }
+    }
+
     // 6. Stats
     if (pathname === '/api/stats' && req.method === 'GET') {
       const stats = await db.getStats();

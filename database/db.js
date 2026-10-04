@@ -134,9 +134,16 @@ function initSchema() {
       min_order_amount REAL DEFAULT 0,
       is_active INTEGER DEFAULT 1,
       usage_count INTEGER DEFAULT 0,
+      max_uses INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try {
+    db.exec('ALTER TABLE discount_codes ADD COLUMN max_uses INTEGER DEFAULT 0;');
+  } catch (e) {
+    // Column already exists
+  }
 
   try {
     db.exec('ALTER TABLE orders ADD COLUMN customer_notes TEXT;');
@@ -926,6 +933,8 @@ function getDiscounts() {
       is_active: Boolean(r.is_active),
       usageCount: r.usage_count || 0,
       usage_count: r.usage_count || 0,
+      maxUses: Number(r.max_uses || 0),
+      max_uses: Number(r.max_uses || 0),
       createdAt: normalizeUtcDate(r.created_at),
       created_at: normalizeUtcDate(r.created_at),
       created_at_cairo: formatCairoDateTime(r.created_at)
@@ -945,13 +954,14 @@ function createDiscount(data) {
   const discountValue = Number(data.discountValue || data.discount_value) || 0;
   if (discountValue <= 0) throw new Error('يرجى تحديد قيمة خصم صالحة');
   const minOrderAmount = Number(data.minOrderAmount || data.min_order_amount) || 0;
+  const maxUses = Math.max(0, parseInt(data.maxUses || data.max_uses) || 0);
   const id = 'disc_' + Date.now();
   const nowIso = new Date().toISOString();
 
   db.prepare(`
-    INSERT INTO discount_codes (id, code, discount_type, discount_value, min_order_amount, is_active, usage_count, created_at)
-    VALUES (?, ?, ?, ?, ?, 1, 0, ?)
-  `).run(id, code, discountType, discountValue, minOrderAmount, nowIso);
+    INSERT INTO discount_codes (id, code, discount_type, discount_value, min_order_amount, is_active, usage_count, max_uses, created_at)
+    VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?)
+  `).run(id, code, discountType, discountValue, minOrderAmount, maxUses, nowIso);
 
   return {
     id,
@@ -961,6 +971,7 @@ function createDiscount(data) {
     min_order_amount: minOrderAmount,
     is_active: true,
     usage_count: 0,
+    max_uses: maxUses,
     created_at: nowIso
   };
 }
@@ -1002,6 +1013,14 @@ function validateDiscount(code, subtotal = 0) {
   if (!disc.is_active) {
     return { valid: false, error: 'كود الخصم غير مفعل حالياً' };
   }
+  const maxUses = Number(disc.max_uses) || 0;
+  const currentUses = Number(disc.usage_count) || 0;
+  if (maxUses > 0 && currentUses >= maxUses) {
+    return {
+      valid: false,
+      error: `تم استنفاد الحد الأقصى لمرات استخدام هذا الكود (${maxUses} مرات)`
+    };
+  }
   const minOrder = Number(disc.min_order_amount) || 0;
   if (minOrder > 0 && subtotal < minOrder) {
     return { 
@@ -1036,6 +1055,17 @@ function recordDiscountUsage(code) {
   try {
     db.prepare("UPDATE discount_codes SET usage_count = usage_count + 1 WHERE UPPER(code) = ?").run(cleanCode);
   } catch (e) {}
+}
+
+/**
+ * Discount Codes: Reset usage count
+ */
+function resetDiscountUsage(id) {
+  const cleanId = String(id || '').trim();
+  try {
+    db.prepare("UPDATE discount_codes SET usage_count = 0 WHERE id = ? OR UPPER(code) = UPPER(?)").run(cleanId, cleanId);
+  } catch (e) {}
+  return { success: true, message: 'Usage count reset to 0' };
 }
 
 /**
@@ -1258,6 +1288,7 @@ module.exports = {
   toggleDiscount,
   validateDiscount,
   recordDiscountUsage,
+  resetDiscountUsage,
   getStats,
   seedTursoDatabase: async () => ({ success: true, message: 'Native SQLite already initialized' }),
   verifyAdminCredentials,

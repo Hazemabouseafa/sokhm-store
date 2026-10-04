@@ -219,9 +219,14 @@ async function initNeonSchema() {
         min_order_amount DOUBLE PRECISION DEFAULT 0,
         is_active INTEGER DEFAULT 1,
         usage_count INTEGER DEFAULT 0,
+        max_uses INTEGER DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    try {
+      await sql.query('ALTER TABLE discount_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 0');
+    } catch (migErr) {}
 
     // Ensure default admin user websiteadmin
     const userCheck = await sql.query('SELECT COUNT(*) as count FROM admin_users WHERE LOWER(TRIM(username)) = $1', ['websiteadmin']);
@@ -995,6 +1000,8 @@ async function getDiscounts() {
           isActive: Boolean(Number(r.is_active)),
           usage_count: Number(r.usage_count || 0),
           usageCount: Number(r.usage_count || 0),
+          max_uses: Number(r.max_uses || 0),
+          maxUses: Number(r.max_uses || 0),
           created_at: normalizeUtcDate(r.created_at),
           createdAt: normalizeUtcDate(r.created_at),
           created_at_cairo: formatCairoDateTime(r.created_at)
@@ -1014,6 +1021,7 @@ async function createDiscount(data) {
   const discountValue = Number(data.discountValue || data.discount_value) || 0;
   if (discountValue <= 0) throw new Error('يرجى تحديد قيمة خصم صالحة');
   const minOrderAmount = Number(data.minOrderAmount || data.min_order_amount) || 0;
+  const maxUses = Math.max(0, parseInt(data.maxUses || data.max_uses) || 0);
   const id = 'disc_' + Date.now();
   const nowIso = new Date().toISOString();
 
@@ -1022,9 +1030,9 @@ async function createDiscount(data) {
     try {
       await initNeonSchema();
       await sql.query(`
-        INSERT INTO discount_codes (id, code, discount_type, discount_value, min_order_amount, is_active, usage_count, created_at)
-        VALUES ($1, $2, $3, $4, $5, 1, 0, $6)
-      `, [id, code, discountType, discountValue, minOrderAmount, nowIso]);
+        INSERT INTO discount_codes (id, code, discount_type, discount_value, min_order_amount, is_active, usage_count, max_uses, created_at)
+        VALUES ($1, $2, $3, $4, $5, 1, 0, $6, $7)
+      `, [id, code, discountType, discountValue, minOrderAmount, maxUses, nowIso]);
     } catch (err) {
       console.error('Neon createDiscount error:', err.message);
     }
@@ -1043,6 +1051,8 @@ async function createDiscount(data) {
     isActive: true,
     usage_count: 0,
     usageCount: 0,
+    max_uses: maxUses,
+    maxUses,
     created_at: nowIso,
     createdAt: nowIso,
     created_at_cairo: formatCairoDateTime(nowIso)
@@ -1098,6 +1108,14 @@ async function validateDiscount(code, subtotal = 0) {
   if (!disc.is_active && !disc.isActive) {
     return { valid: false, error: 'كود الخصم غير مفعل حالياً' };
   }
+  const maxUses = Number(disc.max_uses || disc.maxUses) || 0;
+  const currentUses = Number(disc.usage_count || disc.usageCount) || 0;
+  if (maxUses > 0 && currentUses >= maxUses) {
+    return {
+      valid: false,
+      error: `تم استنفاد الحد الأقصى لمرات استخدام هذا الكود (${maxUses} مرات)`
+    };
+  }
   const minOrder = Number(disc.min_order_amount || disc.minOrderAmount) || 0;
   if (minOrder > 0 && subtotal < minOrder) {
     return { 
@@ -1141,6 +1159,25 @@ async function recordDiscountUsage(code) {
     d.usage_count = (d.usage_count || 0) + 1;
     d.usageCount = d.usage_count;
   }
+}
+
+async function resetDiscountUsage(id) {
+  const cleanId = String(id || '').trim();
+  const sql = getSql();
+  if (sql) {
+    try {
+      await initNeonSchema();
+      await sql.query('UPDATE discount_codes SET usage_count = 0 WHERE id = $1 OR UPPER(code) = UPPER($1)', [cleanId]);
+    } catch (err) {
+      console.error('Neon resetDiscountUsage error:', err.message);
+    }
+  }
+  const d = fallbackDiscounts.find(x => x.id === cleanId || x.code.toUpperCase() === cleanId.toUpperCase());
+  if (d) {
+    d.usage_count = 0;
+    d.usageCount = 0;
+  }
+  return { success: true, message: 'Usage count reset to 0' };
 }
 
 // ================= AUTHENTICATION METHODS =================
@@ -1404,6 +1441,7 @@ module.exports = {
   toggleDiscount,
   validateDiscount,
   recordDiscountUsage,
+  resetDiscountUsage,
   verifyAdminCredentials,
   updateAdminPassword,
   createSession,

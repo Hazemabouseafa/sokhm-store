@@ -446,6 +446,20 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 17.5 Discounts: PUT /api/discounts/:id/reset or POST /api/discounts/reset
+    const discResetMatch = pathname.match(/^\/api\/discounts\/([^\/]+)\/reset$/);
+    if ((discResetMatch || pathname === '/api/discounts/reset') && (req.method === 'PUT' || req.method === 'POST')) {
+      try {
+        const body = await readBody(req);
+        const id = discResetMatch ? discResetMatch[1] : body.id;
+        if (!id) return sendJson(res, 400, { error: 'Missing discount id' });
+        const resObj = await db.resetDiscountUsage(id);
+        return sendJson(res, 200, { success: true, ...resObj });
+      } catch (e) {
+        return sendJson(res, 400, { error: e.message });
+      }
+    }
+
     // 5. POST /api/upload-image
     if (pathname === '/api/upload-image' && req.method === 'POST') {
       try {

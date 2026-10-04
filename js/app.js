@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = await apiRes.json();
         if (Array.isArray(data)) {
           products = data;
+          await loadCategories();
           renderBestSellers();
           return;
         }
@@ -156,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       ];
     }
-    loadCategories();
+    await loadCategories();
     renderBestSellers();
   }
 
@@ -182,41 +183,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderCategoryFilters();
   }
 
+  function closeAllNavDropdowns() {
+    const navCategoriesDropdown = document.getElementById('navCategoriesDropdown');
+    if (navCategoriesDropdown) navCategoriesDropdown.classList.remove('show-dropdown');
+
+    const mobileQuickDropdown = document.getElementById('mobileQuickProductsDropdown');
+    const mobileQuickChevron = document.getElementById('mobileQuickProductsChevron');
+    if (mobileQuickDropdown) mobileQuickDropdown.classList.add('hidden');
+    if (mobileQuickChevron) mobileQuickChevron.classList.remove('rotate-180');
+
+    const mobileNavDrawer = document.getElementById('mobileNavDrawer');
+    const mobileNavBackdrop = document.getElementById('mobileNavBackdrop');
+    if (mobileNavDrawer) mobileNavDrawer.classList.remove('open');
+    if (mobileNavBackdrop) mobileNavBackdrop.classList.remove('open');
+    document.body.classList.remove('overflow-hidden');
+  }
+
   function renderCategoryFilters() {
     const navList = document.getElementById('navCategoriesList');
+    const mobileQuickList = document.getElementById('mobileQuickCategoriesList');
+    const mobileDrawerList = document.getElementById('mobileDrawerCategoriesList');
     const filterBar = document.getElementById('categoryFilterBar');
 
-    if (navList) {
-      navList.innerHTML = categories.map(c => `
-        <a href="#collection" data-nav-category="${c.slug || c.id}" class="nav-category-link flex items-center justify-between px-3 py-2 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 text-xs font-mono transition-all">
-          <span>${c.name}</span>
-          <i data-lucide="chevron-left" class="w-3 h-3 text-neutral-500"></i>
-        </a>
-      `).join('');
+    const isAll = activeCategory === 'all';
 
-      navList.querySelectorAll('.nav-category-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          const cat = link.getAttribute('data-nav-category');
-          selectCategory(cat);
-          const col = document.getElementById('collection');
-          if (col) col.scrollIntoView({ behavior: 'smooth' });
-        });
-      });
+    function generateCategoryHtml(c) {
+      const slug = (c.slug || c.id || '').toLowerCase();
+      const isActive = activeCategory.toLowerCase() === slug;
+      return `
+        <a href="#collection" data-nav-category="${slug}" class="nav-category-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono transition-all ${isActive ? 'bg-white text-black font-bold' : 'text-neutral-300 hover:text-white hover:bg-neutral-900'}">
+          <span>✦ ${c.name.toUpperCase()}</span>
+          <i data-lucide="chevron-right" class="w-3 h-3 ${isActive ? 'text-black' : 'text-neutral-500'}"></i>
+        </a>
+      `;
     }
 
-    const allNavBtn = document.querySelector('[data-nav-category="all"]');
-    if (allNavBtn) {
-      allNavBtn.onclick = (e) => {
+    const itemsHtml = categories.map(c => generateCategoryHtml(c)).join('');
+
+    // 1. Desktop Dropdown List
+    if (navList) {
+      navList.innerHTML = itemsHtml;
+    }
+
+    // 2. Mobile Quick Header Dropdown List
+    if (mobileQuickList) {
+      mobileQuickList.innerHTML = itemsHtml;
+    }
+
+    // 3. Mobile Navigation Drawer Droplist
+    if (mobileDrawerList) {
+      mobileDrawerList.innerHTML = itemsHtml;
+    }
+
+    // Bind click events on all category links (desktop, mobile quick, mobile drawer)
+    document.querySelectorAll('[data-nav-category]').forEach(link => {
+      link.onclick = (e) => {
         e.preventDefault();
-        selectCategory('all');
+        const cat = link.getAttribute('data-nav-category');
+        selectCategory(cat);
+        closeAllNavDropdowns();
         const col = document.getElementById('collection');
         if (col) col.scrollIntoView({ behavior: 'smooth' });
       };
-    }
+    });
 
+    // 4. Collection Section Filter Bar
     if (filterBar) {
-      const isAll = activeCategory === 'all';
       filterBar.innerHTML = `
         <button type="button" class="cat-pill ${isAll ? 'active px-4 py-2 rounded-full border border-white bg-white text-black font-bold uppercase transition-all whitespace-nowrap cursor-pointer shadow-sm' : 'px-4 py-2 rounded-full border border-[#222] bg-[#0E0E0E] text-neutral-400 hover:text-white hover:border-neutral-600 font-bold uppercase transition-all whitespace-nowrap cursor-pointer'}" data-category="all">
           <span>ALL</span>
@@ -241,6 +273,85 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (window.lucide) window.lucide.createIcons();
   }
+
+  function setupNavigationEvents() {
+    // 1. Desktop PRODUCTS Dropdown Toggle on Click
+    const navProductsBtn = document.getElementById('navProductsBtn');
+    const navCategoriesDropdown = document.getElementById('navCategoriesDropdown');
+    if (navProductsBtn && navCategoriesDropdown) {
+      navProductsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        navCategoriesDropdown.classList.toggle('show-dropdown');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!navProductsBtn.contains(e.target) && !navCategoriesDropdown.contains(e.target)) {
+          navCategoriesDropdown.classList.remove('show-dropdown');
+        }
+      });
+    }
+
+    // 2. Mobile Quick PRODUCTS Dropdown Toggle
+    const mobileQuickBtn = document.getElementById('mobileQuickProductsBtn');
+    const mobileQuickDropdown = document.getElementById('mobileQuickProductsDropdown');
+    const mobileQuickChevron = document.getElementById('mobileQuickProductsChevron');
+    if (mobileQuickBtn && mobileQuickDropdown) {
+      mobileQuickBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = mobileQuickDropdown.classList.contains('hidden');
+        if (isHidden) {
+          mobileQuickDropdown.classList.remove('hidden');
+          if (mobileQuickChevron) mobileQuickChevron.classList.add('rotate-180');
+        } else {
+          mobileQuickDropdown.classList.add('hidden');
+          if (mobileQuickChevron) mobileQuickChevron.classList.remove('rotate-180');
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!mobileQuickBtn.contains(e.target) && !mobileQuickDropdown.contains(e.target)) {
+          mobileQuickDropdown.classList.add('hidden');
+          if (mobileQuickChevron) mobileQuickChevron.classList.remove('rotate-180');
+        }
+      });
+    }
+
+    // 3. Mobile Navigation Drawer
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const closeMobileNavBtn = document.getElementById('closeMobileNavBtn');
+    const mobileNavDrawer = document.getElementById('mobileNavDrawer');
+    const mobileNavBackdrop = document.getElementById('mobileNavBackdrop');
+
+    function openDrawer() {
+      if (mobileNavDrawer) mobileNavDrawer.classList.add('open');
+      if (mobileNavBackdrop) mobileNavBackdrop.classList.add('open');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openDrawer);
+    if (closeMobileNavBtn) closeMobileNavBtn.addEventListener('click', closeAllNavDropdowns);
+    if (mobileNavBackdrop) mobileNavBackdrop.addEventListener('click', closeAllNavDropdowns);
+
+    document.querySelectorAll('.mobile-nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        closeAllNavDropdowns();
+      });
+    });
+
+    // 4. Mobile Drawer PRODUCTS Accordion Toggle
+    const drawerProductsBtn = document.getElementById('mobileDrawerProductsBtn');
+    const drawerAccordion = document.getElementById('mobileDrawerCategoriesAccordion');
+    const drawerChevron = document.getElementById('mobileDrawerProductsChevron');
+    if (drawerProductsBtn && drawerAccordion) {
+      drawerProductsBtn.addEventListener('click', () => {
+        drawerAccordion.classList.toggle('hidden');
+        if (drawerChevron) drawerChevron.classList.toggle('rotate-180');
+      });
+    }
+  }
+
+  // Initialize navigation events immediately
+  setupNavigationEvents();
 
   function selectCategory(catSlug) {
     activeCategory = (catSlug || 'all').toLowerCase();

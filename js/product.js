@@ -629,26 +629,111 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 2400);
   }
 
-  // ================= 13. NAV CATEGORIES =================
+  // ================= 13. NAV CATEGORIES & NAVIGATION =================
   async function loadNavCategories() {
     const list = document.getElementById('navCategoriesList');
-    if (!list) return;
+    const mobileQuickList = document.getElementById('mobileQuickCategoriesList');
+    const mobileDrawerList = document.getElementById('mobileDrawerCategoriesList');
+
     try {
       const res = await fetch(`/api/categories?_t=${Date.now()}`);
       if (res.ok) {
         const cats = await res.json();
         if (Array.isArray(cats) && cats.length > 0) {
-          list.innerHTML = cats.map(c => `
+          const itemsHtml = cats.map(c => `
             <a href="index.html?category=${encodeURIComponent(c.slug || c.id)}#collection" class="nav-category-link flex items-center justify-between px-3 py-2 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-900 text-xs font-mono transition-all">
-              <span>${c.name}</span>
-              <i data-lucide="chevron-left" class="w-3 h-3 text-neutral-500"></i>
+              <span>✦ ${c.name.toUpperCase()}</span>
+              <i data-lucide="chevron-right" class="w-3 h-3 text-neutral-500"></i>
             </a>
           `).join('');
+
+          if (list) list.innerHTML = itemsHtml;
+          if (mobileQuickList) mobileQuickList.innerHTML = itemsHtml;
+          if (mobileDrawerList) mobileDrawerList.innerHTML = itemsHtml;
+
           if (window.lucide) window.lucide.createIcons();
         }
       }
     } catch (e) {}
   }
+
+  function setupProductNavEvents() {
+    // 1. Desktop PRODUCTS Dropdown Toggle on Click
+    const navProductsBtn = document.getElementById('navProductsBtn');
+    const navCategoriesDropdown = document.getElementById('navCategoriesDropdown');
+    if (navProductsBtn && navCategoriesDropdown) {
+      navProductsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        navCategoriesDropdown.classList.toggle('show-dropdown');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!navProductsBtn.contains(e.target) && !navCategoriesDropdown.contains(e.target)) {
+          navCategoriesDropdown.classList.remove('show-dropdown');
+        }
+      });
+    }
+
+    // 2. Mobile Quick PRODUCTS Dropdown Toggle
+    const mobileQuickBtn = document.getElementById('mobileQuickProductsBtn');
+    const mobileQuickDropdown = document.getElementById('mobileQuickProductsDropdown');
+    const mobileQuickChevron = document.getElementById('mobileQuickProductsChevron');
+    if (mobileQuickBtn && mobileQuickDropdown) {
+      mobileQuickBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = mobileQuickDropdown.classList.contains('hidden');
+        if (isHidden) {
+          mobileQuickDropdown.classList.remove('hidden');
+          if (mobileQuickChevron) mobileQuickChevron.classList.add('rotate-180');
+        } else {
+          mobileQuickDropdown.classList.add('hidden');
+          if (mobileQuickChevron) mobileQuickChevron.classList.remove('rotate-180');
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!mobileQuickBtn.contains(e.target) && !mobileQuickDropdown.contains(e.target)) {
+          mobileQuickDropdown.classList.add('hidden');
+          if (mobileQuickChevron) mobileQuickChevron.classList.remove('rotate-180');
+        }
+      });
+    }
+
+    // 3. Mobile Navigation Drawer
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const closeMobileNavBtn = document.getElementById('closeMobileNavBtn');
+    const mobileNavDrawer = document.getElementById('mobileNavDrawer');
+    const mobileNavBackdrop = document.getElementById('mobileNavBackdrop');
+
+    function closeDrawer() {
+      if (mobileNavDrawer) mobileNavDrawer.classList.remove('open');
+      if (mobileNavBackdrop) mobileNavBackdrop.classList.remove('open');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', () => {
+        if (mobileNavDrawer) mobileNavDrawer.classList.add('open');
+        if (mobileNavBackdrop) mobileNavBackdrop.classList.add('open');
+        document.body.classList.add('overflow-hidden');
+      });
+    }
+    if (closeMobileNavBtn) closeMobileNavBtn.addEventListener('click', closeDrawer);
+    if (mobileNavBackdrop) mobileNavBackdrop.addEventListener('click', closeDrawer);
+
+    // 4. Mobile Drawer PRODUCTS Accordion
+    const drawerProductsBtn = document.getElementById('mobileDrawerProductsBtn');
+    const drawerAccordion = document.getElementById('mobileDrawerCategoriesAccordion');
+    const drawerChevron = document.getElementById('mobileDrawerProductsChevron');
+    if (drawerProductsBtn && drawerAccordion) {
+      drawerProductsBtn.addEventListener('click', () => {
+        drawerAccordion.classList.toggle('hidden');
+        if (drawerChevron) drawerChevron.classList.toggle('rotate-180');
+      });
+    }
+  }
+
+  setupProductNavEvents();
   loadNavCategories();
 
   // Initial render

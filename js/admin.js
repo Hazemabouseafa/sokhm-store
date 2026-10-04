@@ -2445,6 +2445,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const valStr = isPercent ? `${d.discount_value}%` : `${d.discount_value.toLocaleString('en-US')} ج.م`;
       const minOrder = d.min_order_amount > 0 ? `${d.min_order_amount.toLocaleString('en-US')} ج.م` : 'بدون حد أدنى';
       const isActive = Boolean(d.is_active);
+      const usageCount = Number(d.usage_count || d.usageCount || 0);
+      const maxUses = Number(d.max_uses || d.maxUses || 0);
+      const isExhausted = maxUses > 0 && usageCount >= maxUses;
 
       return `
         <tr class="hover:bg-white/[0.02] transition-colors">
@@ -2461,10 +2464,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td class="py-3 px-3 font-mono text-neutral-300 text-xs whitespace-nowrap">
             ${minOrder}
           </td>
-          <td class="py-3 px-3 text-center font-mono font-bold text-white whitespace-nowrap">
-            <span class="px-2 py-0.5 rounded-full bg-[#161616] border border-[#222] text-[11px]">
-              ${d.usage_count || 0} مرات
-            </span>
+          <td class="py-3 px-3 text-center font-mono whitespace-nowrap">
+            <div class="inline-flex flex-col items-center">
+              <span class="px-2.5 py-0.5 rounded-full ${isExhausted ? 'bg-red-950/70 border border-red-800 text-red-300 font-bold' : 'bg-[#161616] border border-[#222] text-white font-bold'} text-[11px]">
+                ${usageCount} / ${maxUses > 0 ? maxUses + ' مرات' : '∞ (غير محدود)'}
+              </span>
+              ${isExhausted ? '<span class="text-[9px] text-red-400 font-bold mt-0.5">استُنفد بالكامل</span>' : (maxUses > 0 ? `<span class="text-[9px] text-emerald-400 font-mono mt-0.5">متبقي ${maxUses - usageCount}</span>` : '')}
+            </div>
           </td>
           <td class="py-3 px-3 text-center whitespace-nowrap">
             <button type="button" class="toggle-discount-btn inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-colors ${isActive ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 hover:bg-emerald-900/60' : 'bg-neutral-900 text-neutral-500 border border-neutral-700 hover:bg-neutral-800'}" data-id="${d.id}" title="${isActive ? 'الكود مفعّل - اضغط لتعطيله' : 'الكود معطل - اضغط لتفعيله'}">
@@ -2473,15 +2479,47 @@ document.addEventListener('DOMContentLoaded', async () => {
             </button>
           </td>
           <td class="py-3 px-3 text-center whitespace-nowrap">
-            <button type="button" class="delete-discount-btn p-1.5 rounded-lg bg-[#141414] hover:bg-red-950/60 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer border border-[#222]" data-id="${d.id}" data-code="${d.code}" title="حذف كود الخصم">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
+            <div class="inline-flex items-center gap-1">
+              <button type="button" class="reset-discount-btn p-1.5 rounded-lg bg-[#141414] hover:bg-amber-950/60 text-neutral-400 hover:text-amber-400 transition-colors cursor-pointer border border-[#222]" data-id="${d.id}" data-code="${d.code}" title="تصفير عداد استخدام الكود إلى 0">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              </button>
+              <button type="button" class="delete-discount-btn p-1.5 rounded-lg bg-[#141414] hover:bg-red-950/60 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer border border-[#222]" data-id="${d.id}" data-code="${d.code}" title="حذف كود الخصم">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
           </td>
         </tr>
       `;
     }).join('');
 
     setupLucide();
+
+    // Reset discount usage count
+    tbody.querySelectorAll('.reset-discount-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const code = btn.getAttribute('data-code');
+        if (!confirm(`هل تريد تصفير عداد استخدام كود الخصم "${code}" ليبدأ من 0؟`)) return;
+
+        try {
+          const res = await fetch(`/api/discounts/${id}/reset`, {
+            method: 'POST',
+            headers: { 
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            }
+          });
+          if (res.ok) {
+            await loadDiscounts();
+            showToast(`تم تصفير عداد استخدام الكود "${code}" بنجاح ✦`);
+          } else {
+            alert('تعذر تصفير العداد');
+          }
+        } catch (e) {
+          alert('خطأ في الاتصال بالسيرفر');
+        }
+      });
+    });
 
     // Toggle discount active state
     tbody.querySelectorAll('.toggle-discount-btn').forEach(btn => {
@@ -2563,6 +2601,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const discount_type = document.getElementById('newDiscountType')?.value || 'percentage';
         const discount_value = parseFloat(document.getElementById('newDiscountValue')?.value) || 0;
         const min_order_amount = parseFloat(document.getElementById('newDiscountMinOrder')?.value) || 0;
+        const max_uses = Math.max(0, parseInt(document.getElementById('newDiscountMaxUses')?.value) || 0);
 
         if (!code) {
           alert('يرجى كتابة كود الخصم');
@@ -2595,7 +2634,8 @@ document.addEventListener('DOMContentLoaded', async () => {
               code,
               discount_type,
               discount_value,
-              min_order_amount
+              min_order_amount,
+              max_uses
             })
           });
 

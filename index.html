@@ -34,7 +34,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=6.0">
   <!-- CMS Dynamic Content Manager -->
   <script src="js/content-manager.js?v=6.0"></script>
 </head>
@@ -44,17 +44,45 @@
   <header class="w-full bg-[#070707]/95 backdrop-blur-md border-b border-[#1A1A1A] sticky top-0 z-40 transition-all">
     <div class="max-w-[1280px] mx-auto px-6 sm:px-12 h-16 sm:h-20 flex items-center justify-between">
       
-      <!-- Brand Logo: ✦ SOKHM -->
-      <a href="index.html" class="flex items-center gap-2 group cursor-pointer">
-        <svg viewBox="0 0 100 120" class="w-5 h-6 text-white fill-current transform group-hover:rotate-45 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
-        </svg>
-        <span class="font-gothic font-bold text-lg sm:text-xl tracking-[0.2em] text-white uppercase">
-          SOKHM
-        </span>
-      </a>
+      <!-- Brand Logo & Mobile Triggers -->
+      <div class="flex items-center gap-3">
+        <!-- Mobile Menu Hamburger Trigger -->
+        <button id="mobileMenuBtn" type="button" class="md:hidden p-1.5 -ml-1 text-white hover:text-neutral-400 transition-colors cursor-pointer" aria-label="Open Navigation Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
 
-      <!-- Center Navigation Links -->
+        <!-- Brand Logo: ✦ SOKHM -->
+        <a href="index.html" class="flex items-center gap-2 group cursor-pointer">
+          <svg viewBox="0 0 100 120" class="w-5 h-6 text-white fill-current transform group-hover:rotate-45 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
+          </svg>
+          <span class="font-gothic font-bold text-lg sm:text-xl tracking-[0.2em] text-white uppercase">
+            SOKHM
+          </span>
+        </a>
+
+        <!-- Mobile Quick PRODUCTS Droplist Button -->
+        <div class="relative md:hidden ml-1">
+          <button id="mobileQuickProductsBtn" type="button" class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#2A2A2A] bg-[#111] text-[10px] font-mono tracking-wider text-white hover:border-neutral-500 cursor-pointer shadow-sm">
+            <span>PRODUCTS</span>
+            <i id="mobileQuickProductsChevron" data-lucide="chevron-down" class="w-3 h-3 transition-transform duration-200"></i>
+          </button>
+          
+          <!-- Mobile Quick Categories Droplist Popup -->
+          <div id="mobileQuickProductsDropdown" class="absolute top-full left-0 mt-2 min-w-[210px] bg-[#0A0A0A]/95 backdrop-blur-xl border border-[#222] rounded-2xl p-2 shadow-2xl hidden z-50">
+            <a href="#collection" data-nav-category="all" class="nav-category-link flex items-center justify-between px-3 py-2 rounded-xl text-white hover:bg-white hover:text-black text-xs font-mono tracking-wider transition-all">
+              <span>✦ ALL PRODUCTS</span>
+              <span class="text-[10px] opacity-60">الكل</span>
+            </a>
+            <div class="h-px bg-[#1F1F1F] my-1"></div>
+            <div id="mobileQuickCategoriesList" class="space-y-0.5">
+              <!-- Populated dynamically via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Navigation Links (Desktop) -->
       <nav class="hidden md:flex items-center space-x-10 text-[11px] font-semibold tracking-[0.16em] uppercase text-neutral-400">
         <a href="#hero" class="sokhm-nav-link active">HOME</a>
         
@@ -104,6 +132,63 @@
 
     </div>
   </header>
+
+  <!-- ================= MOBILE NAVIGATION DRAWER ================= -->
+  <div id="mobileNavBackdrop" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+  <aside id="mobileNavDrawer" class="fixed top-0 left-0 h-full w-[85%] max-w-[320px] bg-[#090909] border-r border-[#1C1C1C] z-50 flex flex-col shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out">
+    <div class="p-6 border-b border-[#1A1A1A] flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <svg viewBox="0 0 100 120" class="w-4 h-5 text-white fill-current" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" d="M50 0 C50 36 68 54 100 60 C68 66 50 84 50 120 C50 84 32 66 0 60 C32 54 50 36 50 0 Z M50 46 L58 60 L50 74 L42 60 Z" />
+        </svg>
+        <span class="font-gothic font-bold text-base tracking-[0.2em] text-white uppercase">SOKHM</span>
+      </div>
+      <button id="closeMobileNavBtn" class="p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900 transition-colors cursor-pointer" aria-label="Close Menu">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto flex-1 space-y-6 text-sm font-semibold tracking-[0.16em] uppercase">
+      <div>
+        <a href="#hero" class="mobile-nav-link block py-2 text-neutral-300 hover:text-white transition-colors">
+          HOME
+        </a>
+      </div>
+
+      <!-- PRODUCTS Section with Droplist / Accordion -->
+      <div class="border-t border-[#161616] pt-4">
+        <button id="mobileDrawerProductsBtn" type="button" class="w-full flex items-center justify-between py-2 text-white hover:text-neutral-300 cursor-pointer transition-colors group">
+          <span class="flex items-center gap-2">
+            <span>PRODUCTS</span>
+            <span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/80 font-normal">المنتجات</span>
+          </span>
+          <i id="mobileDrawerProductsChevron" data-lucide="chevron-down" class="w-4 h-4 text-neutral-400 transition-transform duration-200 transform"></i>
+        </button>
+
+        <!-- Categories Droplist in Mobile Drawer -->
+        <div id="mobileDrawerCategoriesAccordion" class="mt-2 pl-2 space-y-1">
+          <a href="#collection" data-nav-category="all" class="nav-category-link flex items-center justify-between px-3 py-2 rounded-xl text-white bg-white/5 hover:bg-white hover:text-black text-xs font-mono tracking-wider transition-all">
+            <span>✦ ALL PRODUCTS</span>
+            <span class="text-[10px] opacity-60">الكل</span>
+          </a>
+          <div id="mobileDrawerCategoriesList" class="space-y-1 pt-1">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-[#161616] pt-4">
+        <a href="#story" class="mobile-nav-link block py-2 text-neutral-300 hover:text-white transition-colors">
+          ABOUT
+        </a>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-[#161616] text-[11px] text-neutral-500 font-mono">
+      ✦ SOKHM ATELIER &copy; 2026<br>
+      <span class="text-[10px] text-neutral-600">BUILT DIFFERENT</span>
+    </div>
+  </aside>
 
   <main class="flex-grow">
     
@@ -432,6 +517,6 @@
   <!-- SCRIPTS -->
   <script src="js/store.js?v=5.0"></script>
   <script src="js/checkout.js?v=5.0"></script>
-  <script src="js/app.js?v=5.0"></script>
+  <script src="js/app.js?v=6.0"></script>
 </body>
 </html>
