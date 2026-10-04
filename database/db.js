@@ -1095,6 +1095,10 @@ function getStats() {
     dbPath: 'database/sokhm.db',
     dbSizeBytes,
     dbSizeFormatted: (dbSizeBytes / 1024).toFixed(1) + ' KB',
+    productsCount: prodCount,
+    ordersCount: orderCount,
+    categoriesCount: catCount,
+    sectionsCount: 4,
     counts: {
       categories: catCount,
       products: prodCount,

@@ -109,32 +109,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ================= 1. التهيئة الأولية (INIT) =================
   async function init() {
+    // 1. تشغيل الساعة وعناصر المصادقة والأيقونات فوراً
     startCairoClock();
     setupTabNavigation();
     setupAuthControls();
     setupLucide();
 
-    // تحميل البيانات من قاعدة بيانات السيرفر
-    await Promise.all([
-      loadOrders(),
-      loadSiteContent(),
-      loadProducts(),
-      loadDiscounts(),
-      loadDbStats()
-    ]);
-
-    // تعبئة النماذج والجداول
-    renderOrdersTable();
-    renderOrderStats();
-    populateHomepageForm();
-    populateProductPageForm();
-    populateCheckoutForm();
-    populateCategoryDropdowns();
-    renderCategoriesList();
-    renderProductsTable();
-    renderDiscounts();
-
-    // تفعيل معالجات الأحداث
+    // 2. تفعيل جميع معالجات الأحداث للأزرار والنوافذ فوراً وبشكل متزامن
+    // لضمان استجابة كافة الأزرار بنسبة 100% حتى قبل اكتمال تحميل البيانات أو في حال حدوث أي خطأ في الشبكة
     setupOrdersHandlers();
     setupHomepageFormHandlers();
     setupProductPageFormHandlers();
@@ -145,6 +127,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupModalHandlers();
     setupInvoiceHandlers();
     setupSecurityHandlers();
+
+    // 3. تحميل البيانات بشكل متوازي مع عزل الأخطاء (Isolated Error Boundaries)
+    try {
+      await Promise.allSettled([
+        loadOrders().then(() => {
+          renderOrdersTable();
+          renderOrderStats();
+        }).catch(e => console.warn('Orders render error:', e)),
+
+        loadSiteContent().then(() => {
+          populateHomepageForm();
+          populateProductPageForm();
+          populateCheckoutForm();
+          populateCategoryDropdowns();
+          renderCategoriesList();
+        }).catch(e => console.warn('Site content render error:', e)),
+
+        loadProducts().then(() => {
+          renderProductsTable();
+          populateCategoryDropdowns();
+        }).catch(e => console.warn('Products render error:', e)),
+
+        loadDiscounts().then(() => {
+          renderDiscounts();
+        }).catch(e => console.warn('Discounts render error:', e)),
+
+        loadDbStats().catch(e => console.warn('Db stats error:', e))
+      ]);
+    } catch (err) {
+      console.error('خطأ غير متوقع في تحميل بيانات لوحة التحكم:', err);
+    }
+
+    // 4. تحديث الإحصائيات والأيقونات في النهاية
+    try {
+      renderOrderStats();
+      loadDbStats();
+      setupLucide();
+    } catch (e) {
+      console.warn('Final UI sync error:', e);
+    }
   }
 
   function setupLucide() {
@@ -222,14 +244,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     if (targetTabId === 'tab-discounts') {
-      loadDiscounts();
+      loadDiscounts().then(() => renderDiscounts());
     } else if (targetTabId === 'tab-products') {
-      renderProductsTable();
+      loadProducts().then(() => {
+        renderProductsTable();
+        populateCategoryDropdowns();
+      });
     } else if (targetTabId === 'tab-orders') {
       loadOrders().then(() => {
         renderOrdersTable();
         renderOrderStats();
       });
+    } else if (targetTabId === 'tab-categories') {
+      loadSiteContent().then(() => {
+        renderCategoriesList();
+        populateCategoryDropdowns();
+      });
+    } else if (targetTabId === 'tab-settings') {
+      loadDbStats();
     }
 
     setupLucide();
@@ -251,19 +283,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch('/api/orders');
       if (res.ok) {
         const data = await res.json();
-        orders = Array.isArray(data) ? data : (data.orders || []);
+        orders = Array.isArray(data) ? data : (Array.isArray(data?.orders) ? data.orders : []);
+      } else {
+        console.warn('Orders API returned status:', res.status);
+        if (!Array.isArray(orders)) orders = [];
       }
     } catch (e) {
       console.warn('تعذر جلب الطلبات من السيرفر:', e);
+      if (!Array.isArray(orders)) orders = [];
     }
+    if (!Array.isArray(orders)) orders = [];
     updateOrdersBadge();
   }
 
   function updateOrdersBadge() {
     const badge = document.getElementById('ordersHeaderCountBadge');
     if (!badge) return;
-    const pendingCount = orders.filter(o => o.status === 'pending').length;
-    badge.textContent = pendingCount > 0 ? pendingCount : orders.length;
+    const safeOrders = Array.isArray(orders) ? orders : [];
+    const pendingCount = safeOrders.filter(o => o && o.status === 'pending').length;
+    badge.textContent = pendingCount > 0 ? pendingCount : safeOrders.length;
     badge.className = pendingCount > 0 
       ? 'px-2 py-0.5 rounded-full bg-emerald-500 text-black font-extrabold text-[10px]' 
       : 'px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 font-extrabold text-[10px]';
@@ -277,24 +315,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!totalEl) return;
 
-    const total = orders.length;
-    const pending = orders.filter(o => o.status === 'pending').length;
-    const shipped = orders.filter(o => o.status === 'shipped').length;
-    const revenue = orders
-      .filter(o => o.status !== 'cancelled')
+    const safeOrders = Array.isArray(orders) ? orders : [];
+    const total = safeOrders.length;
+    const pending = safeOrders.filter(o => o && o.status === 'pending').length;
+    const shipped = safeOrders.filter(o => o && o.status === 'shipped').length;
+    const revenue = safeOrders
+      .filter(o => o && o.status !== 'cancelled')
       .reduce((sum, o) => sum + (parseFloat(o.total_price || o.totalPrice) || 0), 0);
 
     totalEl.textContent = total;
-    pendingEl.textContent = pending;
-    shippedEl.textContent = shipped;
-    revenueEl.textContent = revenue.toLocaleString('en-US') + ' ج.م';
+    if (pendingEl) pendingEl.textContent = pending;
+    if (shippedEl) shippedEl.textContent = shipped;
+    if (revenueEl) revenueEl.textContent = revenue.toLocaleString('en-US') + ' ج.م';
   }
 
   function renderOrdersTable() {
     const tbody = document.getElementById('ordersTableBody');
     if (!tbody) return;
 
-    let filtered = orders;
+    let filtered = Array.isArray(orders) ? [...orders] : [];
     if (orderStatusFilterValue !== 'all') {
       filtered = filtered.filter(o => o.status === orderStatusFilterValue);
     }
@@ -658,16 +697,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch('/api/site-content');
       if (res.ok) {
-        siteContent = await res.json();
+        const data = await res.json();
+        if (data && typeof data === 'object') {
+          siteContent = data;
+        }
       }
     } catch (e) {
       console.warn('تعذر جلب المحتوى:', e);
     }
-    if (!siteContent.homepage) siteContent.homepage = {};
-    if (!siteContent.productPage) siteContent.productPage = {};
-    if (!siteContent.checkout) siteContent.checkout = {};
-    if (!siteContent.visibility) siteContent.visibility = {};
-    if (!siteContent.categories) siteContent.categories = [];
+    if (!siteContent || typeof siteContent !== 'object') siteContent = {};
+    if (!siteContent.homepage || typeof siteContent.homepage !== 'object') siteContent.homepage = {};
+    if (!siteContent.productPage || typeof siteContent.productPage !== 'object') siteContent.productPage = {};
+    if (!siteContent.checkout || typeof siteContent.checkout !== 'object') siteContent.checkout = {};
+    if (!siteContent.visibility || typeof siteContent.visibility !== 'object') siteContent.visibility = {};
+    if (!Array.isArray(siteContent.categories)) siteContent.categories = [];
   }
 
   async function saveSiteContent() {
@@ -702,14 +745,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   function bindVisCheckbox(id, key) {
     const cb = document.getElementById(id);
     if (!cb) return;
+    if (!siteContent.visibility || typeof siteContent.visibility !== 'object') {
+      siteContent.visibility = {};
+    }
     const isVis = siteContent.visibility[key] !== false;
     cb.checked = isVis;
     updateVisText(cb);
 
-    cb.addEventListener('change', () => {
+    cb.onchange = () => {
+      if (!siteContent.visibility) siteContent.visibility = {};
       siteContent.visibility[key] = cb.checked;
       updateVisText(cb);
-    });
+    };
   }
 
   function updateVisText(cb) {
@@ -1122,11 +1169,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
-        products = await res.json();
+        const data = await res.json();
+        products = Array.isArray(data) ? data : (Array.isArray(data?.products) ? data.products : []);
+      } else {
+        console.warn('Products API returned status:', res.status);
+        if (!Array.isArray(products)) products = [];
       }
     } catch (e) {
       console.warn('تعذر جلب المنتجات:', e);
+      if (!Array.isArray(products)) products = [];
     }
+    if (!Array.isArray(products)) products = [];
   }
 
   let draggedRowId = null;
@@ -1143,7 +1196,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       statusBadge.classList.add('flex', 'text-amber-400');
     }
 
-    const orderedIds = products.map(p => p.id);
+    const safeProds = Array.isArray(products) ? products : [];
+    const orderedIds = safeProds.map(p => p.id);
     try {
       const res = await fetch('/api/products/reorder', {
         method: 'POST',
@@ -1169,7 +1223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 3000);
       }
 
-      const topProd = products[0];
+      const topProd = safeProds[0];
       showToast(`تم حفظ الترتيب بنجاح! القطعة "${topProd ? topProd.name : ''}" في مقدمة المتجر ★`);
     } catch (err) {
       console.error('Save order error:', err);
@@ -1189,7 +1243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tbody = document.getElementById('productsTableBody');
     if (!tbody) return;
 
-    let filtered = products;
+    let filtered = Array.isArray(products) ? [...products] : [];
     if (productCategoryFilterValue !== 'all') {
       filtered = filtered.filter(p => p.category === productCategoryFilterValue);
     }
@@ -1548,7 +1602,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderModalColors();
 
     } else {
-      form.reset();
+      if (form) form.reset();
       setVal('pm_id', '');
       setVal('pm_name', '');
       setVal('pm_slug', 'sokhm-garment-' + Math.floor(100 + Math.random() * 900));
@@ -2160,7 +2214,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ================= 11. الأقسام والتصنيفات (CATEGORIES) =================
   function populateCategoryDropdowns() {
-    categories = Array.isArray(siteContent.categories) ? siteContent.categories : [];
+    categories = (Array.isArray(siteContent?.categories) && siteContent.categories.length > 0)
+      ? siteContent.categories 
+      : (Array.isArray(categories) && categories.length > 0 ? categories : []);
+
+    if (categories.length === 0) {
+      categories = [
+        { id: 'hoodies', name: 'Hoodies // هوديز فاخر', slug: 'hoodies' },
+        { id: 't-shirts', name: 'T-Shirts // تيشيرتات أوفر سايز', slug: 't-shirts' },
+        { id: 'pants', name: 'Pants // بناطيل كارجو وسويت بانتس', slug: 'pants' },
+        { id: 'jackets', name: 'Jackets // جواكت فاخرة', slug: 'jackets' },
+        { id: 'caps', name: 'Caps & Accessories // كابات وإكسسوارات', slug: 'caps' }
+      ];
+    }
+
     const filter = document.getElementById('productCategoryFilter');
     if (filter) {
       filter.innerHTML = '<option value="all">جميع التصنيفات</option>' + 
@@ -2178,13 +2245,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const container = document.getElementById('categoriesListContainer');
     if (!container) return;
 
-    if (categories.length === 0) {
+    const safeCats = Array.isArray(categories) ? categories : [];
+    const safeProds = Array.isArray(products) ? products : [];
+
+    if (safeCats.length === 0) {
       container.innerHTML = '<div class="text-center py-6 text-neutral-500 text-xs">لا توجد تصنيفات حالياً.</div>';
       return;
     }
 
-    container.innerHTML = categories.map((cat, idx) => {
-      const prodCount = products.filter(p => p.category === (cat.slug || cat.id)).length;
+    container.innerHTML = safeCats.map((cat, idx) => {
+      const prodCount = safeProds.filter(p => p && p.category === (cat.slug || cat.id)).length;
       return `
         <div class="py-3 flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -2274,21 +2344,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
       if (res.ok) {
-        discounts = await res.json();
+        const data = await res.json();
+        discounts = Array.isArray(data) ? data : (Array.isArray(data?.discounts) ? data.discounts : []);
+      } else {
+        console.warn('Discounts API returned status:', res.status);
+        if (!Array.isArray(discounts)) discounts = [];
       }
     } catch (e) {
       console.warn('تعذر جلب أكواد الخصم:', e);
+      if (!Array.isArray(discounts)) discounts = [];
     }
-    renderDiscounts();
+    if (!Array.isArray(discounts)) discounts = [];
+    try { renderDiscounts(); } catch (err) { console.warn('Render discounts error:', err); }
   }
 
   function renderDiscounts() {
     const tbody = document.getElementById('discountsTableBody');
     const badge = document.getElementById('discountsCountBadge');
-    if (badge) badge.textContent = `${discounts.length} كود`;
+    const safeDiscounts = Array.isArray(discounts) ? discounts : [];
+    if (badge) badge.textContent = `${safeDiscounts.length} كود`;
     if (!tbody) return;
 
-    if (!discounts || discounts.length === 0) {
+    if (safeDiscounts.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="6" class="text-center py-10 text-neutral-500 text-xs">
@@ -2299,7 +2376,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    tbody.innerHTML = discounts.map(d => {
+    tbody.innerHTML = safeDiscounts.map(d => {
       const isPercent = d.discount_type === 'percentage';
       const valStr = isPercent ? `${d.discount_value}%` : `${d.discount_value.toLocaleString('en-US')} ج.م`;
       const minOrder = d.min_order_amount > 0 ? `${d.min_order_amount.toLocaleString('en-US')} ج.م` : 'بدون حد أدنى';
@@ -2487,29 +2564,51 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch('/api/stats');
       if (res.ok) {
         const stats = await res.json();
-        const pCount = document.getElementById('statDbProductsCount');
-        const oCount = document.getElementById('statDbOrdersCount');
-        const cCount = document.getElementById('statDbCategoriesCount');
-        const sCount = document.getElementById('statDbSectionsCount');
+        if (stats && typeof stats === 'object') {
+          const safeProds = Array.isArray(products) ? products : [];
+          const safeOrders = Array.isArray(orders) ? orders : [];
+          const safeCats = Array.isArray(categories) ? categories : [];
 
-        if (pCount) pCount.textContent = stats.productsCount || products.length;
-        if (oCount) oCount.textContent = stats.ordersCount || orders.length;
-        if (cCount) cCount.textContent = stats.categoriesCount || categories.length;
-        if (sCount) sCount.textContent = stats.sectionsCount || 4;
+          const pTotal = stats.productsCount ?? stats.counts?.products ?? safeProds.length;
+          const oTotal = stats.ordersCount ?? stats.counts?.orders ?? safeOrders.length;
+          const cTotal = stats.categoriesCount ?? stats.counts?.categories ?? safeCats.length;
+          const sTotal = stats.sectionsCount ?? 4;
 
-        const dbBadgeText = document.getElementById('dbBadgeText');
-        const dbHeaderBadge = document.getElementById('dbHeaderBadge');
-        if (dbBadgeText && stats.engine) {
-          dbBadgeText.textContent = stats.engine + ' • متصلة';
-          if (stats.engine.includes('Fallback')) {
-            dbBadgeText.textContent = '⚠️ ذاكرة محلية مؤقتة (Fallback - Turso غير متصل)';
-            if (dbHeaderBadge) {
-              dbHeaderBadge.className = 'hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-950/40 border border-amber-800/60 text-[11px] font-bold text-amber-300';
+          const pCount = document.getElementById('statDbProductsCount');
+          const oCount = document.getElementById('statDbOrdersCount');
+          const cCount = document.getElementById('statDbCategoriesCount');
+          const sCount = document.getElementById('statDbSectionsCount');
+
+          if (pCount) pCount.textContent = pTotal;
+          if (oCount) oCount.textContent = oTotal;
+          if (cCount) cCount.textContent = cTotal;
+          if (sCount) sCount.textContent = sTotal;
+
+          const engineEl = document.getElementById('statDbEngineText');
+          const pathEl = document.getElementById('statDbPathText');
+          if (engineEl && stats.engine) engineEl.textContent = stats.engine;
+          if (pathEl) pathEl.textContent = stats.dbPath || (stats.engine?.includes('Turso') ? 'Turso Cloud Serverless (libsql)' : 'database/sokhm.db');
+
+          const dbBadgeText = document.getElementById('dbBadgeText');
+          const dbHeaderBadge = document.getElementById('dbHeaderBadge');
+          if (dbBadgeText && stats.engine) {
+            dbBadgeText.textContent = stats.engine + ' • متصلة';
+            if (stats.engine.includes('Fallback')) {
+              dbBadgeText.textContent = '⚠️ ذاكرة محلية مؤقتة (Fallback - Turso غير متصل)';
+              if (dbHeaderBadge) {
+                dbHeaderBadge.className = 'hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-950/40 border border-amber-800/60 text-[11px] font-bold text-amber-300';
+              }
+            } else {
+              if (dbHeaderBadge) {
+                dbHeaderBadge.className = 'hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-800/60 text-[11px] font-bold text-emerald-300';
+              }
             }
           }
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('تعذر جلب إحصائيات قاعدة البيانات:', e);
+    }
   }
 
   // Start initialization
