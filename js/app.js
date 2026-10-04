@@ -516,20 +516,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (modalPrice) modalPrice.textContent = prod.formattedPrice || `${pNum.toLocaleString('en-US')} EGP`;
     if (modalDesc) modalDesc.textContent = prod.description || '500 GSM architectural heavyweight combed cotton fleece. Built different.';
 
-    // Size buttons
+    // Size buttons (strictly dynamic for selected product)
     if (modalSizePicker) {
-      const sizeBtns = modalSizePicker.querySelectorAll('button');
-      sizeBtns.forEach(b => {
-        if (b.dataset.size === 'M') {
-          b.className = 'px-3.5 py-2 rounded-lg border border-white bg-white text-black font-bold';
-        } else {
-          b.className = 'px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400 font-medium';
+      modalSizePicker.innerHTML = '';
+      let prodSizes = [];
+      if (Array.isArray(prod.sizes)) {
+        prodSizes = prod.sizes.filter(Boolean);
+      } else if (typeof prod.sizes === 'string') {
+        try {
+          const parsed = JSON.parse(prod.sizes);
+          prodSizes = Array.isArray(parsed) ? parsed.filter(Boolean) : prod.sizes.split(',').map(s => s.trim()).filter(Boolean);
+        } catch (_) {
+          prodSizes = prod.sizes.split(',').map(s => s.trim()).filter(Boolean);
         }
-        b.onclick = () => {
-          sizeBtns.forEach(sb => sb.className = 'px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400 font-medium');
-          b.className = 'px-3.5 py-2 rounded-lg border border-white bg-white text-black font-bold';
-          selectedModalSize = b.dataset.size;
+      }
+
+      if (prodSizes.length === 0) {
+        prodSizes = ['S', 'M', 'L', 'XL'];
+      }
+
+      if (!prodSizes.includes(selectedModalSize)) {
+        selectedModalSize = prodSizes.includes('M') ? 'M' : prodSizes[0];
+      }
+
+      prodSizes.forEach(size => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.size = size;
+        const isActive = size === selectedModalSize;
+        btn.className = isActive
+          ? 'size-btn px-3.5 py-2 rounded-lg border border-white bg-white text-black font-bold cursor-pointer transition-colors'
+          : 'size-btn px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400 font-medium cursor-pointer transition-colors';
+        btn.textContent = size;
+
+        btn.onclick = () => {
+          modalSizePicker.querySelectorAll('.size-btn').forEach(sb => {
+            sb.className = 'size-btn px-3.5 py-2 rounded-lg border border-[#222] hover:border-white text-neutral-400 font-medium cursor-pointer transition-colors';
+          });
+          btn.className = 'size-btn px-3.5 py-2 rounded-lg border border-white bg-white text-black font-bold cursor-pointer transition-colors';
+          selectedModalSize = btn.dataset.size;
         };
+
+        modalSizePicker.appendChild(btn);
       });
     }
 

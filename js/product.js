@@ -190,8 +190,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // --- SIZE GUIDE MODAL (DYNAMIC CMS BOUND) ---
+  function renderSizeGuide() {
+    const pp = (window.sokhmContent && window.sokhmContent.getAll && window.sokhmContent.getAll().productPage) || {};
+    const sg = pp.sizeGuide || {
+      subtitle: '✦ SOKHM MEASUREMENTS',
+      title: 'Hoodie Sizing Chart (CM)',
+      note: '* Our architectural hoodies feature an oversized drop shoulder fit. Order true to size for the intended drape, or size down for a slimmer silhouette.',
+      rows: [
+        { size: 'XS', chest: '58 cm', length: '66 cm', sleeve: '60 cm', fit: 'Under 168 cm' },
+        { size: 'S', chest: '61 cm', length: '68 cm', sleeve: '62 cm', fit: '168 - 174 cm' },
+        { size: 'M', chest: '64 cm', length: '70 cm', sleeve: '63 cm', fit: '174 - 180 cm (Core)' },
+        { size: 'L', chest: '67 cm', length: '72 cm', sleeve: '65 cm', fit: '180 - 186 cm' },
+        { size: 'XL', chest: '70 cm', length: '74 cm', sleeve: '66 cm', fit: '186 - 192 cm' },
+        { size: 'XXL', chest: '73 cm', length: '76 cm', sleeve: '67 cm', fit: '192 cm+ / Mega Boxy' },
+        { size: 'XXXL', chest: '76 cm', length: '78 cm', sleeve: '68 cm', fit: '195 cm+ / Ultra Oversized' }
+      ]
+    };
+
+    const subtitleEl = document.getElementById('sizeGuideModalSubtitle');
+    const titleEl = document.getElementById('sizeGuideModalTitle');
+    const noteEl = document.getElementById('sizeGuideModalNote');
+    const tbodyEl = document.getElementById('sizeGuideTableBody');
+
+    const isSubVis = window.sokhmContent ? window.sokhmContent.isVisible('productPage.sizeGuideSubtitle') : true;
+    const isTitleVis = window.sokhmContent ? window.sokhmContent.isVisible('productPage.sizeGuideTitle') : true;
+    const isNoteVis = window.sokhmContent ? window.sokhmContent.isVisible('productPage.sizeGuideNote') : true;
+
+    if (subtitleEl) {
+      subtitleEl.textContent = sg.subtitle || '✦ SOKHM MEASUREMENTS';
+      subtitleEl.style.display = isSubVis ? '' : 'none';
+    }
+    if (titleEl) {
+      titleEl.textContent = sg.title || 'Hoodie Sizing Chart (CM)';
+      titleEl.style.display = isTitleVis ? '' : 'none';
+    }
+    if (noteEl) {
+      noteEl.textContent = sg.note || '';
+      noteEl.style.display = isNoteVis ? '' : 'none';
+    }
+
+    if (tbodyEl) {
+      tbodyEl.innerHTML = '';
+      const rows = Array.isArray(sg.rows) ? sg.rows : [];
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const isCore = r.size === 'M' || (r.fit && r.fit.includes('Core'));
+        if (isCore) tr.className = 'bg-white/5';
+        
+        tr.innerHTML = `
+          <td class="p-2.5 font-bold text-white">${r.size || ''}</td>
+          <td class="p-2.5">${r.chest || ''}</td>
+          <td class="p-2.5">${r.length || ''}</td>
+          <td class="p-2.5">${r.sleeve || ''}</td>
+          <td class="p-2.5 ${isCore ? 'text-white font-semibold' : 'text-neutral-500'}">${r.fit || ''}</td>
+        `;
+        tbodyEl.appendChild(tr);
+      });
+    }
+  }
+
   renderFloatingBadges();
-  window.addEventListener('sokhm:content-updated', renderFloatingBadges);
+  renderSizeGuide();
+  window.addEventListener('sokhm:content-updated', () => {
+    renderFloatingBadges();
+    renderSizeGuide();
+  });
 
   if (productRatingText) productRatingText.textContent = currentProduct.rating || '4.98';
 
@@ -264,15 +328,50 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ================= 5. POPULATE SIZE BUTTONS =================
   if (sizeButtonsContainer) {
-    const sizeBtns = sizeButtonsContainer.querySelectorAll('.size-btn');
-    sizeBtns.forEach(btn => {
+    sizeButtonsContainer.innerHTML = '';
+
+    // Strictly parse and use the product's assigned sizes
+    let prodSizes = [];
+    if (Array.isArray(currentProduct.sizes)) {
+      prodSizes = currentProduct.sizes.filter(Boolean);
+    } else if (typeof currentProduct.sizes === 'string') {
+      try {
+        const parsed = JSON.parse(currentProduct.sizes);
+        prodSizes = Array.isArray(parsed) ? parsed.filter(Boolean) : currentProduct.sizes.split(',').map(s => s.trim()).filter(Boolean);
+      } catch (_) {
+        prodSizes = currentProduct.sizes.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+
+    // Fallback only if product has NO sizes defined at all
+    if (prodSizes.length === 0) {
+      prodSizes = ['S', 'M', 'L', 'XL'];
+    }
+
+    // Default selected size: prefer 'M' if available, otherwise first size in list
+    if (!prodSizes.includes(selectedSize)) {
+      selectedSize = prodSizes.includes('M') ? 'M' : prodSizes[0];
+    }
+
+    prodSizes.forEach(size => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.size = size;
+      const isActive = size === selectedSize;
+      btn.className = isActive
+        ? 'size-btn flex-1 min-w-[50px] py-3 rounded-lg border border-white bg-white text-black font-bold transition-all uppercase active'
+        : 'size-btn flex-1 min-w-[50px] py-3 rounded-lg border border-[#222] hover:border-white text-neutral-400 transition-all uppercase';
+      btn.textContent = size;
+
       btn.addEventListener('click', () => {
-        sizeBtns.forEach(b => {
-          b.className = 'size-btn py-3 rounded-lg border border-[#222] hover:border-white text-neutral-400 transition-all uppercase';
+        sizeButtonsContainer.querySelectorAll('.size-btn').forEach(b => {
+          b.className = 'size-btn flex-1 min-w-[50px] py-3 rounded-lg border border-[#222] hover:border-white text-neutral-400 transition-all uppercase';
         });
-        btn.className = 'size-btn py-3 rounded-lg border border-white bg-white text-black font-bold transition-all uppercase active';
+        btn.className = 'size-btn flex-1 min-w-[50px] py-3 rounded-lg border border-white bg-white text-black font-bold transition-all uppercase active';
         selectedSize = btn.dataset.size;
       });
+
+      sizeButtonsContainer.appendChild(btn);
     });
   }
 
@@ -350,7 +449,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Size Guide Dialog
   if (openSizeGuideTrigger && sizeGuideModal) {
-    openSizeGuideTrigger.addEventListener('click', () => sizeGuideModal.showModal());
+    openSizeGuideTrigger.addEventListener('click', () => {
+      renderSizeGuide();
+      sizeGuideModal.showModal();
+    });
   }
   if (closeSizeGuideBtn && sizeGuideModal) {
     closeSizeGuideBtn.addEventListener('click', () => sizeGuideModal.close());

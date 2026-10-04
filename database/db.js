@@ -433,6 +433,14 @@ function getSiteContent() {
   const pp = ppRow ? JSON.parse(ppRow.content_json) : {};
   if (!pp.badgeTitle) pp.badgeTitle = 'SIGNATURE';
   if (!pp.badgeSubtitle) pp.badgeSubtitle = '500 GSM FLEECE';
+  if (!pp.sizeGuide) {
+    try {
+      if (fs.existsSync(siteContentFile)) {
+        const sc = JSON.parse(fs.readFileSync(siteContentFile, 'utf8'));
+        pp.sizeGuide = sc.productPage?.sizeGuide;
+      }
+    } catch (_) {}
+  }
 
   return {
     homepage: hpRow ? JSON.parse(hpRow.content_json) : {},

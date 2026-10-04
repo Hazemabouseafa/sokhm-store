@@ -14,6 +14,10 @@
         {
           "label": "ABOUT",
           "url": "#story"
+        },
+        {
+          "label": "JOURNAL",
+          "url": "#journal"
         }
       ]
     },
@@ -26,8 +30,7 @@
       "scrollLabel": "SCROLL",
       "cta": "SHOP NOW",
       "narrative": "Premium streetwear for those who move different. Timeless designs. Superior quality. A mindset, not just a brand.",
-      "scroll": "SCROLL",
-      "image": "assets/sokhm-noir-hero.jpg"
+      "scroll": "SCROLL"
     },
     "valueBar": [
       {
@@ -91,8 +94,6 @@
       "back": "Back to Collection"
     },
     "kickerPrefix": "✦ SOKHM ATELIER //",
-    "badgeTitle": "SIGNATURE",
-    "badgeSubtitle": "500 GSM FLEECE",
     "sizeGuideButtonText": "Size Guide (CM)",
     "addToBagPrefix": "ADD TO BAG",
     "expressCheckoutText": "EXPRESS CHECKOUT",
@@ -146,6 +147,71 @@
       "emptyTitle": "YOUR BAG IS EMPTY",
       "subtotal": "SUBTOTAL",
       "checkout": "CHECKOUT"
+    },
+    "badgeTitle": "SIGNATURE",
+    "badgeSubtitle": "500 GSM FLEECE",
+    "sizeGuide": {
+      "subtitle": "✦ SOKHM MEASUREMENTS",
+      "title": "Hoodie Sizing Chart (CM)",
+      "note": "* Our architectural hoodies feature an oversized drop shoulder fit. Order true to size for the intended drape, or size down for a slimmer silhouette.",
+      "columns": [
+        "Size",
+        "Chest",
+        "Length",
+        "Sleeve",
+        "Fit Recommendation"
+      ],
+      "rows": [
+        {
+          "size": "XS",
+          "chest": "58 cm",
+          "length": "66 cm",
+          "sleeve": "60 cm",
+          "fit": "Under 168 cm"
+        },
+        {
+          "size": "S",
+          "chest": "61 cm",
+          "length": "68 cm",
+          "sleeve": "62 cm",
+          "fit": "168 - 174 cm"
+        },
+        {
+          "size": "M",
+          "chest": "64 cm",
+          "length": "70 cm",
+          "sleeve": "63 cm",
+          "fit": "174 - 180 cm (Core)"
+        },
+        {
+          "size": "L",
+          "chest": "67 cm",
+          "length": "72 cm",
+          "sleeve": "65 cm",
+          "fit": "180 - 186 cm"
+        },
+        {
+          "size": "XL",
+          "chest": "70 cm",
+          "length": "74 cm",
+          "sleeve": "66 cm",
+          "fit": "186 - 192 cm"
+        },
+        {
+          "size": "XXL",
+          "chest": "73 cm",
+          "length": "76 cm",
+          "sleeve": "67 cm",
+          "fit": "192 cm+ / Mega Boxy"
+        },
+        {
+          "size": "XXXL",
+          "chest": "76 cm",
+          "length": "78 cm",
+          "sleeve": "68 cm",
+          "fit": "195 cm+ / Ultra Oversized"
+        }
+      ]
     }
   },
   "checkout": {
@@ -201,9 +267,7 @@
     "homepage.bottomBanner.ctaText": true,
     "homepage.footer.brandTag": true,
     "homepage.footer.slogan": true,
-    "homepage.footer.copyright": true,
-    "productPage.badgeTitle": true,
-    "productPage.badgeSubtitle": true
+    "homepage.footer.copyright": true
   },
   "categories": [
     {

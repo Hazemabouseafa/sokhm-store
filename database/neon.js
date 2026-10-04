@@ -437,6 +437,7 @@ async function getSiteContent() {
       const pp = contentMap.productPage || fallbackContent.productPage || {};
       if (!pp.badgeTitle) pp.badgeTitle = 'SIGNATURE';
       if (!pp.badgeSubtitle) pp.badgeSubtitle = '500 GSM FLEECE';
+      if (!pp.sizeGuide) pp.sizeGuide = fallbackContent.productPage?.sizeGuide;
 
       return {
         homepage: contentMap.homepage || fallbackContent.homepage || {},

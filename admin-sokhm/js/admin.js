@@ -1016,11 +1016,105 @@ document.addEventListener('DOMContentLoaded', async () => {
     bindVisCheckbox('vis_pp_related_title', 'productPage.relatedTitle');
     bindVisCheckbox('vis_pp_cart_title', 'productPage.cartDrawer.title');
     bindVisCheckbox('vis_pp_cart_empty_title', 'productPage.cartDrawer.emptyTitle');
+
+    // 5. دليل المقاسات وقياسات القطع (Size Guide)
+    const sg = pp.sizeGuide || {
+      subtitle: '✦ SOKHM MEASUREMENTS',
+      title: 'Hoodie Sizing Chart (CM)',
+      note: '* Our architectural hoodies feature an oversized drop shoulder fit. Order true to size for the intended drape, or size down for a slimmer silhouette.',
+      rows: [
+        { size: 'XS', chest: '58 cm', length: '66 cm', sleeve: '60 cm', fit: 'Under 168 cm' },
+        { size: 'S', chest: '61 cm', length: '68 cm', sleeve: '62 cm', fit: '168 - 174 cm' },
+        { size: 'M', chest: '64 cm', length: '70 cm', sleeve: '63 cm', fit: '174 - 180 cm (Core)' },
+        { size: 'L', chest: '67 cm', length: '72 cm', sleeve: '65 cm', fit: '180 - 186 cm' },
+        { size: 'XL', chest: '70 cm', length: '74 cm', sleeve: '66 cm', fit: '186 - 192 cm' },
+        { size: 'XXL', chest: '73 cm', length: '76 cm', sleeve: '67 cm', fit: '192 cm+ / Mega Boxy' },
+        { size: 'XXXL', chest: '76 cm', length: '78 cm', sleeve: '68 cm', fit: '195 cm+ / Ultra Oversized' }
+      ]
+    };
+
+    setVal('pp_sg_subtitle', sg.subtitle || '✦ SOKHM MEASUREMENTS');
+    setVal('pp_sg_title', sg.title || 'Hoodie Sizing Chart (CM)');
+    setVal('pp_sg_note', sg.note || '');
+    bindVisCheckbox('vis_pp_sg_subtitle', 'productPage.sizeGuideSubtitle');
+    bindVisCheckbox('vis_pp_sg_title', 'productPage.sizeGuideTitle');
+    bindVisCheckbox('vis_pp_sg_note', 'productPage.sizeGuideNote');
+
+    renderSizeGuideAdminRows(Array.isArray(sg.rows) ? sg.rows : []);
+  }
+
+  function createSizeGuideRowElement(r = {}) {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-[#141414] transition-colors';
+    tr.innerHTML = `
+      <td class="p-2.5">
+        <input type="text" class="sg-row-size cms-input w-full text-center font-mono font-bold uppercase" placeholder="M">
+      </td>
+      <td class="p-2.5">
+        <input type="text" class="sg-row-chest cms-input w-full font-mono" placeholder="64 cm">
+      </td>
+      <td class="p-2.5">
+        <input type="text" class="sg-row-length cms-input w-full font-mono" placeholder="70 cm">
+      </td>
+      <td class="p-2.5">
+        <input type="text" class="sg-row-sleeve cms-input w-full font-mono" placeholder="63 cm">
+      </td>
+      <td class="p-2.5">
+        <input type="text" class="sg-row-fit cms-input w-full" placeholder="174 - 180 cm (Core)">
+      </td>
+      <td class="p-2.5 text-center">
+        <button type="button" class="sg-row-delete-btn p-1.5 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer" title="حذف الصف">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </td>
+    `;
+    tr.querySelector('.sg-row-size').value = r.size || '';
+    tr.querySelector('.sg-row-chest').value = r.chest || '';
+    tr.querySelector('.sg-row-length').value = r.length || '';
+    tr.querySelector('.sg-row-sleeve').value = r.sleeve || '';
+    tr.querySelector('.sg-row-fit').value = r.fit || '';
+
+    tr.querySelector('.sg-row-delete-btn').addEventListener('click', () => {
+      tr.remove();
+    });
+
+    return tr;
+  }
+
+  function renderSizeGuideAdminRows(rows) {
+    const container = document.getElementById('pp_sg_rows_container');
+    if (!container) return;
+    container.innerHTML = '';
+    rows.forEach(r => {
+      container.appendChild(createSizeGuideRowElement(r));
+    });
+    setupLucide();
   }
 
   function setupProductPageFormHandlers() {
     const saveBtn = document.getElementById('saveProductPageBtn');
     if (!saveBtn) return;
+
+    // Setup add size guide row button
+    const addRowBtn = document.getElementById('addSizeGuideRowBtn');
+    if (addRowBtn && !addRowBtn.dataset.bound) {
+      addRowBtn.dataset.bound = 'true';
+      addRowBtn.addEventListener('click', () => {
+        const container = document.getElementById('pp_sg_rows_container');
+        if (!container) return;
+        const newRow = createSizeGuideRowElement({
+          size: '',
+          chest: '',
+          length: '',
+          sleeve: '',
+          fit: ''
+        });
+        container.appendChild(newRow);
+        setupLucide();
+        const sizeInput = newRow.querySelector('.sg-row-size');
+        if (sizeInput) sizeInput.focus();
+      });
+    }
 
     saveBtn.addEventListener('click', async () => {
       if (!siteContent.productPage) siteContent.productPage = {};
@@ -1056,6 +1150,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       pp.cartDrawer.title = getVal('pp_cart_title');
       pp.cartDrawer.emptyTitle = getVal('pp_cart_empty_title');
 
+      // 5. جدول دليل المقاسات وقياسات القطع
+      const rows = [];
+      document.querySelectorAll('#pp_sg_rows_container tr').forEach(tr => {
+        const size = tr.querySelector('.sg-row-size')?.value?.trim();
+        const chest = tr.querySelector('.sg-row-chest')?.value?.trim() || '';
+        const length = tr.querySelector('.sg-row-length')?.value?.trim() || '';
+        const sleeve = tr.querySelector('.sg-row-sleeve')?.value?.trim() || '';
+        const fit = tr.querySelector('.sg-row-fit')?.value?.trim() || '';
+        if (size) {
+          rows.push({ size, chest, length, sleeve, fit });
+        }
+      });
+
+      pp.sizeGuide = {
+        subtitle: getVal('pp_sg_subtitle') || '✦ SOKHM MEASUREMENTS',
+        title: getVal('pp_sg_title') || 'Hoodie Sizing Chart (CM)',
+        note: getVal('pp_sg_note') || '',
+        columns: ['Size', 'Chest', 'Length', 'Sleeve', 'Fit Recommendation'],
+        rows: rows
+      };
+
       // Update checkboxes in visibility map
       const visCheckboxes = document.querySelectorAll('#tab-product-page input[data-vis-key]');
       visCheckboxes.forEach(cb => {
@@ -1065,7 +1180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const ok = await saveSiteContent();
       if (ok) {
-        showToast('تم حفظ وتحديث نصوص صفحة تفاصيل المنتج بنجاح!');
+        showToast('تم حفظ وتحديث نصوص وصفحة تفاصيل المنتج وجدول المقاسات بنجاح!');
       } else {
         alert('تعذر حفظ المحتوى في السيرفر');
       }
