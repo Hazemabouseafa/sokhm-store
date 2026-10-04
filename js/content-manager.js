@@ -6,7 +6,7 @@
   const STORAGE_KEY = 'sokhm_site_content_v1';
   let siteContent = null;
 
-  function getNested(obj, path, fallback = '') {
+  function getNested(obj, path, fallback = null) {
     if (!obj || !path) return fallback;
     const parts = path.split('.');
     let curr = obj;
@@ -73,9 +73,9 @@
     const elements = document.querySelectorAll('[data-cms]');
     elements.forEach(el => {
       const key = el.getAttribute('data-cms');
-      const val = getNested(siteContent, key);
+      const val = getNested(siteContent, key, null);
 
-      // Check visibility flag
+      // Check visibility flag (explicitly false to hide)
       const isVisible = visibility[key] !== false;
       if (!isVisible) {
         el.style.display = 'none';
@@ -85,8 +85,8 @@
         el.removeAttribute('data-cms-hidden');
       }
 
-      if (val !== undefined && val !== null) {
-        // If element has input or textarea
+      // Only overwrite DOM if there is actual non-empty text from CMS
+      if (val !== undefined && val !== null && String(val).trim() !== '') {
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
           el.value = val;
         } else {

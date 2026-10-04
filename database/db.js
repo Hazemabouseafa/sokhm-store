@@ -1259,6 +1259,7 @@ module.exports = {
   validateDiscount,
   recordDiscountUsage,
   getStats,
+  seedTursoDatabase: async () => ({ success: true, message: 'Native SQLite already initialized' }),
   verifyAdminCredentials,
   updateAdminPassword,
   createSession,

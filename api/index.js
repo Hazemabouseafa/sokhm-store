@@ -139,6 +139,22 @@ module.exports = async (req, res) => {
       return sendJson(res, 200, { success: true });
     }
 
+    if (pathname === '/api/admin/seed-turso' && req.method === 'POST') {
+      const token = getBearerToken(req);
+      if (!token) {
+        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول أولاً' });
+      }
+      const session = await db.validateSession(token);
+      if (!session) {
+        return sendJson(res, 401, { success: false, error: 'انتهت صلاحية الجلسة' });
+      }
+      if (db.seedTursoDatabase) {
+        const result = await db.seedTursoDatabase(true);
+        return sendJson(res, 200, result);
+      }
+      return sendJson(res, 200, { success: true, message: 'قاعدة البيانات جاهزة' });
+    }
+
     // 2. Site Content
     if (pathname === '/api/site-content') {
       if (req.method === 'GET') {

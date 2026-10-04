@@ -66,24 +66,32 @@ let fallbackCategories = null;
 function loadFallbackData() {
   if (fallbackProducts === null) {
     try {
-      const pFile = path.join(__dirname, '..', 'data', 'products.json');
-      if (fs.existsSync(pFile)) {
-        fallbackProducts = JSON.parse(fs.readFileSync(pFile, 'utf8'));
+      fallbackProducts = require('../data/products.json');
+    } catch (reqErr) {
+      try {
+        const pFile = path.join(__dirname, '..', 'data', 'products.json');
+        if (fs.existsSync(pFile)) {
+          fallbackProducts = JSON.parse(fs.readFileSync(pFile, 'utf8'));
+        }
+      } catch (e) {
+        fallbackProducts = [];
       }
-    } catch (e) {
-      fallbackProducts = [];
     }
     if (!Array.isArray(fallbackProducts)) fallbackProducts = [];
   }
 
   if (fallbackContent === null) {
     try {
-      const cFile = path.join(__dirname, '..', 'data', 'site-content.json');
-      if (fs.existsSync(cFile)) {
-        fallbackContent = JSON.parse(fs.readFileSync(cFile, 'utf8'));
+      fallbackContent = require('../data/site-content.json');
+    } catch (reqErr) {
+      try {
+        const cFile = path.join(__dirname, '..', 'data', 'site-content.json');
+        if (fs.existsSync(cFile)) {
+          fallbackContent = JSON.parse(fs.readFileSync(cFile, 'utf8'));
+        }
+      } catch (e) {
+        fallbackContent = {};
       }
-    } catch (e) {
-      fallbackContent = {};
     }
     if (!fallbackContent || typeof fallbackContent !== 'object') fallbackContent = {};
   }
@@ -193,110 +201,138 @@ async function initTursoSchema() {
       console.log('✓ Turso: Initialized default admin user "websiteadmin"');
     }
 
-    // Auto-seed site_content & categories from data files if empty
-    const contentCheck = await c.execute('SELECT COUNT(*) as count FROM site_content');
-    if (Number(contentCheck.rows[0].count) === 0) {
-      loadFallbackData();
+    // Run schema migrations for extra columns
+    try {
+      await c.execute('ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0');
+    } catch (e) {}
+
+    try {
+      await c.execute('ALTER TABLE products ADD COLUMN show_on_homepage INTEGER DEFAULT 1');
+    } catch (e) {}
+
+    try {
+      await c.execute('ALTER TABLE orders ADD COLUMN discount_code TEXT');
+    } catch (e) {}
+
+    try {
+      await c.execute('ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0');
+    } catch (e) {}
+
+    try {
+      await c.execute('ALTER TABLE orders ADD COLUMN subtotal_price REAL');
+    } catch (e) {}
+
+    // Auto-seed if products, categories, or site_content are completely empty
+    const [prodCheck, catCheck] = await Promise.all([
+      c.execute('SELECT COUNT(*) as count FROM products'),
+      c.execute('SELECT COUNT(*) as count FROM categories')
+    ]);
+
+    if (Number(prodCheck.rows[0]?.count || 0) === 0 || Number(catCheck.rows[0]?.count || 0) === 0) {
+      await seedTursoDatabase(false);
+    }
+
+    initialized = true;
+  } catch (err) {
+    console.error('Turso schema initialization error:', err.message);
+  }
+}
+
+async function seedTursoDatabase(force = false) {
+  loadFallbackData();
+  const c = getClient();
+  if (!c) {
+    return { success: false, error: 'Turso client not connected' };
+  }
+
+  const results = {
+    products: 0,
+    categories: 0,
+    content: 0
+  };
+
+  try {
+    // 1. Seed Categories if empty or force
+    const catCheck = await c.execute('SELECT COUNT(*) as count FROM categories');
+    if (force || Number(catCheck.rows[0]?.count || 0) === 0) {
+      if (Array.isArray(fallbackCategories)) {
+        for (const cat of fallbackCategories) {
+          await c.execute({
+            sql: 'INSERT OR REPLACE INTO categories (id, name, slug) VALUES (?, ?, ?)',
+            args: [cat.id || cat.slug, cat.name, cat.slug || cat.id]
+          });
+          results.categories++;
+        }
+      }
+    }
+
+    // 2. Seed Site Content if empty or force
+    const contentCheck = await c.execute('SELECT COUNT(*) as count FROM site_content WHERE section_key != "_products_seeded"');
+    if (force || Number(contentCheck.rows[0]?.count || 0) === 0) {
       if (fallbackContent.homepage) {
         await c.execute({
           sql: 'INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES (?, ?)',
           args: ['homepage', JSON.stringify(fallbackContent.homepage)]
         });
+        results.content++;
       }
       if (fallbackContent.productPage) {
         await c.execute({
           sql: 'INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES (?, ?)',
           args: ['productPage', JSON.stringify(fallbackContent.productPage)]
         });
+        results.content++;
       }
       if (fallbackContent.checkout) {
         await c.execute({
           sql: 'INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES (?, ?)',
           args: ['checkout', JSON.stringify(fallbackContent.checkout)]
         });
+        results.content++;
       }
       if (fallbackContent.visibility) {
         await c.execute({
           sql: 'INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES (?, ?)',
           args: ['visibility', JSON.stringify(fallbackContent.visibility)]
         });
+        results.content++;
       }
-      if (Array.isArray(fallbackCategories)) {
-        for (const cat of fallbackCategories) {
-          await c.execute({
-            sql: 'INSERT OR IGNORE INTO categories (id, name, slug) VALUES (?, ?, ?)',
-            args: [cat.id || cat.slug, cat.name, cat.slug || cat.id]
-          });
-        }
-      }
-      console.log('✓ Turso: Seeded site_content and categories');
     }
 
-    // Auto-seed products only once on initial setup (never re-seed if products were deleted)
-    const seedCheck = await c.execute("SELECT COUNT(*) as count FROM site_content WHERE section_key = '_products_seeded'");
-    const isAlreadySeeded = Number(seedCheck.rows[0]?.count || 0) > 0;
-
-    if (!isAlreadySeeded) {
-      const prodCheck = await c.execute('SELECT COUNT(*) as count FROM products');
-      if (Number(prodCheck.rows[0].count) === 0) {
-        loadFallbackData();
-        for (const p of fallbackProducts) {
-          await c.execute({
-            sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [
-              p.id,
-              p.name,
-              p.slug || p.id,
-              p.price || 1850,
-              p.category || 'hoodies',
-              p.image || (Array.isArray(p.images) && p.images[0]) || 'assets/sokhm-card-1.jpg',
-              p.description || '',
-              JSON.stringify(p.sizes || ['S', 'M', 'L', 'XL', 'XXL']),
-              JSON.stringify(p.colors || [{ name: 'Onyx Black', hex: '#0B0B0B' }]),
-              p.model_info || p.modelInfo || 'Model is 185cm wearing size L',
-              p.stock_status || p.stockStatus || 'in_stock'
-            ]
-          });
-        }
-        console.log(`✓ Turso: Initial seed of ${fallbackProducts.length} products completed`);
+    // 3. Seed Products if empty or force
+    const prodCheck = await c.execute('SELECT COUNT(*) as count FROM products');
+    if (force || Number(prodCheck.rows[0]?.count || 0) === 0) {
+      for (let i = 0; i < fallbackProducts.length; i++) {
+        const p = fallbackProducts[i];
+        await c.execute({
+          sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, sort_order, show_on_homepage)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [
+            p.id,
+            p.name,
+            p.slug || p.id,
+            p.price || 1850,
+            p.category || 'hoodies',
+            p.image || (Array.isArray(p.images) && p.images[0]) || 'assets/sokhm-card-1.jpg',
+            p.description || '',
+            JSON.stringify(p.sizes || ['S', 'M', 'L', 'XL', 'XXL']),
+            JSON.stringify(p.colors || [{ name: 'Onyx Black', hex: '#0B0B0B' }]),
+            p.model_info || p.modelInfo || 'Model is 185cm wearing size L',
+            p.stock_status || p.stockStatus || 'in_stock',
+            p.sort_order !== undefined ? p.sort_order : i,
+            p.show_on_homepage !== undefined ? p.show_on_homepage : 1
+          ]
+        });
+        results.products++;
       }
       await c.execute("INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES ('_products_seeded', '{\"seeded\":true}')");
     }
 
-    try {
-      await c.execute('ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0');
-    } catch (e) {
-      // Column already exists
-    }
-
-    try {
-      await c.execute('ALTER TABLE products ADD COLUMN show_on_homepage INTEGER DEFAULT 1');
-    } catch (e) {
-      // Column already exists
-    }
-
-    try {
-      await c.execute('ALTER TABLE orders ADD COLUMN discount_code TEXT');
-    } catch (e) {
-      // Column already exists
-    }
-
-    try {
-      await c.execute('ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0');
-    } catch (e) {
-      // Column already exists
-    }
-
-    try {
-      await c.execute('ALTER TABLE orders ADD COLUMN subtotal_price REAL');
-    } catch (e) {
-      // Column already exists
-    }
-
-    initialized = true;
-  } catch (err) {
-    console.error('Turso schema initialization error:', err.message);
+    console.log(`✓ Turso: Seed completed (products: ${results.products}, categories: ${results.categories}, content: ${results.content})`);
+    return { success: true, ...results };
+  } catch (seedErr) {
+    console.error('Turso seedDatabase error:', seedErr);
+    return { success: false, error: seedErr.message, ...results };
   }
 }
 
@@ -1391,6 +1427,7 @@ module.exports = {
   validateSession,
   revokeSession,
   getStats,
+  seedTursoDatabase,
   formatCairoDateTime,
   normalizeUtcDate
 };

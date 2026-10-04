@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupModalHandlers();
     setupInvoiceHandlers();
     setupSecurityHandlers();
+    setupSystemHandlers();
 
     // 3. تحميل البيانات بشكل متوازي مع عزل الأخطاء (Isolated Error Boundaries)
     try {
@@ -2608,6 +2609,53 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (e) {
       console.warn('تعذر جلب إحصائيات قاعدة البيانات:', e);
+    }
+  }
+
+  // ================= 14. أدوات النظام وقاعدة البيانات (SYSTEM HANDLERS) =================
+  function setupSystemHandlers() {
+    const seedBtn = document.getElementById('seedTursoBtn');
+    if (seedBtn) {
+      seedBtn.addEventListener('click', async () => {
+        if (!confirm('هل تريد مزامنة وتهيئة البيانات الأولية إلى Turso Cloud الآن؟ سيتم التأكد من وجود المنتجات والتصنيفات والمحتوى الأساسي وتحديث الإحصائيات.')) return;
+
+        seedBtn.disabled = true;
+        seedBtn.innerHTML = '<span class="inline-block animate-spin mr-2">✦</span> جاري مزامنة وتهيئة البيانات...';
+
+        try {
+          const res = await fetch('/api/admin/seed-turso', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            }
+          });
+
+          const data = await res.json();
+          if (res.ok && data.success) {
+            await Promise.allSettled([
+              loadProducts(),
+              loadSiteContent(),
+              loadDiscounts(),
+              loadDbStats()
+            ]);
+            renderProductsTable();
+            populateCategoryDropdowns();
+            renderCategoriesList();
+            renderOrderStats();
+            showToast(`تمت مزامنة بيانات Turso بنجاح! تم تجهيز ${data.products || 0} منتج و ${data.categories || 0} تصنيف ★`);
+          } else {
+            alert(data.error || 'تعذر استكمال المزامنة');
+          }
+        } catch (err) {
+          alert('خطأ في الاتصال أثناء المزامنة: ' + err.message);
+        } finally {
+          seedBtn.disabled = false;
+          seedBtn.innerHTML = '<i data-lucide="database-backup" class="w-4 h-4"></i><span>مزامنة وتهيئة بيانات Turso الآن</span>';
+          setupLucide();
+        }
+      });
     }
   }
 
