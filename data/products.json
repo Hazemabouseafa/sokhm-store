@@ -8,6 +8,8 @@
     "category_id": "hoodies",
     "price": 1850,
     "badge": "LIMITED",
+    "badge_subtitle": "500 GSM FLEECE",
+    "badgeSubtitle": "500 GSM FLEECE",
     "image": "assets/sokhm-card-3.jpg",
     "images": [
       "assets/sokhm-card-3.jpg",
@@ -51,8 +53,8 @@
     "showOnHomepage": true,
     "createdAt": "2026-10-03 18:34:18",
     "created_at": "2026-10-03 18:34:18",
-    "updatedAt": "2026-10-03 18:34:18",
-    "updated_at": "2026-10-03 18:34:18"
+    "updatedAt": "2026-10-04 14:21:23",
+    "updated_at": "2026-10-04 14:21:23"
   },
   {
     "id": "sokhm-garment-291",
@@ -63,6 +65,8 @@
     "category_id": "jackets",
     "price": 1850,
     "badge": "",
+    "badge_subtitle": "500 GSM FLEECE",
+    "badgeSubtitle": "500 GSM FLEECE",
     "image": "assets/sokhm-card-1.jpg",
     "images": [
       "assets/sokhm-card-1.jpg",
@@ -117,6 +121,8 @@
     "category_id": "hoodies",
     "price": 849,
     "badge": "",
+    "badge_subtitle": "500 GSM FLEECE",
+    "badgeSubtitle": "500 GSM FLEECE",
     "image": "assets/sokhm_download__9__1791064374476.webp",
     "images": [
       "assets/sokhm_download__9__1791064374476.webp",
@@ -173,6 +179,8 @@
     "category_id": "hoodies",
     "price": 1851,
     "badge": "CORE",
+    "badge_subtitle": "500 GSM FLEECE",
+    "badgeSubtitle": "500 GSM FLEECE",
     "image": "assets/whatsapp_image_2026-10-02_at_10_50_13_1791051937239.jpg",
     "images": [
       "assets/whatsapp_image_2026-10-02_at_10_50_13_1791051937239.jpg",
@@ -234,6 +242,8 @@
     "category_id": "hoodies",
     "price": 1850,
     "badge": "RESTOCKED",
+    "badge_subtitle": "500 GSM FLEECE",
+    "badgeSubtitle": "500 GSM FLEECE",
     "image": "assets/sokhm-card-4.jpg",
     "images": [
       "assets/sokhm-card-4.jpg",

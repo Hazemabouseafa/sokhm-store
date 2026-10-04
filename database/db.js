@@ -78,7 +78,8 @@ function initSchema() {
       subtitle TEXT,
       category_id TEXT,
       price REAL NOT NULL,
-      badge TEXT,
+      badge TEXT DEFAULT 'SIGNATURE',
+      badge_subtitle TEXT DEFAULT '500 GSM FLEECE',
       images_json TEXT NOT NULL,
       sizes_json TEXT NOT NULL,
       short_desc TEXT,
@@ -89,6 +90,8 @@ function initSchema() {
       colors_json TEXT,
       model_info TEXT,
       stock_status TEXT DEFAULT 'in_stock',
+      sort_order INTEGER DEFAULT 0,
+      show_on_homepage INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -159,6 +162,12 @@ function initSchema() {
 
   try {
     db.exec('ALTER TABLE products ADD COLUMN show_on_homepage INTEGER DEFAULT 1;');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec("ALTER TABLE products ADD COLUMN badge_subtitle TEXT DEFAULT '500 GSM FLEECE';");
   } catch (e) {
     // Column already exists
   }
@@ -421,9 +430,13 @@ function getSiteContent() {
     whatsappButtonText: "متابعة الطلب عبر WhatsApp"
   };
 
+  const pp = ppRow ? JSON.parse(ppRow.content_json) : {};
+  if (!pp.badgeTitle) pp.badgeTitle = 'SIGNATURE';
+  if (!pp.badgeSubtitle) pp.badgeSubtitle = '500 GSM FLEECE';
+
   return {
     homepage: hpRow ? JSON.parse(hpRow.content_json) : {},
-    productPage: ppRow ? JSON.parse(ppRow.content_json) : {},
+    productPage: pp,
     checkout: chkRow ? JSON.parse(chkRow.content_json) : defaultCheckout,
     visibility: visRow ? JSON.parse(visRow.content_json) : {},
     categories: catRows.map(c => ({ id: c.id, name: c.name, slug: c.slug }))
@@ -504,7 +517,9 @@ function getProducts() {
       category: r.category_id,
       category_id: r.category_id,
       price: r.price,
-      badge: r.badge || '',
+      badge: (r.badge !== undefined && r.badge !== null) ? r.badge : 'SIGNATURE',
+      badge_subtitle: (r.badge_subtitle !== undefined && r.badge_subtitle !== null) ? r.badge_subtitle : '500 GSM FLEECE',
+      badgeSubtitle: (r.badge_subtitle !== undefined && r.badge_subtitle !== null) ? r.badge_subtitle : '500 GSM FLEECE',
       image: mainImage,
       images: images.length > 0 ? images : [mainImage],
       sizes: sizes,
@@ -573,7 +588,9 @@ function getProductById(id) {
     category: r.category_id,
     category_id: r.category_id,
     price: r.price,
-    badge: r.badge || '',
+    badge: (r.badge !== undefined && r.badge !== null) ? r.badge : 'SIGNATURE',
+    badge_subtitle: (r.badge_subtitle !== undefined && r.badge_subtitle !== null) ? r.badge_subtitle : '500 GSM FLEECE',
+    badgeSubtitle: (r.badge_subtitle !== undefined && r.badge_subtitle !== null) ? r.badge_subtitle : '500 GSM FLEECE',
     image: mainImage,
     images: images.length > 0 ? images : [mainImage],
     sizes: sizes,
@@ -614,10 +631,10 @@ function saveProducts(productsList) {
     db.exec('DELETE FROM products;');
     const insert = db.prepare(`
       INSERT INTO products (
-        id, name, subtitle, category_id, price, badge,
+        id, name, subtitle, category_id, price, badge, badge_subtitle,
         images_json, sizes_json, short_desc, description,
         fabric, fit_advice, care_advice, colors_json, model_info, stock_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (const p of productsList) {
@@ -627,7 +644,8 @@ function saveProducts(productsList) {
         p.subtitle || '',
         p.category || 'hoodies',
         typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
-        p.badge || '',
+        (p.badge !== undefined && p.badge !== null) ? p.badge : 'SIGNATURE',
+        p.badge_subtitle || p.badgeSubtitle || '500 GSM FLEECE',
         JSON.stringify(p.images || []),
         JSON.stringify(p.sizes || []),
         p.shortDesc || '',
@@ -700,23 +718,27 @@ function upsertProduct(p) {
   const description = p.description || '';
   const shortDesc = p.shortDesc || p.short_desc || '';
   const subtitle = p.subtitle || '';
-  const badge = p.badge || '';
+  const badge = (p.badge !== undefined && p.badge !== null) ? String(p.badge).trim() : 'SIGNATURE';
+  const badgeSubtitle = (p.badge_subtitle !== undefined && p.badge_subtitle !== null)
+    ? String(p.badge_subtitle).trim()
+    : ((p.badgeSubtitle !== undefined && p.badgeSubtitle !== null) ? String(p.badgeSubtitle).trim() : '500 GSM FLEECE');
   const fabric = p.fabric || '';
   const fitAdvice = p.fitAdvice || p.fit_advice || '';
   const careAdvice = p.careAdvice || p.care_advice || '';
 
   const insert = db.prepare(`
     INSERT INTO products (
-      id, name, subtitle, category_id, price, badge,
+      id, name, subtitle, category_id, price, badge, badge_subtitle,
       images_json, sizes_json, short_desc, description,
       fabric, fit_advice, care_advice, colors_json, model_info, stock_status, show_on_homepage, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       name=excluded.name,
       subtitle=excluded.subtitle,
       category_id=excluded.category_id,
       price=excluded.price,
       badge=excluded.badge,
+      badge_subtitle=excluded.badge_subtitle,
       images_json=excluded.images_json,
       sizes_json=excluded.sizes_json,
       short_desc=excluded.short_desc,
@@ -738,6 +760,7 @@ function upsertProduct(p) {
     category,
     price,
     badge,
+    badgeSubtitle,
     JSON.stringify(images),
     JSON.stringify(sizes),
     shortDesc,

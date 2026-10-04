@@ -27,7 +27,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const breadcrumbCurrent = document.getElementById('breadcrumbCurrent');
   const mainGalleryImg = document.getElementById('mainGalleryImg');
   const galleryThumbnails = document.getElementById('galleryThumbnails');
+  const productBadgeContainer = document.getElementById('productBadgeContainer');
   const productBadge = document.getElementById('productBadge');
+  const productBadgeSubtitle = document.getElementById('productBadgeSubtitle') || document.getElementById('productBadgeSub');
   const productCategoryKicker = document.getElementById('productCategoryKicker');
   const productTitle = document.getElementById('productTitle');
   const productPrice = document.getElementById('productPrice');
@@ -140,7 +142,57 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (productPrice) productPrice.textContent = currentProduct.formattedPrice || `${pPriceNum.toLocaleString('en-US')} EGP`;
   if (productDescription) productDescription.textContent = currentProduct.description;
   if (productCategoryKicker) productCategoryKicker.textContent = `✦ SOKHM ATELIER // ${currentProduct.categoryLabel || currentProduct.category || 'DROP 01'}`;
-  if (productBadge) productBadge.textContent = `✦ ${currentProduct.badge || 'SIGNATURE'}`;
+  
+  // --- FLOATING IMAGE BADGES (DYNAMIC & CMS BOUND) ---
+  function renderFloatingBadges() {
+    const defaultBadgeTitle = (window.sokhmContent ? window.sokhmContent.get('productPage.badgeTitle') : null) || 'SIGNATURE';
+    const defaultBadgeSubtitle = (window.sokhmContent ? window.sokhmContent.get('productPage.badgeSubtitle') : null) || '500 GSM FLEECE';
+
+    // Title: check if product explicitly has a badge set (empty string means hide)
+    let badgeTitleVal = (currentProduct.badge !== undefined && currentProduct.badge !== null && String(currentProduct.badge).trim() !== '')
+      ? String(currentProduct.badge).trim()
+      : (currentProduct.badge === '' ? '' : defaultBadgeTitle);
+
+    // Subtitle: check if product explicitly has a badge_subtitle / badgeSubtitle set
+    const prodSub = currentProduct.badge_subtitle || currentProduct.badgeSubtitle;
+    let badgeSubVal = (prodSub !== undefined && prodSub !== null && String(prodSub).trim() !== '')
+      ? String(prodSub).trim()
+      : (prodSub === '' ? '' : defaultBadgeSubtitle);
+
+    // Visibility from CMS
+    const isTitleVis = window.sokhmContent ? window.sokhmContent.isVisible('productPage.badgeTitle') : true;
+    const isSubVis = window.sokhmContent ? window.sokhmContent.isVisible('productPage.badgeSubtitle') : true;
+
+    if (productBadge) {
+      if (badgeTitleVal && isTitleVis) {
+        productBadge.textContent = badgeTitleVal.startsWith('✦') ? badgeTitleVal : `✦ ${badgeTitleVal}`;
+        productBadge.style.display = '';
+      } else {
+        productBadge.style.display = 'none';
+      }
+    }
+
+    if (productBadgeSubtitle) {
+      if (badgeSubVal && isSubVis) {
+        productBadgeSubtitle.textContent = badgeSubVal;
+        productBadgeSubtitle.style.display = '';
+      } else {
+        productBadgeSubtitle.style.display = 'none';
+      }
+    }
+
+    if (productBadgeContainer) {
+      if ((badgeTitleVal && isTitleVis) || (badgeSubVal && isSubVis)) {
+        productBadgeContainer.style.display = 'flex';
+      } else {
+        productBadgeContainer.style.display = 'none';
+      }
+    }
+  }
+
+  renderFloatingBadges();
+  window.addEventListener('sokhm:content-updated', renderFloatingBadges);
+
   if (productRatingText) productRatingText.textContent = currentProduct.rating || '4.98';
 
   if (accordionFitText) accordionFitText.textContent = currentProduct.fit || currentProduct.fit_advice || currentProduct.fitAdvice || 'Sculpted drop-shoulder oversized boxy drape. Forward-rotated sleeves.';

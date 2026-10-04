@@ -977,6 +977,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const pp = siteContent.productPage || {};
 
     // 1. الشارات
+    // 0. شارات صورة المنتج العائمة (Floating Image Badges)
+    setVal('pp_badge_title', pp.badgeTitle || 'SIGNATURE');
+    setVal('pp_badge_subtitle', pp.badgeSubtitle || '500 GSM FLEECE');
+    bindVisCheckbox('vis_pp_badge_title', 'productPage.badgeTitle');
+    bindVisCheckbox('vis_pp_badge_subtitle', 'productPage.badgeSubtitle');
+
+    // 1. الشارات
     if (Array.isArray(pp.highlights)) {
       setVal('pp_high_0', pp.highlights[0]?.text || pp.highlights[0]);
       setVal('pp_high_1', pp.highlights[1]?.text || pp.highlights[1]);
@@ -1018,6 +1025,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBtn.addEventListener('click', async () => {
       if (!siteContent.productPage) siteContent.productPage = {};
       const pp = siteContent.productPage;
+
+      // 0. شارات صورة المنتج العائمة
+      pp.badgeTitle = getVal('pp_badge_title') || 'SIGNATURE';
+      pp.badgeSubtitle = getVal('pp_badge_subtitle') || '500 GSM FLEECE';
 
       // 1. الشارات
       pp.highlights = [
@@ -1617,6 +1628,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (catSelect) catSelect.value = prod.category || (activeCats[0] && (activeCats[0].slug || activeCats[0].id));
       setVal('pm_image', prod.image);
       setVal('pm_description', prod.description);
+      setVal('pm_badge', prod.badge !== undefined && prod.badge !== null ? prod.badge : 'SIGNATURE');
+      setVal('pm_badge_subtitle', (prod.badge_subtitle || prod.badgeSubtitle) !== undefined && (prod.badge_subtitle || prod.badgeSubtitle) !== null ? (prod.badge_subtitle || prod.badgeSubtitle) : '500 GSM FLEECE');
 
       // Display scope
       const showOnHomepageSelect = document.getElementById('pm_show_on_homepage');
@@ -1673,6 +1686,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       setVal('pm_price', '1850');
       setVal('pm_image', 'assets/sokhm-card-1.jpg');
       setVal('pm_description', 'تصميم فاخر من قطن مصري 500 GSM عالي الكثافة مع قصة معمارية عصرية.');
+      setVal('pm_badge', 'SIGNATURE');
+      setVal('pm_badge_subtitle', '500 GSM FLEECE');
       if (catSelect && activeCats.length > 0) catSelect.value = activeCats[0].slug || activeCats[0].id;
       
       const showOnHomepageSelect = document.getElementById('pm_show_on_homepage');
@@ -2171,6 +2186,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           allColorImages.unshift(image);
         }
 
+        const badge = getVal('pm_badge').trim();
+        const badge_subtitle = getVal('pm_badge_subtitle').trim();
+
         const payload = {
           id,
           name,
@@ -2189,6 +2207,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             isMain: Boolean(c.isMain)
           })),
           show_on_homepage,
+          badge,
+          badge_subtitle,
+          badgeSubtitle: badge_subtitle,
           stock_status: 'in_stock'
         };
 

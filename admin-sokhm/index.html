@@ -791,6 +791,42 @@
         </button>
       </div>
 
+      <!-- ٠. شارات صورة المنتج العائمة (Floating Image Badges) -->
+      <div class="cms-card p-6 space-y-5">
+        <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
+          <i data-lucide="award" class="w-4 h-4 text-amber-400"></i>
+          <h3 class="font-bold text-sm text-white">شارات صورة المنتج العائمة الافتراضية (Floating Image Badges)</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- البادج الرئيسي الافتراضي (SIGNATURE) -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="cms-label mb-0">البادج الرئيسي الافتراضي (مثل SIGNATURE)</label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs select-none">
+                <input type="checkbox" id="vis_pp_badge_title" data-vis-key="productPage.badgeTitle" checked class="cms-vis-toggle w-3.5 h-3.5 rounded bg-[#111] border-[#333] text-emerald-400 cursor-pointer">
+                <span class="vis-text text-[10px] font-bold">ظهور</span>
+              </label>
+            </div>
+            <input type="text" id="pp_badge_title" class="cms-input w-full font-mono uppercase" placeholder="SIGNATURE">
+            <p class="text-[10px] text-neutral-500 mt-1">يُستخدم كقيمة افتراضية إذا لم يُحدد المنتج بادج مخصص في بياناته.</p>
+          </div>
+
+          <!-- النص الفرعي للبادج الافتراضي (500 GSM FLEECE) -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="cms-label mb-0">النص الفرعي للبادج الافتراضي (مثل 500 GSM FLEECE)</label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs select-none">
+                <input type="checkbox" id="vis_pp_badge_subtitle" data-vis-key="productPage.badgeSubtitle" checked class="cms-vis-toggle w-3.5 h-3.5 rounded bg-[#111] border-[#333] text-emerald-400 cursor-pointer">
+                <span class="vis-text text-[10px] font-bold">ظهور</span>
+              </label>
+            </div>
+            <input type="text" id="pp_badge_subtitle" class="cms-input w-full font-mono uppercase" placeholder="500 GSM FLEECE">
+            <p class="text-[10px] text-neutral-500 mt-1">يُستخدم كقيمة افتراضية لشارة تفاصيل الخامة فوق الصورة إذا لم تحدد بالمنتج.</p>
+          </div>
+        </div>
+      </div>
+
       <!-- 1. شارات الثقة والضمانات (3 Highlights) -->
       <div class="cms-card p-6 space-y-5">
         <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
@@ -1697,6 +1733,36 @@
         <p class="text-[10px] text-neutral-500 mt-1">
           عند اختيار "الظهور فقط في صفحة التصنيف"، سيظهر المنتج فقط للعملاء عند الضغط على تصنيفه من قائمة المنتجات (Dropdown) ولن يزاحم واجهة المتجر الرئيسية.
         </p>
+      </div>
+
+      <!-- Product Floating Image Badges (شارات صورة المنتج) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 bg-[#080808] rounded-xl border border-[#1A1A1A]">
+        <div>
+          <label class="cms-label flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="tag" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>بادج صورة المنتج الرئيسي (Badge)</span>
+            </span>
+            <span class="text-[10px] text-neutral-500">مثل: SIGNATURE</span>
+          </label>
+          <input type="text" id="pm_badge" placeholder="مثال: SIGNATURE أو LIMITED أو حصري" class="cms-input w-full font-mono text-xs uppercase">
+          <p class="text-[10px] text-neutral-500 mt-1">
+            الشارة البارزة التي تظهر فوق صورة المنتج (اتركه فارغاً لإخفائه).
+          </p>
+        </div>
+        <div>
+          <label class="cms-label flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-neutral-400"></i>
+              <span>النص الفرعي للبادج / تفاصيل الخامة</span>
+            </span>
+            <span class="text-[10px] text-neutral-500">مثل: 500 GSM FLEECE</span>
+          </label>
+          <input type="text" id="pm_badge_subtitle" placeholder="مثال: 500 GSM FLEECE" class="cms-input w-full font-mono text-xs uppercase">
+          <p class="text-[10px] text-neutral-500 mt-1">
+            الشارة الفرعية بجانب البادج على الصورة (اتركه فارغاً لإخفائه).
+          </p>
+        </div>
       </div>
 
       <!-- Available Sizes Checkboxes -->

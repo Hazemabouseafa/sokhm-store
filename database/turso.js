@@ -145,6 +145,10 @@ async function initTursoSchema() {
         colors TEXT,
         model_info TEXT,
         stock_status TEXT DEFAULT 'in_stock',
+        sort_order INTEGER DEFAULT 0,
+        show_on_homepage INTEGER DEFAULT 1,
+        badge TEXT DEFAULT 'SIGNATURE',
+        badge_subtitle TEXT DEFAULT '500 GSM FLEECE',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );`,
@@ -209,6 +213,14 @@ async function initTursoSchema() {
 
     try {
       await c.execute('ALTER TABLE products ADD COLUMN show_on_homepage INTEGER DEFAULT 1');
+    } catch (e) {}
+
+    try {
+      await c.execute("ALTER TABLE products ADD COLUMN badge TEXT DEFAULT 'SIGNATURE'");
+    } catch (e) {}
+
+    try {
+      await c.execute("ALTER TABLE products ADD COLUMN badge_subtitle TEXT DEFAULT '500 GSM FLEECE'");
     } catch (e) {}
 
     try {
@@ -377,6 +389,9 @@ function parseProductRow(row) {
     sortOrder: row.sort_order !== undefined ? Number(row.sort_order) : 0,
     show_on_homepage: row.show_on_homepage === undefined || row.show_on_homepage === null || Number(row.show_on_homepage) === 1,
     showOnHomepage: row.show_on_homepage === undefined || row.show_on_homepage === null || Number(row.show_on_homepage) === 1,
+    badge: (row.badge !== undefined && row.badge !== null) ? String(row.badge) : 'SIGNATURE',
+    badge_subtitle: (row.badge_subtitle !== undefined && row.badge_subtitle !== null) ? String(row.badge_subtitle) : '500 GSM FLEECE',
+    badgeSubtitle: (row.badge_subtitle !== undefined && row.badge_subtitle !== null) ? String(row.badge_subtitle) : '500 GSM FLEECE',
     created_at: normalizeUtcDate(row.created_at),
     createdAt: normalizeUtcDate(row.created_at),
     updated_at: normalizeUtcDate(row.updated_at),
@@ -405,9 +420,13 @@ async function getSiteContent() {
         }
       }
 
+      const pp = contentMap.productPage || fallbackContent.productPage || {};
+      if (!pp.badgeTitle) pp.badgeTitle = 'SIGNATURE';
+      if (!pp.badgeSubtitle) pp.badgeSubtitle = '500 GSM FLEECE';
+
       return {
         homepage: contentMap.homepage || fallbackContent.homepage || {},
-        productPage: contentMap.productPage || fallbackContent.productPage || {},
+        productPage: pp,
         checkout: contentMap.checkout || fallbackContent.checkout || {},
         visibility: contentMap.visibility || fallbackContent.visibility || {},
         categories: (catRows && catRows.rows && catRows.rows.length > 0)
@@ -581,13 +600,17 @@ async function upsertProduct(p) {
   const category = p.category || 'hoodies';
   const description = p.description || '';
   const showOnHomepage = (p.show_on_homepage === false || p.show_on_homepage === 0 || p.show_on_homepage === '0' || p.showOnHomepage === false) ? 0 : 1;
+  const badge = (p.badge !== undefined && p.badge !== null) ? String(p.badge).trim() : 'SIGNATURE';
+  const badgeSubtitle = (p.badge_subtitle !== undefined && p.badge_subtitle !== null)
+    ? String(p.badge_subtitle).trim()
+    : ((p.badgeSubtitle !== undefined && p.badgeSubtitle !== null) ? String(p.badgeSubtitle).trim() : '500 GSM FLEECE');
 
   if (c) {
     try {
       await initTursoSchema();
       await c.execute({
-        sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, show_on_homepage, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, show_on_homepage, badge, badge_subtitle, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         args: [
           id,
           p.name || 'منتج SOKHM',
@@ -600,7 +623,9 @@ async function upsertProduct(p) {
           colorsJson,
           modelInfo,
           stockStatus,
-          showOnHomepage
+          showOnHomepage,
+          badge,
+          badgeSubtitle
         ]
       });
       const prod = await getProductById(id);
@@ -625,6 +650,8 @@ async function upsertProduct(p) {
     model_info: modelInfo,
     stock_status: stockStatus,
     show_on_homepage: showOnHomepage,
+    badge,
+    badge_subtitle: badgeSubtitle,
     updated_at: new Date().toISOString()
   });
 
