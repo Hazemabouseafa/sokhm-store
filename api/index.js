@@ -1,16 +1,24 @@
 const path = require('path');
 const url = require('url');
 
-// Determine database adapter: Turso Cloud or native SQLite
+// Determine database adapter: Neon PostgreSQL, Turso Cloud, or native SQLite
 function getDb() {
+  if (
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.NEON_DATABASE_URL
+  ) {
+    return require('../database/neon.js');
+  }
   if (process.env.TURSO_DATABASE_URL) {
     return require('../database/turso.js');
   }
   try {
     return require('../database/db.js');
   } catch (err) {
-    console.warn('Native SQLite unavailable, falling back to Turso adapter:', err.message);
-    return require('../database/turso.js');
+    console.warn('Native SQLite unavailable, falling back to Neon/Turso adapter:', err.message);
+    return require('../database/neon.js');
   }
 }
 
@@ -139,7 +147,7 @@ module.exports = async (req, res) => {
       return sendJson(res, 200, { success: true });
     }
 
-    if (pathname === '/api/admin/seed-turso' && req.method === 'POST') {
+    if ((pathname === '/api/admin/seed-turso' || pathname === '/api/admin/seed-neon' || pathname === '/api/admin/seed-database') && req.method === 'POST') {
       const token = getBearerToken(req);
       if (!token) {
         return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول أولاً' });
@@ -148,11 +156,15 @@ module.exports = async (req, res) => {
       if (!session) {
         return sendJson(res, 401, { success: false, error: 'انتهت صلاحية الجلسة' });
       }
+      if (db.seedNeonDatabase) {
+        const result = await db.seedNeonDatabase(true);
+        return sendJson(res, 200, result);
+      }
       if (db.seedTursoDatabase) {
         const result = await db.seedTursoDatabase(true);
         return sendJson(res, 200, result);
       }
-      return sendJson(res, 200, { success: true, message: 'قاعدة البيانات جاهزة' });
+      return sendJson(res, 200, { success: true, message: 'قاعدة البيانات جاهزة ومحدثة' });
     }
 
     // 2. Site Content

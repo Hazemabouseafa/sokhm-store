@@ -2,7 +2,19 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const db = process.env.TURSO_DATABASE_URL ? require('./database/turso.js') : require('./database/db.js');
+let db;
+if (
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.NEON_DATABASE_URL
+) {
+  db = require('./database/neon.js');
+} else if (process.env.TURSO_DATABASE_URL) {
+  db = require('./database/turso.js');
+} else {
+  db = require('./database/db.js');
+}
 
 const PORT = 3000;
 const MIME_TYPES = {

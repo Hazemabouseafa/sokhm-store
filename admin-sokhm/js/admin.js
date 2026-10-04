@@ -2588,14 +2588,22 @@ document.addEventListener('DOMContentLoaded', async () => {
           const engineEl = document.getElementById('statDbEngineText');
           const pathEl = document.getElementById('statDbPathText');
           if (engineEl && stats.engine) engineEl.textContent = stats.engine;
-          if (pathEl) pathEl.textContent = stats.dbPath || (stats.engine?.includes('Turso') ? 'Turso Cloud Serverless (libsql)' : 'database/sokhm.db');
+          if (pathEl) {
+            if (stats.engine?.includes('Neon')) {
+              pathEl.textContent = 'Neon Cloud PostgreSQL (HTTP Serverless)';
+            } else if (stats.engine?.includes('Turso')) {
+              pathEl.textContent = 'Turso Cloud Serverless (libsql)';
+            } else {
+              pathEl.textContent = stats.dbPath || 'database/sokhm.db';
+            }
+          }
 
           const dbBadgeText = document.getElementById('dbBadgeText');
           const dbHeaderBadge = document.getElementById('dbHeaderBadge');
           if (dbBadgeText && stats.engine) {
             dbBadgeText.textContent = stats.engine + ' • متصلة';
             if (stats.engine.includes('Fallback')) {
-              dbBadgeText.textContent = '⚠️ ذاكرة محلية مؤقتة (Fallback - Turso غير متصل)';
+              dbBadgeText.textContent = '⚠️ ذاكرة محلية مؤقتة (Fallback - السحابة غير متصلة)';
               if (dbHeaderBadge) {
                 dbHeaderBadge.className = 'hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-950/40 border border-amber-800/60 text-[11px] font-bold text-amber-300';
               }
@@ -2617,13 +2625,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const seedBtn = document.getElementById('seedTursoBtn');
     if (seedBtn) {
       seedBtn.addEventListener('click', async () => {
-        if (!confirm('هل تريد مزامنة وتهيئة البيانات الأولية إلى Turso Cloud الآن؟ سيتم التأكد من وجود المنتجات والتصنيفات والمحتوى الأساسي وتحديث الإحصائيات.')) return;
+        if (!confirm('هل تريد مزامنة وتهيئة البيانات الأولية إلى قاعدة البيانات السحابية (Neon / Turso) الآن؟ سيتم التأكد من وجود المنتجات والتصنيفات والمحتوى الأساسي وتحديث الإحصائيات.')) return;
 
         seedBtn.disabled = true;
         seedBtn.innerHTML = '<span class="inline-block animate-spin mr-2">✦</span> جاري مزامنة وتهيئة البيانات...';
 
         try {
-          const res = await fetch('/api/admin/seed-turso', {
+          const res = await fetch('/api/admin/seed-database', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -2644,7 +2652,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             populateCategoryDropdowns();
             renderCategoriesList();
             renderOrderStats();
-            showToast(`تمت مزامنة بيانات Turso بنجاح! تم تجهيز ${data.products || 0} منتج و ${data.categories || 0} تصنيف ★`);
+            showToast(`تمت مزامنة البيانات السحابية بنجاح! تم تجهيز ${data.products || 0} منتج و ${data.categories || 0} تصنيف ★`);
           } else {
             alert(data.error || 'تعذر استكمال المزامنة');
           }
@@ -2652,7 +2660,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           alert('خطأ في الاتصال أثناء المزامنة: ' + err.message);
         } finally {
           seedBtn.disabled = false;
-          seedBtn.innerHTML = '<i data-lucide="database-backup" class="w-4 h-4"></i><span>مزامنة وتهيئة بيانات Turso الآن</span>';
+          seedBtn.innerHTML = '<i data-lucide="database-backup" class="w-4 h-4"></i><span>مزامنة وتهيئة البيانات السحابية الآن</span>';
           setupLucide();
         }
       });

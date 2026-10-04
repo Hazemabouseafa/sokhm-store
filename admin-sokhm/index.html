@@ -1550,11 +1550,11 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-1">
             <span class="text-neutral-500 block">محرك قاعدة البيانات:</span>
-            <span id="statDbEngineText" class="font-mono text-white font-bold">SQLite 3 (Turso / Native)</span>
+            <span id="statDbEngineText" class="font-mono text-white font-bold">Neon Postgres / Turso / SQLite</span>
           </div>
           <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-1">
             <span class="text-neutral-500 block">ملف قاعدة البيانات الرئيسي:</span>
-            <span id="statDbPathText" class="font-mono text-emerald-400 font-bold">database/sokhm.db</span>
+            <span id="statDbPathText" class="font-mono text-emerald-400 font-bold">Cloud Serverless (Neon/Turso)</span>
           </div>
           <div class="p-3 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-1">
             <span class="text-neutral-500 block">نسخة احتياطية للمنتجات:</span>
@@ -1573,15 +1573,15 @@
           <div>
             <h3 class="font-bold text-sm text-white flex items-center gap-2">
               <i data-lucide="refresh-cw" class="w-4 h-4 text-amber-400"></i>
-              <span>مزامنة وتهيئة البيانات السحابية (Turso Cloud Data Seed)</span>
+              <span>مزامنة وتهيئة البيانات السحابية (Cloud Database Seed)</span>
             </h3>
             <p class="text-xs text-neutral-400 mt-1">
-              إذا كانت قاعدة بيانات Turso السحابية جديدة أو فارغة على Vercel، يمكنك بنقرة واحدة ضخ المنتجات والتصنيفات ونصوص الموقع الأساسية إليها وتحديث الإحصائيات فوراً.
+              إذا كانت قاعدة بياناتك السحابية (Neon Postgres أو Turso) جديدة أو فارغة على Vercel، يمكنك بنقرة واحدة ضخ المنتجات والتصنيفات ونصوص الموقع الأساسية إليها وتحديث الإحصائيات فوراً.
             </p>
           </div>
           <button id="seedTursoBtn" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg whitespace-nowrap">
             <i data-lucide="database-backup" class="w-4 h-4"></i>
-            <span>مزامنة وتهيئة بيانات Turso الآن</span>
+            <span>مزامنة وتهيئة البيانات السحابية الآن</span>
           </button>
         </div>
       </div>
