@@ -550,6 +550,18 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
+server.on('error', (err) => {
+  console.error('Server error:', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 server.listen(PORT, () => {
   console.log(`SOKHM STORE with CMS API is live at http://localhost:${PORT}`);
   console.log(`Storefront: http://localhost:${PORT}/index.html`);
