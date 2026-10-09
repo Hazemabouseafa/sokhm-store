@@ -267,7 +267,9 @@
     "homepage.bottomBanner.ctaText": true,
     "homepage.footer.brandTag": true,
     "homepage.footer.slogan": true,
-    "homepage.footer.copyright": true
+    "homepage.footer.copyright": true,
+    "productPage.showSizeGuide": true,
+    "productPage.sizeGuideButtonText": true
   },
   "categories": [
     {

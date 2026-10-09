@@ -536,7 +536,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (!prodSizes.includes(selectedModalSize)) {
-        selectedModalSize = prodSizes.includes('M') ? 'M' : prodSizes[0];
+        selectedModalSize = prodSizes.includes('M') ? 'M' : (prodSizes.includes('32') ? '32' : prodSizes[0]);
       }
 
       prodSizes.forEach(size => {
@@ -857,9 +857,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 2400);
   }
 
+  // ================= 8.5 DYNAMIC WHATSAPP LINKS SYNC =================
+  function syncWhatsAppLinks() {
+    try {
+      const content = (window.sokhmContent && window.sokhmContent.getContent) ? window.sokhmContent.getContent() : null;
+      const cfg = (content && content.checkout) ? content.checkout : {};
+      const rawWaPhone = (cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
+      const intlWaPhone = rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : (rawWaPhone.startsWith('2') ? rawWaPhone : ('20' + rawWaPhone));
+      const waMsg = encodeURIComponent('مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني');
+      const targetUrl = `https://wa.me/${intlWaPhone}?text=${waMsg}`;
+
+      ['floatingWhatsappBtn', 'navSupportBtn', 'drawerSupportBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.href = targetUrl;
+      });
+    } catch (_) {}
+  }
+
+  window.addEventListener('sokhm:content-updated', syncWhatsAppLinks);
+
   // ================= 9. INITIALIZE =================
   await loadProducts();
   renderCart();
+  syncWhatsAppLinks();
 
   if (window.lucide) {
     window.lucide.createIcons();

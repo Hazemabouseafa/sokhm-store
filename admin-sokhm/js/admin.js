@@ -1039,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bindVisCheckbox('vis_pp_sg_subtitle', 'productPage.sizeGuideSubtitle');
     bindVisCheckbox('vis_pp_sg_title', 'productPage.sizeGuideTitle');
     bindVisCheckbox('vis_pp_sg_note', 'productPage.sizeGuideNote');
+    bindVisCheckbox('vis_pp_sizeguide_master', 'productPage.showSizeGuide');
 
     renderSizeGuideAdminRows(Array.isArray(sg.rows) ? sg.rows : []);
   }
@@ -1752,6 +1753,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         showOnHomepageSelect.value = (prod.show_on_homepage === 0 || prod.show_on_homepage === false) ? '0' : '1';
       }
 
+      // Size Guide Toggle for this product
+      const showSizeGuideCb = document.getElementById('pm_show_size_guide');
+      const showSizeGuideText = document.getElementById('pm_show_size_guide_text');
+      if (showSizeGuideCb) {
+        showSizeGuideCb.checked = (prod.show_size_guide !== undefined && prod.show_size_guide !== null)
+          ? Boolean(Number(prod.show_size_guide))
+          : (prod.showSizeGuide !== undefined ? Boolean(prod.showSizeGuide) : true);
+        if (showSizeGuideText) {
+          showSizeGuideText.textContent = showSizeGuideCb.checked ? 'مُفعل' : 'مُعطل';
+          showSizeGuideText.className = showSizeGuideCb.checked ? 'text-xs font-bold font-mono text-emerald-400' : 'text-xs font-bold font-mono text-neutral-500';
+        }
+      }
+
       // Reset pending images for new color
       pendingNewColorImages = [];
       renderPendingNewColorImages();
@@ -1807,6 +1821,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       const showOnHomepageSelect = document.getElementById('pm_show_on_homepage');
       if (showOnHomepageSelect) showOnHomepageSelect.value = '1';
+
+      // Size Guide Toggle for new product (default enabled)
+      const showSizeGuideCb = document.getElementById('pm_show_size_guide');
+      const showSizeGuideText = document.getElementById('pm_show_size_guide_text');
+      if (showSizeGuideCb) {
+        showSizeGuideCb.checked = true;
+        if (showSizeGuideText) {
+          showSizeGuideText.textContent = 'مُفعل';
+          showSizeGuideText.className = 'text-xs font-bold font-mono text-emerald-400';
+        }
+      }
 
       pendingNewColorImages = [];
       renderPendingNewColorImages();
@@ -2155,6 +2180,49 @@ document.addEventListener('DOMContentLoaded', async () => {
       cb.addEventListener('change', () => updateSizeCheckboxStyle(cb));
     });
 
+    // Quick size selection buttons
+    const quickHoodieBtn = document.getElementById('quickSelectHoodieSizes');
+    if (quickHoodieBtn) {
+      quickHoodieBtn.addEventListener('click', () => {
+        const hoodieSizes = ['S', 'M', 'L', 'XL'];
+        document.querySelectorAll('input[name="pm_sizes"]').forEach(cb => {
+          cb.checked = hoodieSizes.includes(cb.value);
+          updateSizeCheckboxStyle(cb);
+        });
+      });
+    }
+
+    const quickPantsBtn = document.getElementById('quickSelectPantsSizes');
+    if (quickPantsBtn) {
+      quickPantsBtn.addEventListener('click', () => {
+        const pantsSizes = ['30', '32', '34', '36', '38', '40', '42', '44', '46'];
+        document.querySelectorAll('input[name="pm_sizes"]').forEach(cb => {
+          cb.checked = pantsSizes.includes(cb.value);
+          updateSizeCheckboxStyle(cb);
+        });
+      });
+    }
+
+    const clearSizesBtn = document.getElementById('clearAllSizes');
+    if (clearSizesBtn) {
+      clearSizesBtn.addEventListener('click', () => {
+        document.querySelectorAll('input[name="pm_sizes"]').forEach(cb => {
+          cb.checked = false;
+          updateSizeCheckboxStyle(cb);
+        });
+      });
+    }
+
+    // Size guide per-product toggle listener
+    const pmSizeGuideCb = document.getElementById('pm_show_size_guide');
+    const pmSizeGuideText = document.getElementById('pm_show_size_guide_text');
+    if (pmSizeGuideCb && pmSizeGuideText) {
+      pmSizeGuideCb.addEventListener('change', () => {
+        pmSizeGuideText.textContent = pmSizeGuideCb.checked ? 'مُفعل' : 'مُعطل';
+        pmSizeGuideText.className = pmSizeGuideCb.checked ? 'text-xs font-bold font-mono text-emerald-400' : 'text-xs font-bold font-mono text-neutral-500';
+      });
+    }
+
     // Color hex input listener
     const colorHexIn = document.getElementById('newColorHexInput');
     const colorHexValText = document.getElementById('newColorHexValueText');
@@ -2303,6 +2371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const badge = getVal('pm_badge').trim();
         const badge_subtitle = getVal('pm_badge_subtitle').trim();
+        const show_size_guide = document.getElementById('pm_show_size_guide')?.checked ? 1 : 0;
 
         const payload = {
           id,
@@ -2322,6 +2391,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             isMain: Boolean(c.isMain)
           })),
           show_on_homepage,
+          show_size_guide,
+          showSizeGuide: Boolean(show_size_guide),
           badge,
           badge_subtitle,
           badgeSubtitle: badge_subtitle,

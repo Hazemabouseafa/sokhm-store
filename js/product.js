@@ -248,6 +248,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         tbodyEl.appendChild(tr);
       });
     }
+
+    // Check master CMS visibility and currentProduct setting
+    const isMasterVis = window.sokhmContent ? window.sokhmContent.isVisible('productPage.showSizeGuide') : true;
+    const isBtnVis = window.sokhmContent ? window.sokhmContent.isVisible('productPage.sizeGuideButtonText') : true;
+    const isProdVis = currentProduct ? (currentProduct.show_size_guide !== 0 && currentProduct.show_size_guide !== false && currentProduct.show_size_guide !== '0') : true;
+
+    if (openSizeGuideTrigger) {
+      if (!isMasterVis || !isBtnVis || !isProdVis) {
+        openSizeGuideTrigger.style.display = 'none';
+      } else {
+        openSizeGuideTrigger.style.display = '';
+      }
+    }
   }
 
   renderFloatingBadges();
@@ -348,9 +361,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       prodSizes = ['S', 'M', 'L', 'XL'];
     }
 
-    // Default selected size: prefer 'M' if available, otherwise first size in list
+    // Default selected size: prefer 'M' if available, otherwise '32' or first size in list
     if (!prodSizes.includes(selectedSize)) {
-      selectedSize = prodSizes.includes('M') ? 'M' : prodSizes[0];
+      selectedSize = prodSizes.includes('M') ? 'M' : (prodSizes.includes('32') ? '32' : prodSizes[0]);
     }
 
     prodSizes.forEach(size => {
@@ -890,7 +903,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupProductNavEvents();
   loadNavCategories();
 
+  // ================= DYNAMIC WHATSAPP LINKS SYNC =================
+  function syncWhatsAppLinks() {
+    try {
+      const content = (window.sokhmContent && window.sokhmContent.getContent) ? window.sokhmContent.getContent() : null;
+      const cfg = (content && content.checkout) ? content.checkout : {};
+      const rawWaPhone = (cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
+      const intlWaPhone = rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : (rawWaPhone.startsWith('2') ? rawWaPhone : ('20' + rawWaPhone));
+      const waMsg = encodeURIComponent('مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني');
+      const targetUrl = `https://wa.me/${intlWaPhone}?text=${waMsg}`;
+
+      ['floatingWhatsappBtn', 'navProductSupportBtn', 'drawerSupportBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.href = targetUrl;
+      });
+    } catch (_) {}
+  }
+
+  window.addEventListener('sokhm:content-updated', () => {
+    syncWhatsAppLinks();
+  });
+
   // Initial render
   renderCart();
+  syncWhatsAppLinks();
   if (window.lucide) window.lucide.createIcons();
 });

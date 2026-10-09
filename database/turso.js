@@ -149,6 +149,7 @@ async function initTursoSchema() {
         show_on_homepage INTEGER DEFAULT 1,
         badge TEXT DEFAULT 'SIGNATURE',
         badge_subtitle TEXT DEFAULT '500 GSM FLEECE',
+        show_size_guide INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );`,
@@ -221,6 +222,10 @@ async function initTursoSchema() {
 
     try {
       await c.execute("ALTER TABLE products ADD COLUMN badge_subtitle TEXT DEFAULT '500 GSM FLEECE'");
+    } catch (e) {}
+
+    try {
+      await c.execute('ALTER TABLE products ADD COLUMN show_size_guide INTEGER DEFAULT 1');
     } catch (e) {}
 
     try {
@@ -392,6 +397,8 @@ function parseProductRow(row) {
     badge: (row.badge !== undefined && row.badge !== null) ? String(row.badge) : 'SIGNATURE',
     badge_subtitle: (row.badge_subtitle !== undefined && row.badge_subtitle !== null) ? String(row.badge_subtitle) : '500 GSM FLEECE',
     badgeSubtitle: (row.badge_subtitle !== undefined && row.badge_subtitle !== null) ? String(row.badge_subtitle) : '500 GSM FLEECE',
+    show_size_guide: row.show_size_guide === undefined || row.show_size_guide === null || Number(row.show_size_guide) === 1,
+    showSizeGuide: row.show_size_guide === undefined || row.show_size_guide === null || Number(row.show_size_guide) === 1,
     created_at: normalizeUtcDate(row.created_at),
     createdAt: normalizeUtcDate(row.created_at),
     updated_at: normalizeUtcDate(row.updated_at),
@@ -601,6 +608,7 @@ async function upsertProduct(p) {
   const category = p.category || 'hoodies';
   const description = p.description || '';
   const showOnHomepage = (p.show_on_homepage === false || p.show_on_homepage === 0 || p.show_on_homepage === '0' || p.showOnHomepage === false) ? 0 : 1;
+  const showSizeGuide = (p.show_size_guide === false || p.show_size_guide === 0 || p.show_size_guide === '0' || p.showSizeGuide === false) ? 0 : 1;
   const badge = (p.badge !== undefined && p.badge !== null) ? String(p.badge).trim() : 'SIGNATURE';
   const badgeSubtitle = (p.badge_subtitle !== undefined && p.badge_subtitle !== null)
     ? String(p.badge_subtitle).trim()
@@ -610,8 +618,8 @@ async function upsertProduct(p) {
     try {
       await initTursoSchema();
       await c.execute({
-        sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, show_on_homepage, badge, badge_subtitle, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        sql: `INSERT OR REPLACE INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, show_on_homepage, badge, badge_subtitle, show_size_guide, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         args: [
           id,
           p.name || 'منتج SOKHM',
@@ -626,7 +634,8 @@ async function upsertProduct(p) {
           stockStatus,
           showOnHomepage,
           badge,
-          badgeSubtitle
+          badgeSubtitle,
+          showSizeGuide
         ]
       });
       const prod = await getProductById(id);
@@ -653,6 +662,8 @@ async function upsertProduct(p) {
     show_on_homepage: showOnHomepage,
     badge,
     badge_subtitle: badgeSubtitle,
+    show_size_guide: showSizeGuide,
+    showSizeGuide: Boolean(showSizeGuide),
     updated_at: new Date().toISOString()
   });
 

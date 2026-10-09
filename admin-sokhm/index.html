@@ -998,7 +998,14 @@
             <i data-lucide="ruler" class="w-4 h-4 text-emerald-400"></i>
             <h3 class="font-bold text-sm text-white">٥. جدول دليل المقاسات وقياسات القطع (Size Guide Table & Measurements)</h3>
           </div>
-          <span class="text-[11px] text-neutral-400">تحكم كامل في نصوص الجدول، القياسات بالسنتيمتر، والصفوف المعروضة للعملاء</span>
+          <div class="flex items-center gap-3">
+            <span class="text-[11px] text-neutral-400 hidden sm:inline">تحكم كامل في نصوص الجدول والصفوف</span>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs select-none bg-[#111] px-2.5 py-1 rounded-lg border border-[#222]">
+              <span class="text-[11px] text-neutral-300 font-bold">إظهار الدليل في المتجر:</span>
+              <input type="checkbox" id="vis_pp_sizeguide_master" data-vis-key="productPage.showSizeGuide" checked class="cms-vis-toggle w-3.5 h-3.5 rounded bg-[#111] border-[#333] text-emerald-400 cursor-pointer">
+              <span class="vis-text text-[10px] font-bold text-emerald-400">ظهور</span>
+            </label>
+          </div>
         </div>
 
         <!-- نصوص وعناوين نافذة دليل المقاسات -->
@@ -1848,39 +1855,118 @@
         </div>
       </div>
 
-      <!-- Available Sizes Checkboxes -->
-      <div>
-        <label class="cms-label">المقاسات المتوفرة للطلب *</label>
-        <div id="pm_sizes_container" class="flex flex-wrap items-center gap-2 pt-1">
-          <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#080808] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
-            <input type="checkbox" name="pm_sizes" value="XS" class="hidden">
-            <span>XS</span>
-          </label>
-          <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#080808] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
-            <input type="checkbox" name="pm_sizes" value="S" class="hidden">
-            <span>S</span>
-          </label>
-          <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#080808] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
-            <input type="checkbox" name="pm_sizes" value="M" checked class="hidden">
-            <span>M</span>
-          </label>
-          <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#080808] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
-            <input type="checkbox" name="pm_sizes" value="L" checked class="hidden">
-            <span>L</span>
-          </label>
-          <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#080808] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
-            <input type="checkbox" name="pm_sizes" value="XL" checked class="hidden">
-            <span>XL</span>
-          </label>
-          <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#080808] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
-            <input type="checkbox" name="pm_sizes" value="XXL" class="hidden">
-            <span>XXL</span>
-          </label>
-          <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#080808] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
-            <input type="checkbox" name="pm_sizes" value="XXXL" class="hidden">
-            <span>XXXL</span>
-          </label>
+      <!-- Available Sizes (Upperwear & Pants 30-46) -->
+      <div class="p-3.5 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#161616]">
+          <label class="cms-label mb-0">المقاسات المتوفرة للطلب (Sizes) *</label>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] text-neutral-500">تحديد سريع:</span>
+            <button type="button" id="quickSelectHoodieSizes" class="px-2 py-1 rounded bg-[#141414] hover:bg-neutral-800 text-[10px] text-neutral-300 font-mono transition-colors cursor-pointer border border-[#222]">
+              هوديز (S-XL)
+            </button>
+            <button type="button" id="quickSelectPantsSizes" class="px-2 py-1 rounded bg-[#141414] hover:bg-neutral-800 text-[10px] text-neutral-300 font-mono transition-colors cursor-pointer border border-[#222]">
+              بنطلونات (30-46)
+            </button>
+            <button type="button" id="clearAllSizes" class="px-2 py-1 rounded bg-[#141414] hover:bg-neutral-800 text-[10px] text-neutral-400 font-mono transition-colors cursor-pointer border border-[#222]">
+              إلغاء التحديد
+            </button>
+          </div>
         </div>
+
+        <!-- Upperwear Sizes -->
+        <div class="space-y-1.5">
+          <span class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">✦ مقاسات الهوديز والملابس العلوية (Hoodies & Tops):</span>
+          <div id="pm_sizes_upper_container" class="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="XS" class="hidden">
+              <span>XS</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="S" class="hidden">
+              <span>S</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="M" checked class="hidden">
+              <span>M</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="L" checked class="hidden">
+              <span>L</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="XL" checked class="hidden">
+              <span>XL</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="XXL" class="hidden">
+              <span>XXL</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="XXXL" class="hidden">
+              <span>XXXL</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Pants / Trousers Sizes (Even Numbers 30-46) -->
+        <div class="space-y-1.5 pt-1.5 border-t border-[#161616]">
+          <span class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">✦ مقاسات البنطلونات والسراويل الزوجية (Pants & Trousers Sizes 30-46):</span>
+          <div id="pm_sizes_pants_container" class="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="30" class="hidden">
+              <span>30</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="32" class="hidden">
+              <span>32</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="34" class="hidden">
+              <span>34</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="36" class="hidden">
+              <span>36</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="38" class="hidden">
+              <span>38</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="40" class="hidden">
+              <span>40</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="42" class="hidden">
+              <span>42</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="44" class="hidden">
+              <span>44</span>
+            </label>
+            <label class="size-checkbox-label px-3 py-1.5 rounded-lg border border-[#222] bg-[#0C0C0C] text-neutral-400 font-mono font-bold cursor-pointer hover:border-white transition-all">
+              <input type="checkbox" name="pm_sizes" value="46" class="hidden">
+              <span>46</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Size Guide Option for this Product -->
+      <div class="p-3.5 bg-[#080808] rounded-xl border border-[#1A1A1A] flex items-center justify-between">
+        <div>
+          <label class="cms-label mb-0 flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="ruler" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>إظهار دليل المقاسات (Size Guide) لهذا المنتج</span>
+          </label>
+          <p class="text-[10px] text-neutral-500 mt-0.5">
+            أبقِ الخيار مفعلاً لظهور زر وجدول القياسات بصفحة هذا المنتج، أو ألغِ تفعيله لإخفائه (مثلاً للبنطلونات أو الإكسسوارات).
+          </p>
+        </div>
+        <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" id="pm_show_size_guide" checked class="cms-vis-toggle w-4 h-4 rounded bg-[#111] border-[#333] text-emerald-400 cursor-pointer">
+          <span id="pm_show_size_guide_text" class="text-xs font-bold font-mono text-emerald-400">مُفعل</span>
+        </label>
       </div>
 
       <!-- Available Colors Customizer & Main Image Selection -->

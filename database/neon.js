@@ -169,6 +169,7 @@ async function initNeonSchema() {
         show_on_homepage INTEGER DEFAULT 1,
         badge TEXT DEFAULT 'SIGNATURE',
         badge_subtitle TEXT DEFAULT '500 GSM FLEECE',
+        show_size_guide INTEGER DEFAULT 1,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
@@ -236,6 +237,10 @@ async function initNeonSchema() {
 
     try {
       await sql.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_subtitle TEXT DEFAULT '500 GSM FLEECE'");
+    } catch (migErr) {}
+
+    try {
+      await sql.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS show_size_guide INTEGER DEFAULT 1");
     } catch (migErr) {}
 
     // Ensure default admin user websiteadmin
@@ -406,6 +411,8 @@ function parseProductRow(row) {
     badge: (row.badge !== undefined && row.badge !== null) ? String(row.badge) : 'SIGNATURE',
     badge_subtitle: (row.badge_subtitle !== undefined && row.badge_subtitle !== null) ? String(row.badge_subtitle) : '500 GSM FLEECE',
     badgeSubtitle: (row.badge_subtitle !== undefined && row.badge_subtitle !== null) ? String(row.badge_subtitle) : '500 GSM FLEECE',
+    show_size_guide: row.show_size_guide === undefined || row.show_size_guide === null || Number(row.show_size_guide) === 1,
+    showSizeGuide: row.show_size_guide === undefined || row.show_size_guide === null || Number(row.show_size_guide) === 1,
     created_at: normalizeUtcDate(row.created_at),
     createdAt: normalizeUtcDate(row.created_at),
     updated_at: normalizeUtcDate(row.updated_at),
@@ -612,6 +619,7 @@ async function upsertProduct(p) {
   const category = p.category || 'hoodies';
   const description = p.description || '';
   const showOnHomepage = (p.show_on_homepage === false || p.show_on_homepage === 0 || p.show_on_homepage === '0' || p.showOnHomepage === false) ? 0 : 1;
+  const showSizeGuide = (p.show_size_guide === false || p.show_size_guide === 0 || p.show_size_guide === '0' || p.showSizeGuide === false) ? 0 : 1;
   const sortOrder = p.sort_order !== undefined ? Number(p.sort_order) : 0;
   const badge = (p.badge !== undefined && p.badge !== null) ? String(p.badge).trim() : 'SIGNATURE';
   const badgeSubtitle = (p.badge_subtitle !== undefined && p.badge_subtitle !== null)
@@ -622,8 +630,8 @@ async function upsertProduct(p) {
     try {
       await initNeonSchema();
       await sql.query(`
-        INSERT INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, show_on_homepage, sort_order, badge, badge_subtitle, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+        INSERT INTO products (id, name, slug, price, category, image, description, sizes, colors, model_info, stock_status, show_on_homepage, sort_order, badge, badge_subtitle, show_size_guide, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
           slug = EXCLUDED.slug,
@@ -639,6 +647,7 @@ async function upsertProduct(p) {
           sort_order = COALESCE(EXCLUDED.sort_order, products.sort_order),
           badge = EXCLUDED.badge,
           badge_subtitle = EXCLUDED.badge_subtitle,
+          show_size_guide = EXCLUDED.show_size_guide,
           updated_at = NOW()
       `, [
         id,
@@ -655,7 +664,8 @@ async function upsertProduct(p) {
         showOnHomepage,
         sortOrder,
         badge,
-        badgeSubtitle
+        badgeSubtitle,
+        showSizeGuide
       ]);
       const prod = await getProductById(id);
       if (prod) return prod;
@@ -682,6 +692,8 @@ async function upsertProduct(p) {
     sort_order: sortOrder,
     badge,
     badge_subtitle: badgeSubtitle,
+    show_size_guide: showSizeGuide,
+    showSizeGuide: Boolean(showSizeGuide),
     updated_at: new Date().toISOString()
   });
 

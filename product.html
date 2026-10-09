@@ -107,6 +107,12 @@
         </div>
 
         <a href="index.html#story" class="sokhm-nav-link">ABOUT</a>
+
+        <!-- Support / WhatsApp Link -->
+        <a id="navProductSupportBtn" href="https://wa.me/201098765432?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%20SOKHM%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D9%88%D8%A7%D9%84%D8%AA%D9%88%D8%A7%D8%B5%D9%84%20%D9%85%D8%B9%20%D9%81%D8%B1%D9%8A%D9%82%20%D8%A7%D9%84%D8%AF%D8%B9%D9%85%20%D8%A7%D9%84%D9%81%D9%86%D9%8A" target="_blank" rel="noopener noreferrer" class="sokhm-nav-link flex items-center gap-1.5 text-neutral-400 hover:text-emerald-400 transition-colors">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>دعم فني</span>
+        </a>
       </nav>
 
       <!-- Right Action Icons -->
@@ -175,6 +181,17 @@
       <div class="border-t border-[#161616] pt-4">
         <a href="index.html#story" class="mobile-nav-link block py-2 text-neutral-300 hover:text-white transition-colors">
           ABOUT
+        </a>
+      </div>
+
+      <div class="border-t border-[#161616] pt-4">
+        <a id="drawerSupportBtn" href="https://wa.me/201098765432?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%20SOKHM%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D9%88%D8%A7%D9%84%D8%AA%D9%88%D8%A7%D8%B5%D9%84%20%D9%85%D8%B9%20%D9%81%D8%B1%D9%8A%D9%82%20%D8%A7%D9%84%D8%AF%D8%B9%D9%85%20%D8%A7%D9%84%D9%81%D9%86%D9%8A" target="_blank" rel="noopener noreferrer" class="mobile-nav-link flex items-center justify-between py-2 text-neutral-300 hover:text-emerald-400 transition-colors">
+          <span class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>دعم فني</span>
+            <span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-normal">WhatsApp</span>
+          </span>
+          <i data-lucide="message-circle" class="w-4 h-4 text-emerald-400"></i>
         </a>
       </div>
     </div>
@@ -290,7 +307,7 @@
         <div class="space-y-2.5 pt-2">
           <div class="flex items-center justify-between text-xs">
             <span class="text-neutral-400 uppercase tracking-wider">Select Size:</span>
-            <button id="openSizeGuideTrigger" data-cms="productPage.sizeGuideButtonText" class="text-neutral-400 hover:text-white underline cursor-pointer text-[11px]">
+            <button id="openSizeGuideTrigger" data-cms="productPage.sizeGuideButtonText" data-cms-vis="productPage.showSizeGuide" class="text-neutral-400 hover:text-white underline cursor-pointer text-[11px]">
               Size Guide (CM)
             </button>
           </div>
@@ -560,8 +577,36 @@
     </div>
   </dialog>
 
+  <!-- ================= FLOATING WHATSAPP BUTTON ================= -->
+  <aside aria-label="WhatsApp Support" class="fixed bottom-6 right-6 z-40">
+    <a 
+      id="floatingWhatsappBtn" 
+      href="https://wa.me/201098765432?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%20SOKHM%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D9%88%D8%A7%D9%84%D8%AA%D9%88%D8%A7%D8%B5%D9%84%20%D9%85%D8%B9%20%D9%81%D8%B1%D9%8A%D9%82%20%D8%A7%D9%84%D8%AF%D8%B9%D9%85%20%D8%A7%D9%84%D9%81%D9%86%D9%8A" 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      aria-label="تواصل معنا عبر واتساب"
+      class="group relative flex items-center justify-center w-14 h-14 rounded-full bg-[#25D366] text-white shadow-[0_8px_25px_rgba(37,211,102,0.4)] hover:shadow-[0_10px_35px_rgba(37,211,102,0.6)] hover:scale-105 active:scale-95 transition-all duration-300"
+    >
+      <!-- Pulse Ring -->
+      <span class="absolute -inset-1 rounded-full bg-[#25D366]/40 animate-ping pointer-events-none"></span>
+
+      <!-- Online Indicator Dot -->
+      <span class="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-300 border-2 border-black rounded-full shadow-sm"></span>
+
+      <!-- WhatsApp SVG Icon -->
+      <svg class="w-7 h-7 fill-current relative z-10" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.16 12.05 20.16C10.66 20.16 9.3 19.8 8.1 19.11L7.81 18.94L4.69 19.76L5.52 16.71L5.33 16.41C4.55 15.17 4.14 13.56 4.14 11.91C4.14 7.38 7.84 3.67 12.05 3.67ZM8.82 7.02C8.63 7.02 8.43 7.03 8.27 7.37C8.1 7.72 7.55 8.24 7.55 9.33C7.55 10.42 8.35 11.47 8.46 11.62C8.58 11.78 10.13 14.16 12.51 15.18C14.49 16.03 14.89 15.86 15.32 15.82C15.75 15.78 16.71 15.25 16.91 14.69C17.11 14.13 17.11 13.65 17.05 13.55C16.99 13.45 16.84 13.39 16.61 13.27C16.38 13.15 15.26 12.6 15.05 12.52C14.84 12.44 14.69 12.4 14.54 12.63C14.39 12.86 13.95 13.39 13.82 13.55C13.69 13.7 13.56 13.72 13.33 13.61C13.1 13.49 12.36 13.25 11.48 12.46C10.8 11.85 10.34 11.1 10.21 10.88C10.08 10.65 10.2 10.53 10.31 10.42C10.41 10.32 10.54 10.17 10.65 10.04C10.77 9.91 10.81 9.81 10.89 9.66C10.97 9.5 10.93 9.36 10.87 9.24C10.81 9.12 10.36 8.01 10.17 7.55C9.99 7.1 9.8 7.16 9.66 7.15C9.52 7.15 9.36 7.15 9.2 7.15L8.82 7.02Z"/>
+      </svg>
+
+      <!-- Tooltip Label on Hover (Desktop) -->
+      <span class="hidden sm:inline-block absolute right-full mr-3.5 px-3 py-1.5 rounded-xl bg-[#0F0F0F] text-white text-xs font-sans whitespace-nowrap shadow-xl border border-[#222] opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 pointer-events-none">
+        تواصل مع الدعم الفني ✦
+      </span>
+    </a>
+  </aside>
+
   <!-- TOAST CONTAINER -->
-  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none font-mono"></div>
+  <div id="toastContainer" class="fixed bottom-24 right-6 z-50 flex flex-col space-y-2 pointer-events-none font-mono"></div>
 
   <!-- SCRIPTS -->
   <script src="js/store.js?v=5.0"></script>

@@ -92,6 +92,7 @@ function initSchema() {
       stock_status TEXT DEFAULT 'in_stock',
       sort_order INTEGER DEFAULT 0,
       show_on_homepage INTEGER DEFAULT 1,
+      show_size_guide INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -168,6 +169,12 @@ function initSchema() {
 
   try {
     db.exec("ALTER TABLE products ADD COLUMN badge_subtitle TEXT DEFAULT '500 GSM FLEECE';");
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE products ADD COLUMN show_size_guide INTEGER DEFAULT 1;');
   } catch (e) {
     // Column already exists
   }
@@ -548,6 +555,8 @@ function getProducts() {
       sort_order: r.sort_order !== undefined ? r.sort_order : 0,
       show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
       showOnHomepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
+      show_size_guide: r.show_size_guide === undefined || r.show_size_guide === null || r.show_size_guide === 1 || r.show_size_guide === '1',
+      showSizeGuide: r.show_size_guide === undefined || r.show_size_guide === null || r.show_size_guide === 1 || r.show_size_guide === '1',
       createdAt: r.created_at,
       created_at: r.created_at,
       updatedAt: r.updated_at,
@@ -619,6 +628,8 @@ function getProductById(id) {
     sort_order: r.sort_order !== undefined ? r.sort_order : 0,
     show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
     showOnHomepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
+    show_size_guide: r.show_size_guide === undefined || r.show_size_guide === null || r.show_size_guide === 1 || r.show_size_guide === '1',
+    showSizeGuide: r.show_size_guide === undefined || r.show_size_guide === null || r.show_size_guide === 1 || r.show_size_guide === '1',
     createdAt: normalizeUtcDate(r.created_at),
     created_at: normalizeUtcDate(r.created_at),
     updatedAt: normalizeUtcDate(r.updated_at),
@@ -723,6 +734,7 @@ function upsertProduct(p) {
   const modelInfo = p.model_info || p.modelInfo || '';
   const stockStatus = p.stock_status || p.stockStatus || 'in_stock';
   const showOnHomepage = (p.show_on_homepage === false || p.show_on_homepage === 0 || p.show_on_homepage === '0' || p.showOnHomepage === false) ? 0 : 1;
+  const showSizeGuide = (p.show_size_guide === false || p.show_size_guide === 0 || p.show_size_guide === '0' || p.showSizeGuide === false) ? 0 : 1;
   const description = p.description || '';
   const shortDesc = p.shortDesc || p.short_desc || '';
   const subtitle = p.subtitle || '';
@@ -738,8 +750,8 @@ function upsertProduct(p) {
     INSERT INTO products (
       id, name, subtitle, category_id, price, badge, badge_subtitle,
       images_json, sizes_json, short_desc, description,
-      fabric, fit_advice, care_advice, colors_json, model_info, stock_status, show_on_homepage, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      fabric, fit_advice, care_advice, colors_json, model_info, stock_status, show_on_homepage, show_size_guide, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       name=excluded.name,
       subtitle=excluded.subtitle,
@@ -758,6 +770,7 @@ function upsertProduct(p) {
       model_info=excluded.model_info,
       stock_status=excluded.stock_status,
       show_on_homepage=excluded.show_on_homepage,
+      show_size_guide=excluded.show_size_guide,
       updated_at=CURRENT_TIMESTAMP
   `);
 
@@ -779,7 +792,8 @@ function upsertProduct(p) {
     JSON.stringify(colors),
     modelInfo,
     stockStatus,
-    showOnHomepage
+    showOnHomepage,
+    showSizeGuide
   );
 
   const updated = getProducts();
