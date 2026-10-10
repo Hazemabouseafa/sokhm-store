@@ -509,6 +509,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeModalProduct = prod;
     selectedModalSize = 'M';
 
+    if (window.sokhmPixel && typeof window.sokhmPixel.trackViewContent === 'function') {
+      window.sokhmPixel.trackViewContent(prod);
+    }
+
     if (modalImg) modalImg.src = prod.image || (Array.isArray(prod.images) && prod.images[0]) || 'assets/sokhm-card-1.jpg';
     if (modalKicker) modalKicker.textContent = prod.categoryLabel || prod.category || '✦ SOKHM ATELIER';
     if (modalTitle) modalTitle.textContent = prod.name;
@@ -625,6 +629,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveCart();
     showToast(`Added ${product.name} [${size}] to Bag`);
     renderCart();
+
+    if (window.sokhmPixel && typeof window.sokhmPixel.trackAddToCart === 'function') {
+      window.sokhmPixel.trackAddToCart({
+        id: product.id,
+        productId: product.id,
+        name: product.name,
+        price: priceNum,
+        quantity: 1
+      });
+    }
   }
 
   function renderCart() {

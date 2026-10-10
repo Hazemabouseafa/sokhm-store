@@ -213,6 +213,15 @@
           <span>الأقسام والتصنيفات (Categories)</span>
         </button>
 
+        <!-- تبويب تتبع فيسبوك (Meta Pixel) -->
+        <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-pixel">
+          <svg class="w-4 h-4 text-[#1877F2] fill-current" viewBox="0 0 24 24">
+            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v7.005C18.343 21.144 22 17.009 22 12c0-5.523-4.477-10-10-10z"/>
+          </svg>
+          <span>تتبع فيسبوك (Meta Pixel)</span>
+          <span id="pixelHeaderStatusBadge" class="w-2 h-2 rounded-full bg-neutral-600 inline-block"></span>
+        </button>
+
         <!-- تبويب الحماية وتغيير كلمة المرور -->
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-security">
           <i data-lucide="lock" class="w-4 h-4 text-amber-400"></i>
@@ -1531,6 +1540,188 @@
     </section>
 
     <!-- ========================================================
+         التبويب: إعدادات وتتبع فيسبوك (META PIXEL TAB)
+         ======================================================== -->
+    <section id="tab-pixel" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#1A1A1A] gap-4">
+        <div>
+          <span class="text-[11px] font-bold text-[#1877F2] uppercase tracking-wider block">ربط الإعلانات والتتبع التحليلي (Analytics & Ads)</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1 flex items-center gap-3">
+            <span>إعدادات وتتبع Meta Pixel</span>
+            <span id="pixelLiveStatusBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-neutral-900 text-neutral-400 border border-neutral-700 font-mono font-bold">غير مفعل</span>
+          </h2>
+          <p class="text-xs text-neutral-400 mt-1">
+            ربط متجر SOKHM ببيكسل فيسبوك (Meta Pixel) لتتبع الزوار والحملات الإعلانية ومعدلات التحويل تلقائياً لجميع أحداث التجارة الإلكترونية.
+          </p>
+        </div>
+
+        <button 
+          type="button" 
+          id="saveMetaPixelBtn" 
+          class="px-6 py-2.5 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-[#1877F2]/20 self-start sm:self-auto"
+        >
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>حفظ إعدادات Pixel</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Configuration Card (7 Cols) -->
+        <div class="lg:col-span-7 space-y-6">
+          <div class="cms-card p-6 sm:p-8 space-y-6">
+            <div class="flex items-center justify-between pb-4 border-b border-[#1A1A1A]">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-[#1877F2]/10 border border-[#1877F2]/20 flex items-center justify-center text-[#1877F2]">
+                  <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v7.005C18.343 21.144 22 17.009 22 12c0-5.523-4.477-10-10-10z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-bold text-sm text-white">بيانات Meta Pixel ID</h3>
+                  <p class="text-[11px] text-neutral-400">أدخل معرّف البيكسل المكون من أرقام من مدير الأحداث (Events Manager).</p>
+                </div>
+              </div>
+
+              <!-- Master Pixel Toggle -->
+              <label class="relative inline-flex items-center cursor-pointer select-none">
+                <input type="checkbox" id="pixel_enabled" class="sr-only peer">
+                <div class="w-11 h-6 bg-[#222] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1877F2]"></div>
+                <span id="pixel_enabled_text" class="mr-3 text-xs font-bold font-mono text-neutral-400">معطل</span>
+              </label>
+            </div>
+
+            <!-- Pixel ID Input -->
+            <div class="space-y-2">
+              <label class="cms-label" for="pixel_id">معرّف البيكسل (Meta / Facebook Pixel ID) *</label>
+              <div class="relative">
+                <input 
+                  type="text" 
+                  id="pixel_id" 
+                  placeholder="مثال: 123456789012345" 
+                  class="cms-input w-full font-mono text-sm tracking-wider pl-10"
+                  maxlength="25"
+                >
+                <i data-lucide="hash" class="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              </div>
+              <p class="text-[11px] text-neutral-500">يتكون المعرف عادة من 15 إلى 16 رقماً، ويمكنك الحصول عليه من Meta Business Suite > Events Manager.</p>
+            </div>
+
+            <!-- Tracked Events Settings -->
+            <div class="pt-4 border-t border-[#1A1A1A] space-y-4">
+              <h4 class="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">
+                <i data-lucide="check-square" class="w-4 h-4 text-emerald-400"></i>
+                <span>الأحداث القياسية المفعلة للتتبع (Standard E-Commerce Events):</span>
+              </h4>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <label class="p-3 rounded-xl bg-[#0C0C0C] border border-[#1E1E1E] flex items-center justify-between cursor-pointer hover:border-neutral-700 transition-colors">
+                  <div>
+                    <span class="text-xs font-bold text-white block">PageView</span>
+                    <span class="text-[10px] text-neutral-400">زيارات صفحات المتجر كاملة</span>
+                  </div>
+                  <input type="checkbox" id="pixel_event_pageview" checked class="w-4 h-4 rounded bg-[#111] border-[#333] text-[#1877F2] cursor-pointer">
+                </label>
+
+                <label class="p-3 rounded-xl bg-[#0C0C0C] border border-[#1E1E1E] flex items-center justify-between cursor-pointer hover:border-neutral-700 transition-colors">
+                  <div>
+                    <span class="text-xs font-bold text-white block">ViewContent</span>
+                    <span class="text-[10px] text-neutral-400">معاينة صفحات وتفاصيل المنتجات</span>
+                  </div>
+                  <input type="checkbox" id="pixel_event_viewcontent" checked class="w-4 h-4 rounded bg-[#111] border-[#333] text-[#1877F2] cursor-pointer">
+                </label>
+
+                <label class="p-3 rounded-xl bg-[#0C0C0C] border border-[#1E1E1E] flex items-center justify-between cursor-pointer hover:border-neutral-700 transition-colors">
+                  <div>
+                    <span class="text-xs font-bold text-white block">AddToCart</span>
+                    <span class="text-[10px] text-neutral-400">إضافة قطعة إلى حقيبة التسوق</span>
+                  </div>
+                  <input type="checkbox" id="pixel_event_addtocart" checked class="w-4 h-4 rounded bg-[#111] border-[#333] text-[#1877F2] cursor-pointer">
+                </label>
+
+                <label class="p-3 rounded-xl bg-[#0C0C0C] border border-[#1E1E1E] flex items-center justify-between cursor-pointer hover:border-neutral-700 transition-colors">
+                  <div>
+                    <span class="text-xs font-bold text-white block">InitiateCheckout</span>
+                    <span class="text-[10px] text-neutral-400">فتح نافذة تأكيد وإتمام الشراء</span>
+                  </div>
+                  <input type="checkbox" id="pixel_event_initiatecheckout" checked class="w-4 h-4 rounded bg-[#111] border-[#333] text-[#1877F2] cursor-pointer">
+                </label>
+
+                <label class="p-3 rounded-xl bg-[#0C0C0C] border border-[#1E1E1E] flex items-center justify-between cursor-pointer hover:border-neutral-700 transition-colors sm:col-span-2">
+                  <div>
+                    <span class="text-xs font-bold text-emerald-400 block">Purchase (شراء ناجح)</span>
+                    <span class="text-[10px] text-neutral-400">تسجيل وتأكيد الطلب مع إرسال القيمة (EGP) وتفاصيل القطع</span>
+                  </div>
+                  <input type="checkbox" id="pixel_event_purchase" checked class="w-4 h-4 rounded bg-[#111] border-[#333] text-emerald-400 cursor-pointer">
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Testing & Diagnostics Card (5 Cols) -->
+        <div class="lg:col-span-5 space-y-6">
+          <div class="cms-card p-6 space-y-5">
+            <h4 class="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
+              <i data-lucide="activity" class="w-4 h-4 text-[#1877F2]"></i>
+              <span>فحص واختبار تفعيل البيكسل (Diagnostics & Testing)</span>
+            </h4>
+
+            <div class="space-y-3">
+              <div class="p-3.5 bg-[#090909] rounded-xl border border-[#1A1A1A] space-y-2 text-xs">
+                <div class="flex items-center justify-between font-mono">
+                  <span class="text-neutral-500">حالة البيكسل:</span>
+                  <span id="diagPixelStatus" class="font-bold text-neutral-400">غير مفعل</span>
+                </div>
+                <div class="flex items-center justify-between font-mono">
+                  <span class="text-neutral-500">معرف البيكسل:</span>
+                  <span id="diagPixelId" class="font-bold text-white">--</span>
+                </div>
+                <div class="flex items-center justify-between font-mono">
+                  <span class="text-neutral-500">مكتبة fbq:</span>
+                  <span id="diagFbqStatus" class="font-bold text-neutral-400">جاهزة للحقن التلقائي</span>
+                </div>
+              </div>
+
+              <!-- Test Event Button -->
+              <button 
+                type="button" 
+                id="testPixelEventBtn" 
+                class="w-full py-3 rounded-xl bg-[#141414] hover:bg-[#1F1F1F] text-white border border-[#2A2A2A] hover:border-neutral-500 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+                <span>إرسال حدث تجريبي فوري (Test Event)</span>
+              </button>
+
+              <div id="testEventFeedback" class="hidden p-3 rounded-xl text-xs font-mono text-center"></div>
+
+              <!-- Open Meta Events Manager Link -->
+              <a 
+                id="openEventsManagerBtn" 
+                href="https://business.facebook.com/events_manager2" 
+                target="_blank" 
+                rel="noopener"
+                class="w-full py-2.5 rounded-xl bg-[#0C0C0C] hover:bg-[#141414] text-neutral-300 hover:text-white border border-[#222] font-semibold text-xs transition-all flex items-center justify-center gap-2"
+              >
+                <span>فتح مدير الأحداث (Events Manager)</span>
+                <i data-lucide="external-link" class="w-3.5 h-3.5 text-neutral-400"></i>
+              </a>
+            </div>
+
+            <!-- Pixel Best Practices Info -->
+            <div class="p-4 bg-[#080808] rounded-xl border border-[#161616] space-y-2 text-[11px] text-neutral-400 leading-relaxed">
+              <span class="font-bold text-neutral-300 block flex items-center gap-1.5">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-[#1877F2]"></i>
+                نصائح للتحقق:
+              </span>
+              <p>• تأكد من تثبيت إضافة <strong>Meta Pixel Helper</strong> على متصفح Chrome لفحص البيكسل أثناء تصفح المتجر.</p>
+              <p>• إذا كنت تستخدم مانع إعلانات (AdBlocker)، يرجى إيقافه مؤقتاً لتتمكن من رؤية إرسال البيانات بدقة.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
          التبويب ٧: الحماية وإدارة كلمة المرور (SECURITY TAB)
          ======================================================== -->
     <section id="tab-security" class="tab-pane hidden space-y-6">
@@ -2112,6 +2303,7 @@
     ✦ SOKHM ATELIER &copy; 2026. كل الحقوق محفوظة • بوابة الإدارة المركزية SQLite
   </footer>
 
+  <script src="../js/meta-pixel.js?v=1.0"></script>
   <script src="js/admin.js?v=6.0"></script>
 </body>
 </html>

@@ -505,6 +505,13 @@
     renderOrderSummary();
 
     modal.showModal();
+
+    // Meta Pixel InitiateCheckout event
+    if (window.sokhmPixel && typeof window.sokhmPixel.trackInitiateCheckout === 'function') {
+      const subtotal = currentOrderItems.reduce((acc, i) => acc + ((i.price || 0) * (i.quantity || 1)), 0);
+      window.sokhmPixel.trackInitiateCheckout(currentOrderItems, subtotal);
+    }
+
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -745,6 +752,17 @@
       const waBtn = document.getElementById('coWhatsappBtn');
       if (waBtn) {
         waBtn.href = `https://wa.me/${intlWaPhone}?text=${waMsg}`;
+      }
+
+      // Meta Pixel Purchase Event
+      if (window.sokhmPixel && typeof window.sokhmPixel.trackPurchase === 'function') {
+        window.sokhmPixel.trackPurchase({
+          id: orderId,
+          orderId: orderId,
+          items: currentOrderItems,
+          totalPrice: totalPrice,
+          total: totalPrice
+        });
       }
 
       if (window.lucide) window.lucide.createIcons();

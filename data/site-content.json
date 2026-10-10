@@ -267,9 +267,16 @@
     "homepage.bottomBanner.ctaText": true,
     "homepage.footer.brandTag": true,
     "homepage.footer.slogan": true,
-    "homepage.footer.copyright": true,
-    "productPage.showSizeGuide": true,
-    "productPage.sizeGuideButtonText": true
+    "homepage.footer.copyright": true
+  },
+  "metaPixel": {
+    "pixelId": "",
+    "enabled": false,
+    "trackPageView": true,
+    "trackViewContent": true,
+    "trackAddToCart": true,
+    "trackInitiateCheckout": true,
+    "trackPurchase": true
   },
   "categories": [
     {

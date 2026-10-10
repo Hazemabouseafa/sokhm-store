@@ -270,6 +270,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderSizeGuide();
   });
 
+  // Meta Pixel ViewContent event
+  if (window.sokhmPixel && typeof window.sokhmPixel.trackViewContent === 'function') {
+    window.sokhmPixel.trackViewContent(currentProduct);
+  }
+
   if (productRatingText) productRatingText.textContent = currentProduct.rating || '4.98';
 
   if (accordionFitText) accordionFitText.textContent = currentProduct.fit || currentProduct.fit_advice || currentProduct.fitAdvice || 'Sculpted drop-shoulder oversized boxy drape. Forward-rotated sleeves.';
@@ -553,6 +558,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveCart();
     showToast(`Added ${product.name} [${size}] to Bag`);
     renderCart();
+
+    if (window.sokhmPixel && typeof window.sokhmPixel.trackAddToCart === 'function') {
+      window.sokhmPixel.trackAddToCart(product, qty);
+    }
   }
 
   function renderCart() {

@@ -432,11 +432,22 @@ async function getSiteContent() {
       if (!pp.badgeSubtitle) pp.badgeSubtitle = '500 GSM FLEECE';
       if (!pp.sizeGuide) pp.sizeGuide = fallbackContent.productPage?.sizeGuide;
 
+      const defaultMetaPixel = {
+        pixelId: "",
+        enabled: false,
+        trackPageView: true,
+        trackViewContent: true,
+        trackAddToCart: true,
+        trackInitiateCheckout: true,
+        trackPurchase: true
+      };
+
       return {
         homepage: contentMap.homepage || fallbackContent.homepage || {},
         productPage: pp,
         checkout: contentMap.checkout || fallbackContent.checkout || {},
         visibility: contentMap.visibility || fallbackContent.visibility || {},
+        metaPixel: contentMap.metaPixel || fallbackContent.metaPixel || defaultMetaPixel,
         categories: (catRows && catRows.rows && catRows.rows.length > 0)
           ? catRows.rows.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug }))
           : fallbackCategories
@@ -446,11 +457,22 @@ async function getSiteContent() {
     }
   }
 
+  const defaultMetaPixel = {
+    pixelId: "",
+    enabled: false,
+    trackPageView: true,
+    trackViewContent: true,
+    trackAddToCart: true,
+    trackInitiateCheckout: true,
+    trackPurchase: true
+  };
+
   return {
     homepage: fallbackContent.homepage || {},
     productPage: fallbackContent.productPage || {},
     checkout: fallbackContent.checkout || {},
     visibility: fallbackContent.visibility || {},
+    metaPixel: fallbackContent.metaPixel || defaultMetaPixel,
     categories: fallbackCategories
   };
 }
@@ -488,6 +510,12 @@ async function saveSiteContent(content) {
           args: [JSON.stringify(content.visibility)]
         });
       }
+      if (content.metaPixel) {
+        stmts.push({
+          sql: "INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('metaPixel', ?, CURRENT_TIMESTAMP)",
+          args: [JSON.stringify(content.metaPixel)]
+        });
+      }
       if (Array.isArray(content.categories)) {
         for (const cat of content.categories) {
           stmts.push({
@@ -510,6 +538,7 @@ async function saveSiteContent(content) {
   if (content.productPage) fallbackContent.productPage = content.productPage;
   if (content.checkout) fallbackContent.checkout = content.checkout;
   if (content.visibility) fallbackContent.visibility = content.visibility;
+  if (content.metaPixel) fallbackContent.metaPixel = content.metaPixel;
   if (Array.isArray(content.categories)) fallbackCategories = content.categories;
 
   try {

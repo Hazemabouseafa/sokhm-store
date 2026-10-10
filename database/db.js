@@ -415,7 +415,18 @@ function getSiteContent() {
   const ppRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'productPage'").get();
   const chkRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'checkout'").get();
   const visRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'visibility'").get();
+  const pixelRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'metaPixel'").get();
   const catRows = db.prepare("SELECT id, name, slug FROM categories ORDER BY created_at ASC").all();
+
+  const defaultMetaPixel = {
+    pixelId: "",
+    enabled: false,
+    trackPageView: true,
+    trackViewContent: true,
+    trackAddToCart: true,
+    trackInitiateCheckout: true,
+    trackPurchase: true
+  };
 
   const defaultCheckout = {
     title: "إتمام الطلب والشحن الفاخر",
@@ -454,6 +465,7 @@ function getSiteContent() {
     productPage: pp,
     checkout: chkRow ? JSON.parse(chkRow.content_json) : defaultCheckout,
     visibility: visRow ? JSON.parse(visRow.content_json) : {},
+    metaPixel: pixelRow ? JSON.parse(pixelRow.content_json) : defaultMetaPixel,
     categories: catRows.map(c => ({ id: c.id, name: c.name, slug: c.slug }))
   };
 }
@@ -488,6 +500,13 @@ function saveSiteContent(content) {
       INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
       VALUES ('visibility', ?, CURRENT_TIMESTAMP)
     `).run(JSON.stringify(content.visibility));
+  }
+
+  if (content.metaPixel) {
+    db.prepare(`
+      INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
+      VALUES ('metaPixel', ?, CURRENT_TIMESTAMP)
+    `).run(JSON.stringify(content.metaPixel));
   }
 
   if (Array.isArray(content.categories)) {

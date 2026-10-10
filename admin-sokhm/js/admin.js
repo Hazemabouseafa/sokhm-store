@@ -44,7 +44,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     productPage: {},
     checkout: {},
     visibility: {},
-    categories: []
+    categories: [],
+    metaPixel: {
+      pixelId: '',
+      enabled: false,
+      trackPageView: true,
+      trackViewContent: true,
+      trackAddToCart: true,
+      trackInitiateCheckout: true,
+      trackPurchase: true
+    }
   };
   let products = [];
   let categories = [];
@@ -121,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupHomepageFormHandlers();
     setupProductPageFormHandlers();
     setupCheckoutFormHandlers();
+    setupMetaPixelHandlers();
     setupCategoriesHandlers();
     setupProductsHandlers();
     setupDiscountsHandlers();
@@ -141,6 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           populateHomepageForm();
           populateProductPageForm();
           populateCheckoutForm();
+          populateMetaPixelForm();
           populateCategoryDropdowns();
           renderCategoriesList();
         }).catch(e => console.warn('Site content render error:', e)),
@@ -261,6 +272,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderCategoriesList();
         populateCategoryDropdowns();
       });
+    } else if (targetTabId === 'tab-pixel') {
+      populateMetaPixelForm();
     } else if (targetTabId === 'tab-settings') {
       loadDbStats();
     }
@@ -711,6 +724,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!siteContent.productPage || typeof siteContent.productPage !== 'object') siteContent.productPage = {};
     if (!siteContent.checkout || typeof siteContent.checkout !== 'object') siteContent.checkout = {};
     if (!siteContent.visibility || typeof siteContent.visibility !== 'object') siteContent.visibility = {};
+    if (!siteContent.metaPixel || typeof siteContent.metaPixel !== 'object') {
+      siteContent.metaPixel = {
+        pixelId: '',
+        enabled: false,
+        trackPageView: true,
+        trackViewContent: true,
+        trackAddToCart: true,
+        trackInitiateCheckout: true,
+        trackPurchase: true
+      };
+    }
     if (!Array.isArray(siteContent.categories)) siteContent.categories = [];
   }
 
@@ -1276,6 +1300,195 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert('تعذر حفظ إعدادات الشراء في السيرفر');
       }
     });
+  }
+
+  // ================= 7.5. إعدادات وتتبع فيسبوك (META PIXEL) =================
+  function populateMetaPixelForm() {
+    const px = siteContent.metaPixel || {};
+    const isEnabled = Boolean(px.enabled);
+
+    const enabledToggle = document.getElementById('pixel_enabled');
+    const enabledText = document.getElementById('pixel_enabled_text');
+    if (enabledToggle) enabledToggle.checked = isEnabled;
+    if (enabledText) {
+      enabledText.textContent = isEnabled ? 'مُفعل' : 'معطل';
+      enabledText.className = isEnabled ? 'mr-3 text-xs font-bold font-mono text-emerald-400' : 'mr-3 text-xs font-bold font-mono text-neutral-400';
+    }
+
+    setVal('pixel_id', px.pixelId || '');
+
+    const cbPageView = document.getElementById('pixel_event_pageview');
+    const cbViewContent = document.getElementById('pixel_event_viewcontent');
+    const cbAddToCart = document.getElementById('pixel_event_addtocart');
+    const cbInitiateCheckout = document.getElementById('pixel_event_initiatecheckout');
+    const cbPurchase = document.getElementById('pixel_event_purchase');
+
+    if (cbPageView) cbPageView.checked = px.trackPageView !== false;
+    if (cbViewContent) cbViewContent.checked = px.trackViewContent !== false;
+    if (cbAddToCart) cbAddToCart.checked = px.trackAddToCart !== false;
+    if (cbInitiateCheckout) cbInitiateCheckout.checked = px.trackInitiateCheckout !== false;
+    if (cbPurchase) cbPurchase.checked = px.trackPurchase !== false;
+
+    // Badges update
+    const liveBadge = document.getElementById('pixelLiveStatusBadge');
+    const headerBadge = document.getElementById('pixelHeaderStatusBadge');
+    if (liveBadge) {
+      if (isEnabled && px.pixelId) {
+        liveBadge.textContent = 'نشط ومتصل بالمتجر';
+        liveBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/50 text-emerald-400 border border-emerald-500/40 font-mono font-bold';
+      } else if (isEnabled) {
+        liveBadge.textContent = 'مُفعل (في انتظار معرف البيكسل)';
+        liveBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-amber-950/50 text-amber-300 border border-amber-500/40 font-mono font-bold';
+      } else {
+        liveBadge.textContent = 'غير مفعل';
+        liveBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-neutral-900 text-neutral-400 border border-neutral-700 font-mono font-bold';
+      }
+    }
+
+    if (headerBadge) {
+      if (isEnabled && px.pixelId) {
+        headerBadge.className = 'w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30 inline-block';
+        headerBadge.title = 'Meta Pixel نشط';
+      } else {
+        headerBadge.className = 'w-2 h-2 rounded-full bg-neutral-600 inline-block';
+        headerBadge.title = 'Meta Pixel غير نشط';
+      }
+    }
+
+    // Diagnostics card
+    const diagStatus = document.getElementById('diagPixelStatus');
+    const diagId = document.getElementById('diagPixelId');
+    const diagFbq = document.getElementById('diagFbqStatus');
+    if (diagStatus) {
+      diagStatus.textContent = isEnabled ? 'مُفعل في المتجر' : 'معطل حالياً';
+      diagStatus.className = isEnabled ? 'font-bold text-emerald-400' : 'font-bold text-neutral-400';
+    }
+    if (diagId) {
+      diagId.textContent = px.pixelId ? px.pixelId : 'لم يتم التحديد';
+      diagId.className = px.pixelId ? 'font-bold text-white font-mono' : 'font-bold text-neutral-500 font-mono';
+    }
+    if (diagFbq) {
+      const fbqReady = typeof window.fbq === 'function';
+      diagFbq.textContent = fbqReady ? 'متصل وجاهز (fbq Loaded)' : (isEnabled && px.pixelId ? 'جاهز للحقن عند أول زيارة' : 'غير متصل');
+      diagFbq.className = fbqReady ? 'font-bold text-emerald-400' : 'font-bold text-neutral-400';
+    }
+  }
+
+  function setupMetaPixelHandlers() {
+    const enabledToggle = document.getElementById('pixel_enabled');
+    const enabledText = document.getElementById('pixel_enabled_text');
+    if (enabledToggle && enabledText) {
+      enabledToggle.addEventListener('change', () => {
+        if (enabledToggle.checked) {
+          enabledText.textContent = 'مُفعل';
+          enabledText.className = 'mr-3 text-xs font-bold font-mono text-emerald-400';
+        } else {
+          enabledText.textContent = 'معطل';
+          enabledText.className = 'mr-3 text-xs font-bold font-mono text-neutral-400';
+        }
+      });
+    }
+
+    const saveBtn = document.getElementById('saveMetaPixelBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        if (!siteContent.metaPixel) {
+          siteContent.metaPixel = {};
+        }
+
+        const enabled = Boolean(document.getElementById('pixel_enabled')?.checked);
+        let pixelId = getVal('pixel_id');
+        pixelId = pixelId.replace(/\D/g, '');
+
+        if (enabled && !pixelId) {
+          alert('يرجى إدخال معرّف البيكسل (Pixel ID) الرقمي بشكل صحيح قبل التفعيل.');
+          document.getElementById('pixel_id')?.focus();
+          return;
+        }
+
+        siteContent.metaPixel.enabled = enabled;
+        siteContent.metaPixel.pixelId = pixelId;
+        siteContent.metaPixel.trackPageView = document.getElementById('pixel_event_pageview')?.checked ?? true;
+        siteContent.metaPixel.trackViewContent = document.getElementById('pixel_event_viewcontent')?.checked ?? true;
+        siteContent.metaPixel.trackAddToCart = document.getElementById('pixel_event_addtocart')?.checked ?? true;
+        siteContent.metaPixel.trackInitiateCheckout = document.getElementById('pixel_event_initiatecheckout')?.checked ?? true;
+        siteContent.metaPixel.trackPurchase = document.getElementById('pixel_event_purchase')?.checked ?? true;
+
+        saveBtn.disabled = true;
+        const originalHtml = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<span class="inline-block animate-spin mr-1">✦</span> جاري الحفظ...';
+
+        try {
+          const ok = await saveSiteContent();
+          if (ok) {
+            // Also update localStorage cache for immediate cross-script sync
+            try {
+              localStorage.setItem('sokhm_site_content_v1', JSON.stringify(siteContent));
+            } catch (_) {}
+
+            // Dispatch custom content update event
+            window.dispatchEvent(new CustomEvent('sokhm:content-updated', { detail: siteContent }));
+
+            // Re-initialize pixel if enabled
+            if (enabled && pixelId && window.sokhmPixel && typeof window.sokhmPixel.init === 'function') {
+              window.sokhmPixel.init(pixelId);
+            }
+
+            populateMetaPixelForm();
+            showToast('تم حفظ وتفعيل إعدادات Meta Pixel بنجاح!');
+          } else {
+            alert('تعذر حفظ إعدادات Meta Pixel في الخادم.');
+          }
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = originalHtml;
+        }
+      });
+    }
+
+    const testBtn = document.getElementById('testPixelEventBtn');
+    const feedback = document.getElementById('testEventFeedback');
+    if (testBtn) {
+      testBtn.addEventListener('click', () => {
+        const px = siteContent.metaPixel || {};
+        const cleanId = String(px.pixelId || '').trim().replace(/[^0-9]/g, '');
+        if (!cleanId) {
+          if (feedback) {
+            feedback.className = 'p-3 rounded-xl text-xs font-mono text-center bg-amber-950/40 text-amber-300 border border-amber-500/30';
+            feedback.textContent = '⚠️ يرجى إدخال معرّف البيكسل (Pixel ID) وحفظه أولاً لإرسال حدث تجريبي.';
+            feedback.classList.remove('hidden');
+          }
+          return;
+        }
+
+        if (window.sokhmPixel && typeof window.sokhmPixel.testEvent === 'function') {
+          const success = window.sokhmPixel.testEvent({
+            trigger: 'admin_dashboard_test_button'
+          });
+          if (success) {
+            if (feedback) {
+              feedback.className = 'p-3 rounded-xl text-xs font-mono text-center bg-emerald-950/40 text-emerald-300 border border-emerald-500/30';
+              feedback.innerHTML = `✓ تم إرسال الحدث التجريبي بنجاح (Event: SOKHM_Test_Event) للبيكسل: <strong>${cleanId}</strong>.<br><span class="text-[10px] text-neutral-400">تحقق من قسم Test Events في Facebook Events Manager.</span>`;
+              feedback.classList.remove('hidden');
+            }
+            showToast('تم إرسال حدث تجريبي إلى Meta Pixel بنجاح!');
+            populateMetaPixelForm();
+          } else {
+            if (feedback) {
+              feedback.className = 'p-3 rounded-xl text-xs font-mono text-center bg-red-950/40 text-red-300 border border-red-500/30';
+              feedback.textContent = '❌ تعذر إرسال الحدث. تأكد من تحميل مكتبة فيسبوك أو إيقاف مانع الإعلانات (AdBlocker).';
+              feedback.classList.remove('hidden');
+            }
+          }
+        } else {
+          if (feedback) {
+            feedback.className = 'p-3 rounded-xl text-xs font-mono text-center bg-amber-950/40 text-amber-300 border border-amber-500/30';
+            feedback.textContent = 'مكتبة meta-pixel.js غير متصلة بالمتصفح.';
+            feedback.classList.remove('hidden');
+          }
+        }
+      });
+    }
   }
 
   // ================= 8. إدارة الحماية وكلمة المرور (SECURITY TAB) =================
