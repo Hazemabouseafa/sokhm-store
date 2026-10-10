@@ -53,6 +53,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       trackAddToCart: true,
       trackInitiateCheckout: true,
       trackPurchase: true
+    },
+    support: {
+      whatsappPhone: '01098765432',
+      whatsappMessage: 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني',
+      showFloatingButton: true,
+      showNavSupport: true
     }
   };
   let products = [];
@@ -130,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupHomepageFormHandlers();
     setupProductPageFormHandlers();
     setupCheckoutFormHandlers();
+    setupSupportFormHandlers();
     setupMetaPixelHandlers();
     setupCategoriesHandlers();
     setupProductsHandlers();
@@ -151,6 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           populateHomepageForm();
           populateProductPageForm();
           populateCheckoutForm();
+          populateSupportForm();
           populateMetaPixelForm();
           populateCategoryDropdowns();
           renderCategoriesList();
@@ -272,6 +280,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderCategoriesList();
         populateCategoryDropdowns();
       });
+    } else if (targetTabId === 'tab-support') {
+      populateSupportForm();
     } else if (targetTabId === 'tab-pixel') {
       populateMetaPixelForm();
     } else if (targetTabId === 'tab-settings') {
@@ -733,6 +743,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         trackAddToCart: true,
         trackInitiateCheckout: true,
         trackPurchase: true
+      };
+    }
+    if (!siteContent.support || typeof siteContent.support !== 'object') {
+      siteContent.support = {
+        whatsappPhone: siteContent.checkout?.whatsappPhone || '01098765432',
+        whatsappMessage: 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني',
+        showFloatingButton: true,
+        showNavSupport: true
       };
     }
     if (!Array.isArray(siteContent.categories)) siteContent.categories = [];
@@ -1235,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setVal('chk_successTitle', chk.successTitle || 'تم استلام وتأكيد طلبك بنجاح!');
     setVal('chk_successSubtitle', chk.successSubtitle || 'شكراً لاختيارك ✦ SOKHM ATELIER. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.');
-    setVal('chk_whatsappPhone', chk.whatsappPhone || '01098765432');
+    setVal('chk_whatsappPhone', chk.whatsappPhone || siteContent.support?.whatsappPhone || '01098765432');
     setVal('chk_whatsappButtonText', chk.whatsappButtonText || 'متابعة الطلب عبر WhatsApp');
 
     // Bind checkmarks
@@ -1286,6 +1304,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       chk.whatsappPhone = getVal('chk_whatsappPhone');
       chk.whatsappButtonText = getVal('chk_whatsappButtonText');
 
+      // Sync with support
+      if (!siteContent.support) siteContent.support = {};
+      siteContent.support.whatsappPhone = chk.whatsappPhone;
+
       // Update checkboxes in visibility map
       const visCheckboxes = document.querySelectorAll('#tab-checkout input[data-vis-key]');
       visCheckboxes.forEach(cb => {
@@ -1295,11 +1317,135 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const ok = await saveSiteContent();
       if (ok) {
+        populateSupportForm();
         showToast('تم حفظ وتحديث إعدادات وتخصيصات الشراء بنجاح!');
       } else {
         alert('تعذر حفظ إعدادات الشراء في السيرفر');
       }
     });
+  }
+
+  // ================= 7.4. إعدادات واتساب الدعم الفني (TECH SUPPORT WHATSAPP) =================
+  function updateSupportTestBtn(phone, msg) {
+    const testBtn = document.getElementById('testSupportWhatsAppBtn');
+    if (!testBtn) return;
+    const rawWa = String(phone || '').replace(/[^0-9]/g, '');
+    const intlWa = rawWa.startsWith('0') ? ('2' + rawWa) : (rawWa.startsWith('2') ? rawWa : ('20' + rawWa));
+    const encodedMsg = encodeURIComponent(msg || 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني');
+    testBtn.href = `https://wa.me/${intlWa}?text=${encodedMsg}`;
+  }
+
+  function populateSupportForm() {
+    const supp = siteContent.support || {};
+    const chk = siteContent.checkout || {};
+    const phone = supp.whatsappPhone || chk.whatsappPhone || '01098765432';
+    const msg = supp.whatsappMessage || 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني';
+
+    setVal('support_whatsapp_phone', phone);
+    setVal('support_whatsapp_message', msg);
+
+    const cbFloating = document.getElementById('support_show_floating_btn');
+    const cbNav = document.getElementById('support_show_nav_btn');
+    const vis = siteContent.visibility || {};
+
+    if (cbFloating) {
+      cbFloating.checked = (vis['support.floatingBtn'] !== false) && (supp.showFloatingButton !== false);
+    }
+    if (cbNav) {
+      cbNav.checked = (vis['support.navBtn'] !== false) && (supp.showNavSupport !== false);
+    }
+
+    updateSupportTestBtn(phone, msg);
+
+    const liveBadge = document.getElementById('supportLiveStatusBadge');
+    if (liveBadge) {
+      liveBadge.textContent = phone ? `متصل بالمتجر (${phone})` : 'لم يتم تحديد رقم';
+    }
+
+    const headerBadge = document.getElementById('supportHeaderBadge');
+    if (headerBadge) {
+      if (phone) {
+        headerBadge.className = 'w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30 inline-block';
+        headerBadge.title = `واتساب الدعم متصل: ${phone}`;
+      } else {
+        headerBadge.className = 'w-2 h-2 rounded-full bg-neutral-600 inline-block';
+      }
+    }
+  }
+
+  function setupSupportFormHandlers() {
+    const phoneInput = document.getElementById('support_whatsapp_phone');
+    const msgInput = document.getElementById('support_whatsapp_message');
+
+    if (phoneInput) {
+      phoneInput.addEventListener('input', () => {
+        const p = phoneInput.value.trim();
+        const m = msgInput ? msgInput.value.trim() : '';
+        updateSupportTestBtn(p, m);
+
+        // Keep checkout phone input synced
+        const chkPhone = document.getElementById('chk_whatsappPhone');
+        if (chkPhone) chkPhone.value = p;
+      });
+    }
+
+    if (msgInput) {
+      msgInput.addEventListener('input', () => {
+        const p = phoneInput ? phoneInput.value.trim() : '';
+        const m = msgInput.value.trim();
+        updateSupportTestBtn(p, m);
+      });
+    }
+
+    const saveBtn = document.getElementById('saveSupportBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        if (!siteContent.support) siteContent.support = {};
+        if (!siteContent.checkout) siteContent.checkout = {};
+        if (!siteContent.visibility) siteContent.visibility = {};
+
+        const phone = getVal('support_whatsapp_phone') || '01098765432';
+        const msg = getVal('support_whatsapp_message') || 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني';
+        const showFloating = document.getElementById('support_show_floating_btn')?.checked ?? true;
+        const showNav = document.getElementById('support_show_nav_btn')?.checked ?? true;
+
+        siteContent.support.whatsappPhone = phone;
+        siteContent.support.whatsappMessage = msg;
+        siteContent.support.showFloatingButton = showFloating;
+        siteContent.support.showNavSupport = showNav;
+
+        // Keep checkout phone identical
+        siteContent.checkout.whatsappPhone = phone;
+
+        // Save visibility flags
+        siteContent.visibility['support.floatingBtn'] = showFloating;
+        siteContent.visibility['support.navBtn'] = showNav;
+
+        saveBtn.disabled = true;
+        const originalHtml = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<span class="inline-block animate-spin mr-1">✦</span> جاري الحفظ...';
+
+        try {
+          const ok = await saveSiteContent();
+          if (ok) {
+            try {
+              localStorage.setItem('sokhm_site_content_v1', JSON.stringify(siteContent));
+            } catch (_) {}
+
+            window.dispatchEvent(new CustomEvent('sokhm:content-updated', { detail: siteContent }));
+
+            populateSupportForm();
+            populateCheckoutForm();
+            showToast('تم حفظ وتحديث إعدادات واتساب الدعم الفني بنجاح!');
+          } else {
+            alert('تعذر حفظ إعدادات واتساب الدعم الفني في الخادم.');
+          }
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = originalHtml;
+        }
+      });
+    }
   }
 
   // ================= 7.5. إعدادات وتتبع فيسبوك (META PIXEL) =================

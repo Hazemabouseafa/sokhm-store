@@ -278,6 +278,12 @@
     "trackInitiateCheckout": true,
     "trackPurchase": true
   },
+  "support": {
+    "whatsappPhone": "01098765432",
+    "whatsappMessage": "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
+    "showFloatingButton": true,
+    "showNavSupport": true
+  },
   "categories": [
     {
       "id": "hoodies",

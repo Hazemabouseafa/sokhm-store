@@ -416,7 +416,15 @@ function getSiteContent() {
   const chkRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'checkout'").get();
   const visRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'visibility'").get();
   const pixelRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'metaPixel'").get();
+  const supportRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'support'").get();
   const catRows = db.prepare("SELECT id, name, slug FROM categories ORDER BY created_at ASC").all();
+
+  const defaultSupport = {
+    whatsappPhone: "01098765432",
+    whatsappMessage: "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
+    showFloatingButton: true,
+    showNavSupport: true
+  };
 
   const defaultMetaPixel = {
     pixelId: "",
@@ -466,6 +474,7 @@ function getSiteContent() {
     checkout: chkRow ? JSON.parse(chkRow.content_json) : defaultCheckout,
     visibility: visRow ? JSON.parse(visRow.content_json) : {},
     metaPixel: pixelRow ? JSON.parse(pixelRow.content_json) : defaultMetaPixel,
+    support: supportRow ? JSON.parse(supportRow.content_json) : defaultSupport,
     categories: catRows.map(c => ({ id: c.id, name: c.name, slug: c.slug }))
   };
 }
@@ -507,6 +516,13 @@ function saveSiteContent(content) {
       INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
       VALUES ('metaPixel', ?, CURRENT_TIMESTAMP)
     `).run(JSON.stringify(content.metaPixel));
+  }
+
+  if (content.support) {
+    db.prepare(`
+      INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
+      VALUES ('support', ?, CURRENT_TIMESTAMP)
+    `).run(JSON.stringify(content.support));
   }
 
   if (Array.isArray(content.categories)) {

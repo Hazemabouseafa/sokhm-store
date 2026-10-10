@@ -213,6 +213,13 @@
           <span>الأقسام والتصنيفات (Categories)</span>
         </button>
 
+        <!-- تبويب واتساب والدعم الفني (Tech Support WhatsApp) -->
+        <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-support">
+          <i data-lucide="message-circle" class="w-4 h-4 text-emerald-400"></i>
+          <span>واتساب والدعم الفني (Support)</span>
+          <span id="supportHeaderBadge" class="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30 inline-block"></span>
+        </button>
+
         <!-- تبويب تتبع فيسبوك (Meta Pixel) -->
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-pixel">
           <svg class="w-4 h-4 text-[#1877F2] fill-current" viewBox="0 0 24 24">
@@ -1533,6 +1540,136 @@
                   <!-- Populated dynamically -->
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         التبويب: واتساب والدعم الفني والتواصل (TECH SUPPORT WHATSAPP)
+         ======================================================== -->
+    <section id="tab-support" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#1A1A1A] gap-4">
+        <div>
+          <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">قنوات التواصل وخدمة العملاء (Customer Support & WhatsApp)</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1 flex items-center gap-3">
+            <span>واتساب الدعم الفني وخدمة العملاء</span>
+            <span id="supportLiveStatusBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/50 text-emerald-400 border border-emerald-500/40 font-mono font-bold">متصل بالمتجر</span>
+          </h2>
+          <p class="text-xs text-neutral-400 mt-1">
+            تخصيص رقم هاتف واتساب الدعم الفني المربوط بالزر العائم في واجهة المتجر ورابط الدعم في شريط التنقل (Navbar) ومتابعة الطلبات.
+          </p>
+        </div>
+
+        <button 
+          type="button" 
+          id="saveSupportBtn" 
+          class="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-emerald-500/20 self-start sm:self-auto"
+        >
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>حفظ إعدادات الواتساب</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Main Support Settings (7 Cols) -->
+        <div class="lg:col-span-7 space-y-6">
+          <div class="cms-card p-6 sm:p-8 space-y-6">
+            <div class="flex items-center gap-3 pb-4 border-b border-[#1A1A1A]">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <i data-lucide="message-square" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-white">بيانات واتساب الدعم الفني</h3>
+                <p class="text-[11px] text-neutral-400">الرقم المعتمد لتحويل استفسارات العملاء وطلبات المساعدة مباشرة.</p>
+              </div>
+            </div>
+
+            <!-- Support WhatsApp Phone -->
+            <div class="space-y-2">
+              <label class="cms-label" for="support_whatsapp_phone">رقم هاتف WhatsApp للدعم الفني *</label>
+              <div class="relative">
+                <input 
+                  type="tel" 
+                  id="support_whatsapp_phone" 
+                  placeholder="01098765432" 
+                  class="cms-input w-full font-mono text-sm tracking-wider pl-10"
+                >
+                <i data-lucide="phone" class="w-4 h-4 text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              </div>
+              <p class="text-[11px] text-neutral-500">
+                يمكن كتابة الرقم المصري (مثال: 01012345678) أو بالصيغة الدولية (+201012345678). يقوم النظام تلقائياً بتهيئته لفتح محادثة واتساب صحيحة.
+              </p>
+            </div>
+
+            <!-- Support Message -->
+            <div class="space-y-2">
+              <label class="cms-label" for="support_whatsapp_message">الرسالة الترحيبية التلقائية (Default Greeting Text)</label>
+              <textarea 
+                id="support_whatsapp_message" 
+                rows="3" 
+                class="cms-input w-full text-xs leading-relaxed" 
+                placeholder="مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني"
+              ></textarea>
+              <p class="text-[11px] text-neutral-500">
+                هذه الرسالة تظهر مكتوبة وجاهزة في صندوق المحادثة لدى العميل بمجرد نقره على زر الدعم الفني.
+              </p>
+            </div>
+
+            <!-- Test Button -->
+            <div class="pt-2">
+              <a 
+                id="testSupportWhatsAppBtn" 
+                href="https://wa.me/201098765432" 
+                target="_blank" 
+                rel="noopener"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#141414] hover:bg-[#1C1C1C] text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/60 font-bold text-xs transition-all shadow-sm"
+              >
+                <i data-lucide="external-link" class="w-4 h-4"></i>
+                <span>تجربة فتح شات الواتساب بهذا الرقم للتأكد ↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visibility & Scope Card (5 Cols) -->
+        <div class="lg:col-span-5 space-y-6">
+          <div class="cms-card p-6 space-y-5">
+            <h4 class="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
+              <i data-lucide="eye" class="w-4 h-4 text-emerald-400"></i>
+              <span>خيارات ظهور أزرار الواتساب في المتجر</span>
+            </h4>
+
+            <div class="space-y-3">
+              <!-- Floating Button Visibility -->
+              <label class="p-3.5 rounded-xl bg-[#0C0C0C] border border-[#1E1E1E] flex items-center justify-between cursor-pointer hover:border-neutral-700 transition-colors">
+                <div>
+                  <span class="text-xs font-bold text-white block">زر الواتساب العائم (Floating Button)</span>
+                  <span class="text-[10px] text-neutral-400">الزر الدائري الأخضر أسفل يمين واجهة المتجر وصفحة المنتج</span>
+                </div>
+                <input type="checkbox" id="support_show_floating_btn" checked class="w-4 h-4 rounded bg-[#111] border-[#333] text-emerald-400 cursor-pointer">
+              </label>
+
+              <!-- Navbar Support Link Visibility -->
+              <label class="p-3.5 rounded-xl bg-[#0C0C0C] border border-[#1E1E1E] flex items-center justify-between cursor-pointer hover:border-neutral-700 transition-colors">
+                <div>
+                  <span class="text-xs font-bold text-white block">رابط "دعم فني" في شريط التنقل (Navbar & Drawer)</span>
+                  <span class="text-[10px] text-neutral-400">زر الدعم الفني بالنافبار العلوي وداخل قائمة الموبايل الجانبية</span>
+                </div>
+                <input type="checkbox" id="support_show_nav_btn" checked class="w-4 h-4 rounded bg-[#111] border-[#333] text-emerald-400 cursor-pointer">
+              </label>
+            </div>
+
+            <!-- Info Guide -->
+            <div class="p-4 bg-[#080808] rounded-xl border border-[#161616] space-y-2 text-[11px] text-neutral-400 leading-relaxed">
+              <span class="font-bold text-neutral-300 block flex items-center gap-1.5">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-emerald-400"></i>
+                أماكن تطبيق هذا الرقم تلقائياً:
+              </span>
+              <p>• الزر العائم في الواجهة وصفحة المنتج.</p>
+              <p>• رابط "دعم فني" في النافبار وقائمة الموبايل.</p>
+              <p>• زر متابعة الطلب في صفحة نجاح الشراء (Checkout Success).</p>
             </div>
           </div>
         </div>

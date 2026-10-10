@@ -744,7 +744,12 @@
       document.getElementById('coSuccessTotal').textContent = `${totalPrice.toLocaleString('en-US')} ج.م`;
 
       // WhatsApp Button URL
-      const rawWaPhone = (cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
+      let suppPhone = null;
+      try {
+        const fullContent = (window.sokhmContent && window.sokhmContent.getContent) ? window.sokhmContent.getContent() : null;
+        if (fullContent && fullContent.support && fullContent.support.whatsappPhone) suppPhone = fullContent.support.whatsappPhone;
+      } catch (_) {}
+      const rawWaPhone = (suppPhone || cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
       const intlWaPhone = rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : (rawWaPhone.startsWith('2') ? rawWaPhone : ('20' + rawWaPhone));
       const waMsg = encodeURIComponent(
         `مرحباً SOKHM ATELIER، أود متابعة طلبي رقم: #${orderId}\nالاسم: ${customerName}\nالإجمالي: ${totalPrice.toLocaleString('en-US')} ج.م`

@@ -481,12 +481,20 @@ async function getSiteContent() {
     trackPurchase: true
   };
 
+  const defaultSupport = {
+    whatsappPhone: "01098765432",
+    whatsappMessage: "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
+    showFloatingButton: true,
+    showNavSupport: true
+  };
+
   return {
     homepage: fallbackContent.homepage || {},
     productPage: fallbackContent.productPage || {},
     checkout: fallbackContent.checkout || {},
     visibility: fallbackContent.visibility || {},
     metaPixel: fallbackContent.metaPixel || defaultMetaPixel,
+    support: fallbackContent.support || defaultSupport,
     categories: fallbackCategories
   };
 }
@@ -534,6 +542,13 @@ async function saveSiteContent(content) {
           ON CONFLICT (section_key) DO UPDATE SET content_json = EXCLUDED.content_json, updated_at = NOW()
         `, [JSON.stringify(content.metaPixel)]);
       }
+      if (content.support) {
+        await sql.query(`
+          INSERT INTO site_content (section_key, content_json, updated_at)
+          VALUES ('support', $1, NOW())
+          ON CONFLICT (section_key) DO UPDATE SET content_json = EXCLUDED.content_json, updated_at = NOW()
+        `, [JSON.stringify(content.support)]);
+      }
       if (Array.isArray(content.categories)) {
         for (const cat of content.categories) {
           await sql.query(`
@@ -554,6 +569,7 @@ async function saveSiteContent(content) {
   if (content.checkout) fallbackContent.checkout = content.checkout;
   if (content.visibility) fallbackContent.visibility = content.visibility;
   if (content.metaPixel) fallbackContent.metaPixel = content.metaPixel;
+  if (content.support) fallbackContent.support = content.support;
   if (Array.isArray(content.categories)) fallbackCategories = content.categories;
 
   try {

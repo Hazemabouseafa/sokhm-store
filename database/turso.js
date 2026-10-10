@@ -467,12 +467,20 @@ async function getSiteContent() {
     trackPurchase: true
   };
 
+  const defaultSupport = {
+    whatsappPhone: "01098765432",
+    whatsappMessage: "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
+    showFloatingButton: true,
+    showNavSupport: true
+  };
+
   return {
     homepage: fallbackContent.homepage || {},
     productPage: fallbackContent.productPage || {},
     checkout: fallbackContent.checkout || {},
     visibility: fallbackContent.visibility || {},
     metaPixel: fallbackContent.metaPixel || defaultMetaPixel,
+    support: fallbackContent.support || defaultSupport,
     categories: fallbackCategories
   };
 }
@@ -516,6 +524,12 @@ async function saveSiteContent(content) {
           args: [JSON.stringify(content.metaPixel)]
         });
       }
+      if (content.support) {
+        stmts.push({
+          sql: "INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('support', ?, CURRENT_TIMESTAMP)",
+          args: [JSON.stringify(content.support)]
+        });
+      }
       if (Array.isArray(content.categories)) {
         for (const cat of content.categories) {
           stmts.push({
@@ -539,6 +553,7 @@ async function saveSiteContent(content) {
   if (content.checkout) fallbackContent.checkout = content.checkout;
   if (content.visibility) fallbackContent.visibility = content.visibility;
   if (content.metaPixel) fallbackContent.metaPixel = content.metaPixel;
+  if (content.support) fallbackContent.support = content.support;
   if (Array.isArray(content.categories)) fallbackCategories = content.categories;
 
   try {

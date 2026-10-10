@@ -875,16 +875,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   function syncWhatsAppLinks() {
     try {
       const content = (window.sokhmContent && window.sokhmContent.getContent) ? window.sokhmContent.getContent() : null;
+      const supp = (content && content.support) ? content.support : {};
       const cfg = (content && content.checkout) ? content.checkout : {};
-      const rawWaPhone = (cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
+      const rawWaPhone = (supp.whatsappPhone || cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
       const intlWaPhone = rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : (rawWaPhone.startsWith('2') ? rawWaPhone : ('20' + rawWaPhone));
-      const waMsg = encodeURIComponent('مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني');
+      const waMsgText = supp.whatsappMessage || 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني';
+      const waMsg = encodeURIComponent(waMsgText);
       const targetUrl = `https://wa.me/${intlWaPhone}?text=${waMsg}`;
 
       ['floatingWhatsappBtn', 'navSupportBtn', 'drawerSupportBtn'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.href = targetUrl;
       });
+
+      // Visibility controls
+      const vis = (content && content.visibility) ? content.visibility : {};
+      const isFloatingHidden = vis['support.floatingBtn'] === false || supp.showFloatingButton === false;
+      const floatingEl = document.getElementById('floatingWhatsappBtn');
+      if (floatingEl) {
+        if (isFloatingHidden) floatingEl.classList.add('hidden');
+        else floatingEl.classList.remove('hidden');
+      }
+
+      const isNavHidden = vis['support.navBtn'] === false || supp.showNavSupport === false;
+      const navEl = document.getElementById('navSupportBtn');
+      if (navEl) {
+        if (isNavHidden) navEl.classList.add('hidden');
+        else navEl.classList.remove('hidden');
+      }
+
+      const drawerEl = document.getElementById('drawerSupportBtn');
+      if (drawerEl) {
+        if (isNavHidden) drawerEl.classList.add('hidden');
+        else drawerEl.classList.remove('hidden');
+      }
     } catch (_) {}
   }
 
