@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       trackPurchase: true
     },
     support: {
-      whatsappPhone: '01098765432',
+      whatsappPhone: '01274994509',
       whatsappMessage: 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني',
       showFloatingButton: true,
       showNavSupport: true
@@ -747,7 +747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (!siteContent.support || typeof siteContent.support !== 'object') {
       siteContent.support = {
-        whatsappPhone: siteContent.checkout?.whatsappPhone || '01098765432',
+        whatsappPhone: siteContent.checkout?.whatsappPhone || '01274994509',
         whatsappMessage: 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني',
         showFloatingButton: true,
         showNavSupport: true
@@ -1253,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setVal('chk_successTitle', chk.successTitle || 'تم استلام وتأكيد طلبك بنجاح!');
     setVal('chk_successSubtitle', chk.successSubtitle || 'شكراً لاختيارك ✦ SOKHM ATELIER. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.');
-    setVal('chk_whatsappPhone', chk.whatsappPhone || siteContent.support?.whatsappPhone || '01098765432');
+    setVal('chk_whatsappPhone', chk.whatsappPhone || siteContent.support?.whatsappPhone || '01274994509');
     setVal('chk_whatsappButtonText', chk.whatsappButtonText || 'متابعة الطلب عبر WhatsApp');
 
     // Bind checkmarks
@@ -1338,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function populateSupportForm() {
     const supp = siteContent.support || {};
     const chk = siteContent.checkout || {};
-    const phone = supp.whatsappPhone || chk.whatsappPhone || '01098765432';
+    const phone = supp.whatsappPhone || chk.whatsappPhone || '01274994509';
     const msg = supp.whatsappMessage || 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني';
 
     setVal('support_whatsapp_phone', phone);
@@ -1404,7 +1404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!siteContent.checkout) siteContent.checkout = {};
         if (!siteContent.visibility) siteContent.visibility = {};
 
-        const phone = getVal('support_whatsapp_phone') || '01098765432';
+        const phone = getVal('support_whatsapp_phone') || '01274994509';
         const msg = getVal('support_whatsapp_message') || 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني';
         const showFloating = document.getElementById('support_show_floating_btn')?.checked ?? true;
         const showNav = document.getElementById('support_show_nav_btn')?.checked ?? true;

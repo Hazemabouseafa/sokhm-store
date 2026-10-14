@@ -371,7 +371,7 @@ function autoSeed() {
       ],
       successTitle: "تم استلام وتأكيد طلبك بنجاح!",
       successSubtitle: "شكراً لاختيارك ✦ SOKHM ATELIER. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.",
-      whatsappPhone: "01098765432",
+      whatsappPhone: "01274994509",
       whatsappButtonText: "متابعة الطلب عبر WhatsApp"
     };
     db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('checkout', ?, CURRENT_TIMESTAMP)").run(JSON.stringify(defaultCheckout));
@@ -417,15 +417,6 @@ function getSiteContent() {
   const visRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'visibility'").get();
   const pixelRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'metaPixel'").get();
   const supportRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'support'").get();
-  const catRows = db.prepare("SELECT id, name, slug FROM categories ORDER BY created_at ASC").all();
-
-  const defaultSupport = {
-    whatsappPhone: "01098765432",
-    whatsappMessage: "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
-    showFloatingButton: true,
-    showNavSupport: true
-  };
-
   const defaultMetaPixel = {
     pixelId: "",
     enabled: false,
@@ -452,8 +443,18 @@ function getSiteContent() {
     ],
     successTitle: "تم استلام وتأكيد طلبك بنجاح!",
     successSubtitle: "شكراً لاختيارك ✦ SOKHM ATELIER. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.",
-    whatsappPhone: "01098765432",
+    whatsappPhone: "01274994509",
     whatsappButtonText: "متابعة الطلب عبر WhatsApp"
+  };
+
+  const chkData = chkRow ? JSON.parse(chkRow.content_json) : defaultCheckout;
+  const suppData = supportRow ? JSON.parse(supportRow.content_json) : {};
+  const activeWhatsapp = suppData.whatsappPhone || chkData.whatsappPhone || "01274994509";
+  const resolvedSupport = {
+    whatsappPhone: activeWhatsapp,
+    whatsappMessage: suppData.whatsappMessage || "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
+    showFloatingButton: suppData.showFloatingButton !== false,
+    showNavSupport: suppData.showNavSupport !== false
   };
 
   const pp = ppRow ? JSON.parse(ppRow.content_json) : {};
@@ -471,10 +472,10 @@ function getSiteContent() {
   return {
     homepage: hpRow ? JSON.parse(hpRow.content_json) : {},
     productPage: pp,
-    checkout: chkRow ? JSON.parse(chkRow.content_json) : defaultCheckout,
+    checkout: chkData,
     visibility: visRow ? JSON.parse(visRow.content_json) : {},
     metaPixel: pixelRow ? JSON.parse(pixelRow.content_json) : defaultMetaPixel,
-    support: supportRow ? JSON.parse(supportRow.content_json) : defaultSupport,
+    support: resolvedSupport,
     categories: catRows.map(c => ({ id: c.id, name: c.name, slug: c.slug }))
   };
 }

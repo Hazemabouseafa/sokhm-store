@@ -746,11 +746,23 @@
       // WhatsApp Button URL
       let suppPhone = null;
       try {
-        const fullContent = (window.sokhmContent && window.sokhmContent.getContent) ? window.sokhmContent.getContent() : null;
-        if (fullContent && fullContent.support && fullContent.support.whatsappPhone) suppPhone = fullContent.support.whatsappPhone;
+        let fullContent = null;
+        if (window.sokhmContent) {
+          if (typeof window.sokhmContent.getAll === 'function') fullContent = window.sokhmContent.getAll();
+          else if (typeof window.sokhmContent.getContent === 'function') fullContent = window.sokhmContent.getContent();
+        }
+        if (!fullContent) {
+          const cached = localStorage.getItem('sokhm_site_content_v1');
+          if (cached) fullContent = JSON.parse(cached);
+        }
+        if (fullContent && fullContent.support && fullContent.support.whatsappPhone) {
+          suppPhone = fullContent.support.whatsappPhone;
+        }
       } catch (_) {}
-      const rawWaPhone = (suppPhone || cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
-      const intlWaPhone = rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : (rawWaPhone.startsWith('2') ? rawWaPhone : ('20' + rawWaPhone));
+      let rawWaPhone = (suppPhone || cfg.whatsappPhone || '01274994509').replace(/[^0-9]/g, '');
+      if (rawWaPhone.startsWith('0020')) rawWaPhone = rawWaPhone.slice(4);
+      else if (rawWaPhone.startsWith('002')) rawWaPhone = rawWaPhone.slice(3);
+      const intlWaPhone = rawWaPhone.startsWith('20') ? rawWaPhone : (rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : ('20' + rawWaPhone));
       const waMsg = encodeURIComponent(
         `مرحباً SOKHM ATELIER، أود متابعة طلبي رقم: #${orderId}\nالاسم: ${customerName}\nالإجمالي: ${totalPrice.toLocaleString('en-US')} ج.م`
       );

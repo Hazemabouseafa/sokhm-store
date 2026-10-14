@@ -442,12 +442,23 @@ async function getSiteContent() {
         trackPurchase: true
       };
 
+      const supportData = contentMap.support || fallbackContent.support || {};
+      const checkoutData = contentMap.checkout || fallbackContent.checkout || {};
+      const activeWhatsapp = supportData.whatsappPhone || checkoutData.whatsappPhone || "01274994509";
+      const resolvedSupport = {
+        whatsappPhone: activeWhatsapp,
+        whatsappMessage: supportData.whatsappMessage || "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
+        showFloatingButton: supportData.showFloatingButton !== false,
+        showNavSupport: supportData.showNavSupport !== false
+      };
+
       return {
         homepage: contentMap.homepage || fallbackContent.homepage || {},
         productPage: pp,
         checkout: contentMap.checkout || fallbackContent.checkout || {},
         visibility: contentMap.visibility || fallbackContent.visibility || {},
         metaPixel: contentMap.metaPixel || fallbackContent.metaPixel || defaultMetaPixel,
+        support: resolvedSupport,
         categories: (catRows && catRows.rows && catRows.rows.length > 0)
           ? catRows.rows.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug }))
           : fallbackCategories
@@ -467,11 +478,14 @@ async function getSiteContent() {
     trackPurchase: true
   };
 
+  const fallbackSupport = fallbackContent.support || {};
+  const fallbackCheckout = fallbackContent.checkout || {};
+  const activeFallbackWa = fallbackSupport.whatsappPhone || fallbackCheckout.whatsappPhone || "01274994509";
   const defaultSupport = {
-    whatsappPhone: "01098765432",
-    whatsappMessage: "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
-    showFloatingButton: true,
-    showNavSupport: true
+    whatsappPhone: activeFallbackWa,
+    whatsappMessage: fallbackSupport.whatsappMessage || "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
+    showFloatingButton: fallbackSupport.showFloatingButton !== false,
+    showNavSupport: fallbackSupport.showNavSupport !== false
   };
 
   return {

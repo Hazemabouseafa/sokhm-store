@@ -874,11 +874,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 8.5 DYNAMIC WHATSAPP LINKS SYNC =================
   function syncWhatsAppLinks() {
     try {
-      const content = (window.sokhmContent && window.sokhmContent.getContent) ? window.sokhmContent.getContent() : null;
+      let content = null;
+      if (window.sokhmContent) {
+        if (typeof window.sokhmContent.getAll === 'function') content = window.sokhmContent.getAll();
+        else if (typeof window.sokhmContent.getContent === 'function') content = window.sokhmContent.getContent();
+      }
+      if (!content) {
+        try {
+          const cached = localStorage.getItem('sokhm_site_content_v1');
+          if (cached) content = JSON.parse(cached);
+        } catch (_) {}
+      }
       const supp = (content && content.support) ? content.support : {};
       const cfg = (content && content.checkout) ? content.checkout : {};
-      const rawWaPhone = (supp.whatsappPhone || cfg.whatsappPhone || '01098765432').replace(/[^0-9]/g, '');
-      const intlWaPhone = rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : (rawWaPhone.startsWith('2') ? rawWaPhone : ('20' + rawWaPhone));
+      let rawWaPhone = (supp.whatsappPhone || cfg.whatsappPhone || '01274994509').replace(/[^0-9]/g, '');
+      if (rawWaPhone.startsWith('0020')) rawWaPhone = rawWaPhone.slice(4);
+      else if (rawWaPhone.startsWith('002')) rawWaPhone = rawWaPhone.slice(3);
+      const intlWaPhone = rawWaPhone.startsWith('20') ? rawWaPhone : (rawWaPhone.startsWith('0') ? ('2' + rawWaPhone) : ('20' + rawWaPhone));
       const waMsgText = supp.whatsappMessage || 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني';
       const waMsg = encodeURIComponent(waMsgText);
       const targetUrl = `https://wa.me/${intlWaPhone}?text=${waMsg}`;

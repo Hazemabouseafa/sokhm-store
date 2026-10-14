@@ -40,6 +40,7 @@
       if (cached) {
         siteContent = JSON.parse(cached);
         applyToDOM();
+        window.dispatchEvent(new CustomEvent('sokhm:content-updated', { detail: siteContent }));
       }
     } catch (e) {}
 
@@ -59,6 +60,7 @@
         if (fileRes.ok) {
           siteContent = await fileRes.json();
           applyToDOM();
+          window.dispatchEvent(new CustomEvent('sokhm:content-updated', { detail: siteContent }));
         }
       } catch (err) {}
     }
@@ -127,6 +129,39 @@
         heroEl.style.backgroundImage = `url('${heroBg}')`;
       }
     }
+
+    // 5. WhatsApp Floating & Nav buttons dynamic setup
+    try {
+      const supp = siteContent.support || {};
+      const chk = siteContent.checkout || {};
+      let rawPhone = (supp.whatsappPhone || chk.whatsappPhone || '01274994509').replace(/[^0-9]/g, '');
+      if (rawPhone.startsWith('0020')) rawPhone = rawPhone.slice(4);
+      else if (rawPhone.startsWith('002')) rawPhone = rawPhone.slice(3);
+      const intlPhone = rawPhone.startsWith('20') ? rawPhone : (rawPhone.startsWith('0') ? ('2' + rawPhone) : ('20' + rawPhone));
+      const msg = encodeURIComponent(supp.whatsappMessage || 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني');
+      const waUrl = `https://wa.me/${intlPhone}?text=${msg}`;
+
+      ['floatingWhatsappBtn', 'navSupportBtn', 'drawerSupportBtn', 'navProductSupportBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.href = waUrl;
+      });
+
+      const isFloatingVisible = (visibility['support.floatingBtn'] !== false) && (supp.showFloatingButton !== false);
+      const floatEl = document.getElementById('floatingWhatsappBtn');
+      if (floatEl) {
+        if (!isFloatingVisible) floatEl.classList.add('hidden');
+        else floatEl.classList.remove('hidden');
+      }
+
+      const isNavVisible = (visibility['support.navBtn'] !== false) && (supp.showNavSupport !== false);
+      ['navSupportBtn', 'drawerSupportBtn', 'navProductSupportBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (!isNavVisible) el.classList.add('hidden');
+          else el.classList.remove('hidden');
+        }
+      });
+    } catch (_) {}
   }
 
   async function saveContent(updatedContent) {
@@ -154,6 +189,8 @@
     get: (path, fallback) => getNested(siteContent, path, fallback),
     set: (path, val) => setNested(siteContent, path, val),
     getAll: () => siteContent,
+    getContent: () => siteContent,
+    getSupport: () => (siteContent && siteContent.support) || {},
     applyToDOM: applyToDOM,
     save: saveContent,
     isVisible: (key) => {
