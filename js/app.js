@@ -61,7 +61,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load persisted cart from localStorage
   try {
     const saved = localStorage.getItem('sokhm_noir_cart_v1');
-    if (saved) cart = JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        cart = parsed.map(item => ({
+          ...item,
+          price: typeof item.price === 'number' ? item.price : (parseFloat(String(item.price || 0).replace(/[^0-9.]/g, '')) || 0),
+          quantity: parseInt(item.quantity, 10) || 1
+        }));
+      }
+    }
   } catch (e) {
     cart = [];
   }
@@ -72,15 +81,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {}
   }
 
+  // 0. Instant paint from local cache (Stale-While-Revalidate)
+  try {
+    const cachedProds = localStorage.getItem('sokhm_products_cache_v1');
+    if (cachedProds) {
+      const parsed = JSON.parse(cachedProds);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        products = parsed;
+        renderBestSellers();
+      }
+    }
+  } catch (_) {}
+
   // ================= 1. FETCH SOKHM PRODUCTS =================
   async function loadProducts() {
     try {
-      // 1. Fetch live database products first
-      const apiRes = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-cache' });
+      // 1. Fetch live database products (supported by Edge CDN)
+      const apiRes = await fetch('/api/products');
       if (apiRes.ok) {
         const data = await apiRes.json();
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           products = data;
+          try {
+            localStorage.setItem('sokhm_products_cache_v1', JSON.stringify(data));
+          } catch (_) {}
           await loadCategories();
           renderBestSellers();
           return;
@@ -608,17 +632,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cName = colorName || (Array.isArray(product.colors) && product.colors[0] ? (typeof product.colors[0] === 'object' ? product.colors[0].name : product.colors[0]) : 'Standard');
     const itemId = `${product.id}-${size}-${cName}`;
     const existing = cart.find(i => i.id === itemId);
-    const priceNum = typeof product.price === 'number' ? product.price : (parseFloat(product.price) || 0);
+    const priceNum = typeof product.price === 'number' ? product.price : (parseFloat(String(product.price).replace(/[^0-9.]/g, '')) || 0);
 
     if (existing) {
-      existing.quantity += 1;
+      existing.quantity = (parseInt(existing.quantity, 10) || 0) + 1;
     } else {
       cart.push({
         id: itemId,
         productId: product.id,
         name: product.name,
         price: priceNum,
-        formattedPrice: product.formattedPrice || `${priceNum.toLocaleString()} EGP`,
+        formattedPrice: product.formattedPrice || `${priceNum.toLocaleString('en-US')} EGP`,
         image: pMainImage,
         size: size,
         color: cName,
@@ -642,12 +666,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderCart() {
-    const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const totalCount = cart.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 1), 0);
+    const subtotal = cart.reduce((sum, item) => {
+      const p = typeof item.price === 'number' ? item.price : (parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0);
+      const q = parseInt(item.quantity, 10) || 1;
+      return sum + (p * q);
+    }, 0);
 
     if (navCartBadge) navCartBadge.textContent = totalCount;
     if (drawerCount) drawerCount.textContent = totalCount;
-    if (cartSubtotal) cartSubtotal.textContent = `${subtotal.toLocaleString()} EGP`;
+    if (cartSubtotal) cartSubtotal.textContent = `${subtotal.toLocaleString('en-US')} EGP`;
 
     if (!cartItemsList) return;
 
@@ -667,6 +695,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     cart.forEach(item => {
       const itemEl = document.createElement('div');
       itemEl.className = 'flex gap-3 pb-3 border-b border-[#1A1A1A] items-center font-mono';
+      const itemPrice = typeof item.price === 'number' ? item.price : (parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0);
+      const itemQty = parseInt(item.quantity, 10) || 1;
 
       itemEl.innerHTML = `
         <img src="${item.image}" alt="${item.name}" class="w-14 h-14 object-cover rounded-lg bg-neutral-900 border border-[#222] flex-shrink-0">
@@ -681,10 +711,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="flex justify-between items-center mt-1.5">
             <div class="flex items-center border border-[#222] bg-[#111] rounded px-1.5 py-0.5 text-xs">
               <button class="qty-min px-1 font-bold text-neutral-400 hover:text-white">-</button>
-              <span class="px-2 font-bold text-white">${item.quantity}</span>
+              <span class="px-2 font-bold text-white">${itemQty}</span>
               <button class="qty-plus px-1 font-bold text-neutral-400 hover:text-white">+</button>
             </div>
-            <span class="text-xs font-bold text-white">${(item.price * item.quantity).toLocaleString()} EGP</span>
+            <span class="text-xs font-bold text-white">${(itemPrice * itemQty).toLocaleString('en-US')} EGP</span>
           </div>
         </div>
       `;
@@ -847,7 +877,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('storage', (e) => {
     if (e.key === 'sokhm_noir_cart_v1') {
       try {
-        cart = e.newValue ? JSON.parse(e.newValue) : [];
+        const parsed = e.newValue ? JSON.parse(e.newValue) : [];
+        if (Array.isArray(parsed)) {
+          cart = parsed.map(item => ({
+            ...item,
+            price: typeof item.price === 'number' ? item.price : (parseFloat(String(item.price || 0).replace(/[^0-9.]/g, '')) || 0),
+            quantity: parseInt(item.quantity, 10) || 1
+          }));
+        } else {
+          cart = [];
+        }
         renderCart();
       } catch (err) {}
     }

@@ -2341,29 +2341,57 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
           </div>
 
-          <!-- Color Images Thumbnails -->
+          <!-- Color Images Thumbnails with Reordering & Primary Selection -->
           <div class="flex items-center gap-2 flex-wrap pt-0.5">
             ${images.map((img, imgIdx) => {
               const src = img.startsWith('http') || img.startsWith('data:') ? img : '../' + img.replace(/^\.\.\//, '');
               return `
-                <div class="relative group w-12 h-14 rounded-lg overflow-hidden border ${imgIdx === 0 ? 'border-amber-500/50' : 'border-[#2A2A2A]'} bg-black flex-shrink-0 shadow-sm" title="${imgIdx === 0 ? 'الصورة الأساسية للون' : `صورة ${imgIdx + 1}`}">
-                  <img src="${src}" class="w-full h-full object-cover" onerror="this.src='../assets/sokhm-card-1.jpg'">
-                  ${imgIdx === 0 ? `
-                    <span class="absolute bottom-0 inset-x-0 bg-black/80 text-[8px] text-amber-300 text-center font-bold py-0.5">أساسية</span>
-                  ` : ''}
-                  ${images.length > 1 ? `
-                    <button type="button" class="delete-color-img-btn absolute top-0.5 right-0.5 w-4 h-4 bg-black/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-[9px] cursor-pointer transition-colors" data-color-idx="${idx}" data-img-idx="${imgIdx}" title="حذف هذه الصورة من هذا اللون">
-                      ✕
-                    </button>
-                  ` : ''}
+                <div class="relative group w-16 h-20 rounded-lg overflow-hidden border ${imgIdx === 0 ? 'border-amber-500/80 ring-1 ring-amber-500/40' : 'border-[#2A2A2A]'} bg-black flex-shrink-0 shadow-md flex flex-col justify-between" title="${imgIdx === 0 ? 'الصورة الأساسية للون' : `صورة ${imgIdx + 1}`}">
+                  <img src="${src}" class="absolute inset-0 w-full h-full object-cover" onerror="this.src='../assets/sokhm-card-1.jpg'">
+                  
+                  <!-- Top Actions -->
+                  <div class="relative z-10 flex items-center justify-between p-1 bg-gradient-to-b from-black/90 to-transparent">
+                    ${imgIdx > 0 ? `
+                      <button type="button" class="set-color-main-img-btn p-0.5 rounded bg-black/80 hover:bg-amber-500 text-amber-300 hover:text-black transition-colors" data-color-idx="${idx}" data-img-idx="${imgIdx}" title="تعيين كصورة أولى لهذا اللون">
+                        <i data-lucide="star" class="w-3 h-3"></i>
+                      </button>
+                    ` : `
+                      <span class="p-0.5 rounded bg-amber-500/90 text-black font-bold text-[8px] flex items-center gap-0.5">
+                        <i data-lucide="star" class="w-2.5 h-2.5 fill-black"></i>
+                      </span>
+                    `}
+                    
+                    ${images.length > 1 ? `
+                      <button type="button" class="delete-color-img-btn p-0.5 rounded-full bg-black/80 hover:bg-red-600 text-white transition-colors" data-color-idx="${idx}" data-img-idx="${imgIdx}" title="حذف هذه الصورة">
+                        <i data-lucide="x" class="w-3 h-3"></i>
+                      </button>
+                    ` : '<span></span>'}
+                  </div>
+
+                  <!-- Bottom Reorder Controls (◀ / ▶) -->
+                  <div class="relative z-10 flex items-center justify-between px-1 py-0.5 bg-gradient-to-t from-black/90 to-transparent font-mono">
+                    ${imgIdx > 0 ? `
+                      <button type="button" class="move-img-prev-btn p-0.5 rounded hover:bg-white/30 text-white text-[10px] leading-none" data-color-idx="${idx}" data-img-idx="${imgIdx}" title="تقديم الصورة (يمين)">
+                        ◀
+                      </button>
+                    ` : '<span class="w-3"></span>'}
+                    
+                    <span class="text-[8px] text-neutral-300 font-bold">${imgIdx + 1}/${images.length}</span>
+
+                    ${imgIdx < images.length - 1 ? `
+                      <button type="button" class="move-img-next-btn p-0.5 rounded hover:bg-white/30 text-white text-[10px] leading-none" data-color-idx="${idx}" data-img-idx="${imgIdx}" title="تأخير الصورة (شمال)">
+                        ▶
+                      </button>
+                    ` : '<span class="w-3"></span>'}
+                  </div>
                 </div>
               `;
             }).join('')}
 
             <!-- Add more images directly to this color -->
-            <label class="w-12 h-14 rounded-lg border border-dashed border-[#333] hover:border-white hover:bg-[#1A1A1A] flex flex-col items-center justify-center text-neutral-400 hover:text-white cursor-pointer transition-colors flex-shrink-0" title="رفع صور إضافية لهذا اللون">
-              <i data-lucide="plus" class="w-4 h-4"></i>
-              <span class="text-[9px] mt-0.5 font-bold">+صورة</span>
+            <label class="w-16 h-20 rounded-lg border border-dashed border-[#333] hover:border-white hover:bg-[#1A1A1A] flex flex-col items-center justify-center text-neutral-400 hover:text-white cursor-pointer transition-colors flex-shrink-0" title="رفع صور إضافية لهذا اللون">
+              <i data-lucide="plus" class="w-5 h-5"></i>
+              <span class="text-[9px] mt-1 font-bold">+صورة</span>
               <input type="file" multiple accept="image/*" class="hidden color-extra-file-input" data-color-idx="${idx}">
             </label>
           </div>
@@ -2372,6 +2400,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).join('');
 
     setupLucide();
+
+    // Attach Set Main Image of Color Events
+    list.querySelectorAll('.set-color-main-img-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const colorIdx = parseInt(btn.getAttribute('data-color-idx'), 10);
+        const imgIdx = parseInt(btn.getAttribute('data-img-idx'), 10);
+        const col = modalColorsList[colorIdx];
+        if (col && Array.isArray(col.images) && imgIdx > 0) {
+          const [targetImg] = col.images.splice(imgIdx, 1);
+          col.images.unshift(targetImg);
+          col.image = col.images[0];
+          renderModalColors();
+          showToast(`تم تعيين الصورة كصورة أساسية للون "${col.name}" ★`);
+        }
+      });
+    });
+
+    // Attach Move Image Previous (◀)
+    list.querySelectorAll('.move-img-prev-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const colorIdx = parseInt(btn.getAttribute('data-color-idx'), 10);
+        const imgIdx = parseInt(btn.getAttribute('data-img-idx'), 10);
+        const col = modalColorsList[colorIdx];
+        if (col && Array.isArray(col.images) && imgIdx > 0) {
+          const temp = col.images[imgIdx - 1];
+          col.images[imgIdx - 1] = col.images[imgIdx];
+          col.images[imgIdx] = temp;
+          col.image = col.images[0];
+          renderModalColors();
+        }
+      });
+    });
+
+    // Attach Move Image Next (▶)
+    list.querySelectorAll('.move-img-next-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const colorIdx = parseInt(btn.getAttribute('data-color-idx'), 10);
+        const imgIdx = parseInt(btn.getAttribute('data-img-idx'), 10);
+        const col = modalColorsList[colorIdx];
+        if (col && Array.isArray(col.images) && imgIdx < col.images.length - 1) {
+          const temp = col.images[imgIdx + 1];
+          col.images[imgIdx + 1] = col.images[imgIdx];
+          col.images[imgIdx] = temp;
+          col.image = col.images[0];
+          renderModalColors();
+        }
+      });
+    });
 
     // Attach Set Main Color Events
     list.querySelectorAll('.set-main-color-btn').forEach(btn => {
@@ -2423,7 +2502,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const files = Array.from(e.target.files || []);
         if (files.length === 0 || !modalColorsList[colorIdx]) return;
 
-        showToast(`جاري رفع ${files.length} صور للون ${modalColorsList[colorIdx].name}...`);
+        showToast(`جاري ضغط ورفع ${files.length} صور للون ${modalColorsList[colorIdx].name}...`);
         for (const file of files) {
           try {
             const uploadedUrl = await uploadImageFile(file);
@@ -2454,7 +2533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         img.onload = async () => {
           let width = img.width;
           let height = img.height;
-          const maxDim = 1600;
+          const maxDim = 1200; // Balanced for ultra-crisp mobile Retina while keeping payload < 150KB
           if (width > maxDim || height > maxDim) {
             if (width > height) {
               height = Math.round((height * maxDim) / width);
@@ -2473,9 +2552,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           let optimizedDataUrl = rawDataUrl;
           try {
-            optimizedDataUrl = canvas.toDataURL('image/webp', 0.88);
+            optimizedDataUrl = canvas.toDataURL('image/webp', 0.80);
+            if (optimizedDataUrl.startsWith('data:image/png')) {
+              optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            }
           } catch (canvasErr) {
-            optimizedDataUrl = rawDataUrl;
+            try {
+              optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            } catch (_) {
+              optimizedDataUrl = rawDataUrl;
+            }
           }
 
           try {

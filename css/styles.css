@@ -224,19 +224,178 @@ img {
   color: #E50000;
 }
 
-/* Swatch Dots */
+/* Swatch Dots (Card Level) */
 .swatch-dot-dark {
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   cursor: pointer;
-  transition: transform 0.15s ease, outline 0.15s ease;
+  transition: transform 0.15s ease, outline 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.swatch-dot-dark:hover {
+  transform: scale(1.15);
 }
 
 .swatch-dot-dark.active {
-  outline: 1.5px solid #FFFFFF;
-  outline-offset: 2px;
+  outline: 2px solid #FFFFFF;
+  outline-offset: 2.5px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Dedicated Large Product Page Color Swatches (Touch Friendly 32px) */
+.product-swatch-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), outline 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-swatch-dot:hover {
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.product-swatch-dot.active {
+  outline: 2px solid #FFFFFF;
+  outline-offset: 3px;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+}
+
+/* ================= PRODUCT GALLERY SLIDER (SWIPE / SLIDER) ================= */
+.gallery-slider-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: 640px;
+  border-radius: 14px;
+  overflow: hidden;
+  background-color: #0E0E0E;
+  border: 1px solid #1A1A1A;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
+}
+
+.gallery-slider-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.gallery-slider-track::-webkit-scrollbar {
+  display: none;
+}
+
+.gallery-slider-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+  user-select: none;
+}
+
+.gallery-slider-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+.gallery-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(14, 14, 14, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s ease;
+  opacity: 0.85;
+}
+
+.gallery-nav-arrow:hover {
+  background: #FFFFFF;
+  color: #000000;
+  opacity: 1;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.gallery-nav-arrow.prev {
+  left: 12px;
+}
+
+.gallery-nav-arrow.next {
+  right: 12px;
+}
+
+.gallery-pagination-dots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.gallery-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transition: all 0.25s ease;
+}
+
+.gallery-dot.active {
+  width: 18px;
+  border-radius: 9999px;
+  background: #FFFFFF;
+}
+
+/* Skeleton Loading Shimmer */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #121212 25%, #1E1E1E 50%, #121212 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ================= BOTTOM MOUNTAIN BANNER ================= */

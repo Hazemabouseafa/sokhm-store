@@ -40,12 +40,16 @@ function parseBody(req) {
   });
 }
 
-function sendJson(res, statusCode, data) {
+function sendJson(res, statusCode, data, cacheControl = null) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
+  if (cacheControl) {
+    res.setHeader('Cache-Control', cacheControl);
+  } else {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token');
@@ -171,7 +175,7 @@ module.exports = async (req, res) => {
     if (pathname === '/api/site-content') {
       if (req.method === 'GET') {
         const content = await db.getSiteContent();
-        return sendJson(res, 200, content);
+        return sendJson(res, 200, content, 'public, max-age=10, s-maxage=60, stale-while-revalidate=600');
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
@@ -194,7 +198,7 @@ module.exports = async (req, res) => {
     if (pathname === '/api/products') {
       if (req.method === 'GET') {
         const prods = await db.getProducts();
-        return sendJson(res, 200, prods);
+        return sendJson(res, 200, prods, 'public, max-age=15, s-maxage=60, stale-while-revalidate=600');
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
@@ -224,7 +228,7 @@ module.exports = async (req, res) => {
       if (req.method === 'GET') {
         const prod = await db.getProductById(id);
         if (!prod) return sendJson(res, 404, { success: false, error: 'المنتج غير موجود' });
-        return sendJson(res, 200, prod);
+        return sendJson(res, 200, prod, 'public, max-age=15, s-maxage=60, stale-while-revalidate=600');
       }
       if (req.method === 'PUT') {
         const body = await parseBody(req);
@@ -242,7 +246,7 @@ module.exports = async (req, res) => {
     if (pathname === '/api/categories') {
       if (req.method === 'GET') {
         const cats = await db.getCategories();
-        return sendJson(res, 200, cats);
+        return sendJson(res, 200, cats, 'public, max-age=30, s-maxage=120, stale-while-revalidate=600');
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
