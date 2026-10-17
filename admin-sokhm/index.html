@@ -125,6 +125,13 @@
           <span class="text-neutral-400 font-sans text-[11px]">القاهرة:</span>
           <span id="cairoClockText" class="font-bold text-amber-300">--:--:--</span>
         </span>
+
+        <!-- Live Visitor Counter Badge -->
+        <span id="headerVisitsBadge" class="hidden xl:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#111] border border-[#222] text-[11px] font-mono text-neutral-300 shadow-sm" title="إجمالي زيارات متجر SOKHM">
+          <i data-lucide="eye" class="w-3 h-3 text-purple-400"></i>
+          <span class="text-neutral-400 font-sans text-[11px]">الزيارات:</span>
+          <span id="headerVisitsCount" class="font-bold text-purple-300">0</span>
+        </span>
       </div>
 
       <!-- Quick Actions & Auth Controls -->
@@ -203,6 +210,13 @@
           <span>تخصيص الشراء (Checkout)</span>
         </button>
 
+        <!-- تبويب أسعار الشحن والتوصيل (Shipping Rates) -->
+        <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-shipping">
+          <i data-lucide="truck" class="w-4 h-4 text-emerald-400"></i>
+          <span>أسعار الشحن (Shipping)</span>
+          <span id="shippingHeaderBadge" class="px-2 py-0.5 rounded-full bg-emerald-950/70 text-emerald-400 border border-emerald-800 text-[10px] font-mono font-bold">50 ج.م</span>
+        </button>
+
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-discounts">
           <i data-lucide="tag" class="w-4 h-4 text-emerald-400"></i>
           <span>أكواد الخصم والكوبونات (Discounts)</span>
@@ -273,8 +287,23 @@
         </div>
       </div>
 
-      <!-- 4 Top Metrics Cards (Sales & Orders KPI) -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- 5 Top Metrics Cards (Sales, Orders & Site Visits KPI) -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <!-- Site Visits Card -->
+        <div class="cms-card p-4 sm:p-5 flex items-center gap-4 col-span-2 sm:col-span-1 border-purple-500/30 bg-gradient-to-br from-[#0c0c0c] to-[#140c1c]">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <i data-lucide="eye" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] font-bold text-neutral-400 block">زيارات المتجر</span>
+              <span id="metricTodayVisits" class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800/60 font-mono">+0 اليوم</span>
+            </div>
+            <span id="metricTotalVisits" class="text-2xl font-black font-mono text-purple-300">0</span>
+            <span id="metricUniqueVisitors" class="text-[10px] text-neutral-500 block font-mono">0 زائر فريد</span>
+          </div>
+        </div>
+
         <div class="cms-card p-4 sm:p-5 flex items-center gap-4">
           <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
             <i data-lucide="shopping-bag" class="w-6 h-6"></i>
@@ -305,7 +334,7 @@
           </div>
         </div>
 
-        <div class="cms-card p-4 sm:p-5 flex items-center gap-4">
+        <div class="cms-card p-4 sm:p-5 flex items-center gap-4 col-span-2 md:col-span-1">
           <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <i data-lucide="badge-dollar-sign" class="w-6 h-6"></i>
           </div>
@@ -1369,6 +1398,136 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- ========================================================
+         تبويب أسعار الشحن والتوصيل للمحافظات (SHIPPING RATES TAB)
+         ======================================================== -->
+    <section id="tab-shipping" class="tab-pane hidden space-y-6">
+      
+      <!-- Top Bar: Title & Save Button -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1A1A1A]">
+        <div>
+          <span class="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">إدارة الشحن والتوصيل لجميع المحافظات</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1 flex items-center gap-3">
+            <span>أسعار الشحن والتوصيل (Shipping Rates)</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-400 border border-emerald-800 font-mono font-bold">27 محافظة</span>
+          </h2>
+          <p class="text-xs text-neutral-400 mt-1">
+            تحكم كامل في سعر الشحن الافتراضي، حد الشحن المجاني، وتخصيص أسعار شحن محددة لكل محافظة في مصر.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="saveShippingRatesBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/50">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>حفظ أسعار الشحن</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 1. القواعد العامة لمصاريف الشحن -->
+      <div class="cms-card p-6 space-y-5">
+        <div class="flex items-center gap-2 pb-3 border-b border-[#1A1A1A]">
+          <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i>
+          <h3 class="font-bold text-sm text-white">١. القواعد العامة لمصاريف الشحن (Global Shipping Rules)</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <!-- Standard Fee -->
+          <div>
+            <label class="cms-label">سعر الشحن الأساسي / الافتراضي (EGP) *</label>
+            <div class="relative">
+              <input type="number" id="ship_standardFee" min="0" step="any" class="cms-input w-full font-mono pl-14 font-bold text-emerald-400 text-sm" placeholder="50">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-neutral-400 font-bold">ج.م</span>
+            </div>
+            <span class="text-[10px] text-neutral-500 block mt-1">يُطبق تلقائياً على أي محافظة لم يتم تحديد سعر خاص لها أدناه.</span>
+          </div>
+
+          <!-- Free Shipping Threshold -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="cms-label mb-0">حد الشحن المجاني (EGP)</label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs select-none">
+                <input type="checkbox" id="ship_freeEnabled" checked class="cms-vis-toggle w-3.5 h-3.5 rounded bg-[#111] border-[#333] text-emerald-400 cursor-pointer">
+                <span id="ship_freeEnabledText" class="vis-text text-[10px] font-bold text-emerald-400">مُفعل</span>
+              </label>
+            </div>
+            <div class="relative">
+              <input type="number" id="ship_freeThreshold" min="0" step="any" class="cms-input w-full font-mono pl-14 font-bold text-white text-sm" placeholder="2500">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-neutral-400 font-bold">ج.م</span>
+            </div>
+            <span class="text-[10px] text-neutral-500 block mt-1">الطلبات بهذا المبلغ أو أكثر تحصل على شحن مجاني تلقائياً.</span>
+          </div>
+
+          <!-- Notice Text -->
+          <div>
+            <label class="cms-label">نص إشعار الشحن في المتجر</label>
+            <input type="text" id="ship_noticeText" class="cms-input w-full" placeholder="شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر">
+            <span class="text-[10px] text-neutral-500 block mt-1">يظهر للعميل أسفل ملخص الطلب في نافذة الشراء.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. أسعار الشحن المخصصة للمحافظات المصرية -->
+      <div class="cms-card p-6 space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#1A1A1A]">
+          <div class="flex items-center gap-2">
+            <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i>
+            <h3 class="font-bold text-sm text-white">٢. تخصيص أسعار الشحن حسب المحافظات (Governorate Rates)</h3>
+          </div>
+          <span class="text-[11px] text-neutral-400">المحافظة التي تُترك فارغة تأخذ "سعر الشحن الأساسي" تلقائياً</span>
+        </div>
+
+        <!-- Groups of Governorates -->
+        <div class="space-y-6">
+          
+          <!-- القاهرة والجيزة والإسكندرية (المدن الكبرى) -->
+          <div>
+            <h4 class="text-xs font-bold text-neutral-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>المدن الكبرى (العاصمة والإسكندرية)</span>
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="govGroupMajor"></div>
+          </div>
+
+          <!-- محافظات الدلتا والقناة -->
+          <div class="pt-4 border-t border-[#141414]">
+            <h4 class="text-xs font-bold text-neutral-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+              <span>محافظات الدلتا والقناة</span>
+            </h4>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" id="govGroupDelta"></div>
+          </div>
+
+          <!-- محافظات الصعيد -->
+          <div class="pt-4 border-t border-[#141414]">
+            <h4 class="text-xs font-bold text-neutral-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              <span>محافظات الصعيد والوجه القبلي</span>
+            </h4>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" id="govGroupUpper"></div>
+          </div>
+
+          <!-- المحافظات الحدودية والنائية -->
+          <div class="pt-4 border-t border-[#141414]">
+            <h4 class="text-xs font-bold text-neutral-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+              <span>المحافظات الحدودية والمناطق النائية</span>
+            </h4>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="govGroupRemote"></div>
+          </div>
+
+        </div>
+
+        <div class="pt-4 border-t border-[#1A1A1A] flex justify-end">
+          <button id="saveShippingRatesBtnBottom" class="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/50">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>تأكيد وحفظ جميع أسعار الشحن</span>
+          </button>
+        </div>
+      </div>
+
     </section>
 
     <!-- ========================================================

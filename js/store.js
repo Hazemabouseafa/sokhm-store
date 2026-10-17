@@ -445,8 +445,33 @@ class SokhStore {
   getCartTotals() {
     const cart = this.getCart();
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const freeShippingThreshold = 2500;
-    const shipping = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 75;
+    
+    let freeShippingThreshold = 2500;
+    let standardShippingFee = 50;
+    let freeShippingEnabled = true;
+
+    try {
+      let content = null;
+      if (window.sokhmContent && typeof window.sokhmContent.getAll === 'function') {
+        content = window.sokhmContent.getAll();
+      } else {
+        const cached = localStorage.getItem('sokhm_site_content_v1');
+        if (cached) content = JSON.parse(cached);
+      }
+      if (content) {
+        if (content.shipping) {
+          if (content.shipping.freeShippingThreshold !== undefined) freeShippingThreshold = Number(content.shipping.freeShippingThreshold);
+          if (content.shipping.standardFee !== undefined) standardShippingFee = Number(content.shipping.standardFee);
+          if (content.shipping.freeShippingEnabled !== undefined) freeShippingEnabled = content.shipping.freeShippingEnabled;
+        } else if (content.checkout) {
+          if (content.checkout.freeShippingThreshold !== undefined) freeShippingThreshold = Number(content.checkout.freeShippingThreshold);
+          if (content.checkout.standardShippingFee !== undefined) standardShippingFee = Number(content.checkout.standardShippingFee);
+        }
+      }
+    } catch (_) {}
+
+    const isFree = freeShippingEnabled && subtotal >= freeShippingThreshold;
+    const shipping = subtotal === 0 ? 0 : (isFree ? 0 : standardShippingFee);
     const total = subtotal + shipping;
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -525,3 +550,50 @@ class SokhStore {
 window.sokhmStore = new SokhStore();
 window.sokhStore = window.sokhmStore;
 window.vioraStore = window.sokhmStore;
+
+// ================= SITE VISIT TRACKER =================
+(function() {
+  if (typeof window === 'undefined') return;
+  // Ignore admin pages and localhost bots
+  const path = window.location.pathname || '';
+  if (path.includes('/admin') || path.includes('/admin-sokhm')) return;
+
+  function initVisitorTracker() {
+    try {
+      let vid = localStorage.getItem('sokhm_vid_v1');
+      if (!vid) {
+        vid = 'v_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        localStorage.setItem('sokhm_vid_v1', vid);
+      }
+
+      // Track once per session per page URL
+      const pageKey = 'sokhm_tracked_' + (path || '/');
+      if (sessionStorage.getItem(pageKey)) return;
+      sessionStorage.setItem(pageKey, '1');
+
+      const payload = JSON.stringify({
+        page: path + (window.location.search || ''),
+        visitorId: vid,
+        referrer: document.referrer || ''
+      });
+
+      if (navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: 'application/json' });
+        navigator.sendBeacon('/api/visits', blob);
+      } else {
+        fetch('/api/visits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true
+        }).catch(() => {});
+      }
+    } catch (_) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initVisitorTracker, 300));
+  } else {
+    setTimeout(initVisitorTracker, 300);
+  }
+})();

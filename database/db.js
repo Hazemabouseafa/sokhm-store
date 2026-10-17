@@ -141,6 +141,19 @@ function initSchema() {
       max_uses INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- Site Visits & Visitor Analytics Table
+    CREATE TABLE IF NOT EXISTS site_visits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page TEXT DEFAULT '/',
+      visitor_id TEXT,
+      referrer TEXT,
+      user_agent TEXT,
+      ip_hash TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_site_visits_created ON site_visits(created_at);
+    CREATE INDEX IF NOT EXISTS idx_site_visits_vid ON site_visits(visitor_id);
   `);
 
   try {
@@ -417,6 +430,7 @@ function getSiteContent() {
   const visRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'visibility'").get();
   const pixelRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'metaPixel'").get();
   const supportRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'support'").get();
+  const catRows = db.prepare("SELECT id, name, slug FROM categories ORDER BY created_at ASC").all();
   const defaultMetaPixel = {
     pixelId: "",
     enabled: false,
@@ -469,6 +483,16 @@ function getSiteContent() {
     } catch (_) {}
   }
 
+  const shippingRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'shipping'").get();
+  const rawShipping = shippingRow ? JSON.parse(shippingRow.content_json) : {};
+  const resolvedShipping = {
+    standardFee: rawShipping.standardFee !== undefined ? Number(rawShipping.standardFee) : (chkData.standardShippingFee !== undefined ? Number(chkData.standardShippingFee) : 50),
+    freeShippingThreshold: rawShipping.freeShippingThreshold !== undefined ? Number(rawShipping.freeShippingThreshold) : (chkData.freeShippingThreshold !== undefined ? Number(chkData.freeShippingThreshold) : 2500),
+    freeShippingEnabled: rawShipping.freeShippingEnabled !== false,
+    noticeText: rawShipping.noticeText || chkData.shippingRuleText || 'شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر',
+    governorateRates: (rawShipping.governorateRates && typeof rawShipping.governorateRates === 'object') ? rawShipping.governorateRates : {}
+  };
+
   return {
     homepage: hpRow ? JSON.parse(hpRow.content_json) : {},
     productPage: pp,
@@ -476,6 +500,7 @@ function getSiteContent() {
     visibility: visRow ? JSON.parse(visRow.content_json) : {},
     metaPixel: pixelRow ? JSON.parse(pixelRow.content_json) : defaultMetaPixel,
     support: resolvedSupport,
+    shipping: resolvedShipping,
     categories: catRows.map(c => ({ id: c.id, name: c.name, slug: c.slug }))
   };
 }
@@ -496,6 +521,32 @@ function saveSiteContent(content) {
       INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
       VALUES ('productPage', ?, CURRENT_TIMESTAMP)
     `).run(JSON.stringify(content.productPage));
+  }
+
+  if (content.shipping && content.checkout) {
+    if (content.shipping.standardFee !== undefined) {
+      content.checkout.standardShippingFee = Number(content.shipping.standardFee);
+    }
+    if (content.shipping.freeShippingThreshold !== undefined) {
+      content.checkout.freeShippingThreshold = Number(content.shipping.freeShippingThreshold);
+    }
+    if (content.shipping.noticeText) {
+      content.checkout.shippingRuleText = content.shipping.noticeText;
+    }
+  } else if (content.shipping && !content.checkout) {
+    try {
+      const chkRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'checkout'").get();
+      if (chkRow) {
+        const chk = JSON.parse(chkRow.content_json);
+        if (content.shipping.standardFee !== undefined) chk.standardShippingFee = Number(content.shipping.standardFee);
+        if (content.shipping.freeShippingThreshold !== undefined) chk.freeShippingThreshold = Number(content.shipping.freeShippingThreshold);
+        if (content.shipping.noticeText) chk.shippingRuleText = content.shipping.noticeText;
+        db.prepare(`
+          INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
+          VALUES ('checkout', ?, CURRENT_TIMESTAMP)
+        `).run(JSON.stringify(chk));
+      }
+    } catch (_) {}
   }
 
   if (content.checkout) {
@@ -524,6 +575,13 @@ function saveSiteContent(content) {
       INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
       VALUES ('support', ?, CURRENT_TIMESTAMP)
     `).run(JSON.stringify(content.support));
+  }
+
+  if (content.shipping) {
+    db.prepare(`
+      INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at)
+      VALUES ('shipping', ?, CURRENT_TIMESTAMP)
+    `).run(JSON.stringify(content.shipping));
   }
 
   if (Array.isArray(content.categories)) {
@@ -1183,8 +1241,49 @@ function getOrderStats() {
     inDeliveryOrders,
     deliveredOrders,
     totalRevenue,
-    totalRevenueFormatted: totalRevenue.toLocaleString('en-US') + ' ج.م'
+    totalRevenueFormatted: totalRevenue.toLocaleString('en-US') + ' ج.م',
+    visits: getVisitStats()
   };
+}
+
+/**
+ * Site Visits & Analytics
+ */
+function recordVisit(data = {}) {
+  try {
+    const page = (data.page || '/').slice(0, 255);
+    const visitorId = (data.visitorId || data.visitor_id || 'anon-' + Math.random().toString(36).substring(2, 10)).slice(0, 100);
+    const referrer = (data.referrer || '').slice(0, 500);
+    const userAgent = (data.userAgent || data.user_agent || '').slice(0, 500);
+    const ip = data.ip || '';
+    const ipHash = ip ? crypto.createHash('sha256').update(ip).digest('hex').slice(0, 32) : null;
+
+    db.prepare(`
+      INSERT INTO site_visits (page, visitor_id, referrer, user_agent, ip_hash, created_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(page, visitorId, referrer, userAgent, ipHash);
+    return { success: true };
+  } catch (err) {
+    console.warn('SQLite recordVisit error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+function getVisitStats() {
+  try {
+    const totalRow = db.prepare('SELECT COUNT(*) as count FROM site_visits').get();
+    const todayRow = db.prepare("SELECT COUNT(*) as count FROM site_visits WHERE date(created_at) = date('now')").get();
+    const uniqueRow = db.prepare('SELECT COUNT(DISTINCT visitor_id) as count FROM site_visits').get();
+
+    return {
+      totalVisits: Number(totalRow?.count || 0),
+      todayVisits: Number(todayRow?.count || 0),
+      uniqueVisitors: Number(uniqueRow?.count || 0)
+    };
+  } catch (err) {
+    console.warn('SQLite getVisitStats error:', err.message);
+    return { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0 };
+  }
 }
 
 /**
@@ -1371,6 +1470,8 @@ module.exports = {
   recordDiscountUsage,
   resetDiscountUsage,
   getStats,
+  recordVisit,
+  getVisitStats,
   seedTursoDatabase: async () => ({ success: true, message: 'Native SQLite already initialized' }),
   verifyAdminCredentials,
   updateAdminPassword,

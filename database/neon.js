@@ -75,6 +75,7 @@ let fallbackContent = null;
 let fallbackOrders = [];
 let fallbackCategories = null;
 let fallbackDiscounts = [];
+let fallbackVisits = [];
 
 function loadFallbackData() {
   if (fallbackProducts === null) {
@@ -226,6 +227,25 @@ async function initNeonSchema() {
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS site_visits (
+        id SERIAL PRIMARY KEY,
+        page TEXT DEFAULT '/',
+        visitor_id TEXT,
+        referrer TEXT,
+        user_agent TEXT,
+        ip_hash TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    try {
+      await sql.query('CREATE INDEX IF NOT EXISTS idx_site_visits_created ON site_visits(created_at)');
+    } catch (_) {}
+    try {
+      await sql.query('CREATE INDEX IF NOT EXISTS idx_site_visits_vid ON site_visits(visitor_id)');
+    } catch (_) {}
 
     try {
       await sql.query('ALTER TABLE discount_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 0');
@@ -466,6 +486,15 @@ async function getSiteContent() {
         showNavSupport: supportData.showNavSupport !== false
       };
 
+      const rawShipping = contentMap.shipping || fallbackContent.shipping || {};
+      const resolvedShipping = {
+        standardFee: rawShipping.standardFee !== undefined ? Number(rawShipping.standardFee) : (checkoutData.standardShippingFee !== undefined ? Number(checkoutData.standardShippingFee) : 50),
+        freeShippingThreshold: rawShipping.freeShippingThreshold !== undefined ? Number(rawShipping.freeShippingThreshold) : (checkoutData.freeShippingThreshold !== undefined ? Number(checkoutData.freeShippingThreshold) : 2500),
+        freeShippingEnabled: rawShipping.freeShippingEnabled !== false,
+        noticeText: rawShipping.noticeText || checkoutData.shippingRuleText || 'شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر',
+        governorateRates: (rawShipping.governorateRates && typeof rawShipping.governorateRates === 'object') ? rawShipping.governorateRates : {}
+      };
+
       return {
         homepage: contentMap.homepage || fallbackContent.homepage || {},
         productPage: pp,
@@ -473,6 +502,7 @@ async function getSiteContent() {
         visibility: contentMap.visibility || fallbackContent.visibility || {},
         metaPixel: contentMap.metaPixel || fallbackContent.metaPixel || defaultMetaPixel,
         support: resolvedSupport,
+        shipping: resolvedShipping,
         categories: (catRows && catRows.length > 0)
           ? catRows.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug }))
           : fallbackCategories
@@ -502,6 +532,15 @@ async function getSiteContent() {
     showNavSupport: fallbackSupport.showNavSupport !== false
   };
 
+  const rawFbShipping = fallbackContent.shipping || {};
+  const defaultShipping = {
+    standardFee: rawFbShipping.standardFee !== undefined ? Number(rawFbShipping.standardFee) : (fallbackCheckout.standardShippingFee !== undefined ? Number(fallbackCheckout.standardShippingFee) : 50),
+    freeShippingThreshold: rawFbShipping.freeShippingThreshold !== undefined ? Number(rawFbShipping.freeShippingThreshold) : (fallbackCheckout.freeShippingThreshold !== undefined ? Number(fallbackCheckout.freeShippingThreshold) : 2500),
+    freeShippingEnabled: rawFbShipping.freeShippingEnabled !== false,
+    noticeText: rawFbShipping.noticeText || fallbackCheckout.shippingRuleText || 'شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر',
+    governorateRates: (rawFbShipping.governorateRates && typeof rawFbShipping.governorateRates === 'object') ? rawFbShipping.governorateRates : {}
+  };
+
   return {
     homepage: fallbackContent.homepage || {},
     productPage: fallbackContent.productPage || {},
@@ -509,6 +548,7 @@ async function getSiteContent() {
     visibility: fallbackContent.visibility || {},
     metaPixel: fallbackContent.metaPixel || defaultMetaPixel,
     support: fallbackContent.support || defaultSupport,
+    shipping: fallbackContent.shipping || defaultShipping,
     categories: fallbackCategories
   };
 }
@@ -534,6 +574,17 @@ async function saveSiteContent(content) {
           VALUES ('productPage', $1, NOW())
           ON CONFLICT (section_key) DO UPDATE SET content_json = EXCLUDED.content_json, updated_at = NOW()
         `, [JSON.stringify(content.productPage)]);
+      }
+      if (content.shipping && content.checkout) {
+        if (content.shipping.standardFee !== undefined) {
+          content.checkout.standardShippingFee = Number(content.shipping.standardFee);
+        }
+        if (content.shipping.freeShippingThreshold !== undefined) {
+          content.checkout.freeShippingThreshold = Number(content.shipping.freeShippingThreshold);
+        }
+        if (content.shipping.noticeText) {
+          content.checkout.shippingRuleText = content.shipping.noticeText;
+        }
       }
       if (content.checkout) {
         await sql.query(`
@@ -563,6 +614,13 @@ async function saveSiteContent(content) {
           ON CONFLICT (section_key) DO UPDATE SET content_json = EXCLUDED.content_json, updated_at = NOW()
         `, [JSON.stringify(content.support)]);
       }
+      if (content.shipping) {
+        await sql.query(`
+          INSERT INTO site_content (section_key, content_json, updated_at)
+          VALUES ('shipping', $1, NOW())
+          ON CONFLICT (section_key) DO UPDATE SET content_json = EXCLUDED.content_json, updated_at = NOW()
+        `, [JSON.stringify(content.shipping)]);
+      }
       if (Array.isArray(content.categories)) {
         for (const cat of content.categories) {
           await sql.query(`
@@ -584,6 +642,14 @@ async function saveSiteContent(content) {
   if (content.visibility) fallbackContent.visibility = content.visibility;
   if (content.metaPixel) fallbackContent.metaPixel = content.metaPixel;
   if (content.support) fallbackContent.support = content.support;
+  if (content.shipping) {
+    fallbackContent.shipping = content.shipping;
+    if (fallbackContent.checkout) {
+      if (content.shipping.standardFee !== undefined) fallbackContent.checkout.standardShippingFee = Number(content.shipping.standardFee);
+      if (content.shipping.freeShippingThreshold !== undefined) fallbackContent.checkout.freeShippingThreshold = Number(content.shipping.freeShippingThreshold);
+      if (content.shipping.noticeText) fallbackContent.checkout.shippingRuleText = content.shipping.noticeText;
+    }
+  }
   if (Array.isArray(content.categories)) fallbackCategories = content.categories;
 
   try {
@@ -1437,7 +1503,8 @@ async function getOrderStats() {
         inDeliveryOrders,
         deliveredOrders,
         totalRevenue,
-        totalRevenueFormatted: totalRevenue.toLocaleString('en-US') + ' ج.م'
+        totalRevenueFormatted: totalRevenue.toLocaleString('en-US') + ' ج.م',
+        visits: await getVisitStats()
       };
     } catch (err) {
       console.error('Neon getOrderStats error:', err.message);
@@ -1458,7 +1525,79 @@ async function getOrderStats() {
     inDeliveryOrders: inDelivery,
     deliveredOrders: delivered,
     totalRevenue: rev,
-    totalRevenueFormatted: rev.toLocaleString('en-US') + ' ج.م'
+    totalRevenueFormatted: rev.toLocaleString('en-US') + ' ج.م',
+    visits: await getVisitStats()
+  };
+}
+
+async function recordVisit(data = {}) {
+  const page = (data.page || '/').slice(0, 255);
+  const visitorId = (data.visitorId || data.visitor_id || 'anon-' + Math.random().toString(36).substring(2, 10)).slice(0, 100);
+  const referrer = (data.referrer || '').slice(0, 500);
+  const userAgent = (data.userAgent || data.user_agent || '').slice(0, 500);
+  const ip = data.ip || '';
+  const ipHash = ip ? crypto.createHash('sha256').update(ip).digest('hex').slice(0, 32) : null;
+  const nowIso = new Date().toISOString();
+
+  const sql = getSql();
+  if (sql) {
+    try {
+      await initNeonSchema();
+      await sql.query(`
+        INSERT INTO site_visits (page, visitor_id, referrer, user_agent, ip_hash, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
+      `, [page, visitorId, referrer, userAgent, ipHash, nowIso]);
+      return { success: true };
+    } catch (err) {
+      console.error('Neon recordVisit error:', err.message);
+    }
+  }
+
+  fallbackVisits.push({
+    id: fallbackVisits.length + 1,
+    page,
+    visitor_id: visitorId,
+    referrer,
+    user_agent: userAgent,
+    ip_hash: ipHash,
+    created_at: nowIso
+  });
+  if (fallbackVisits.length > 5000) fallbackVisits = fallbackVisits.slice(-5000);
+  return { success: true };
+}
+
+async function getVisitStats() {
+  const sql = getSql();
+  if (sql) {
+    try {
+      await initNeonSchema();
+      const [totalRow, todayRow, uniqueRow] = await Promise.all([
+        sql.query('SELECT COUNT(*) as count FROM site_visits'),
+        sql.query("SELECT COUNT(*) as count FROM site_visits WHERE created_at >= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Cairo')::date"),
+        sql.query('SELECT COUNT(DISTINCT visitor_id) as count FROM site_visits')
+      ]);
+
+      const totalVisits = Number(totalRow[0]?.count || 0);
+      const todayVisits = Number(todayRow[0]?.count || 0);
+      const uniqueVisitors = Number(uniqueRow[0]?.count || 0);
+
+      return {
+        totalVisits,
+        todayVisits,
+        uniqueVisitors
+      };
+    } catch (err) {
+      console.error('Neon getVisitStats error:', err.message);
+    }
+  }
+
+  const nowCairo = new Date().toISOString().slice(0, 10);
+  const todayCount = fallbackVisits.filter(v => (v.created_at || '').slice(0, 10) === nowCairo).length;
+  const uniqueSet = new Set(fallbackVisits.map(v => v.visitor_id));
+  return {
+    totalVisits: fallbackVisits.length,
+    todayVisits: todayCount,
+    uniqueVisitors: uniqueSet.size
   };
 }
 
@@ -1548,6 +1687,8 @@ module.exports = {
   validateSession,
   revokeSession,
   getStats,
+  recordVisit,
+  getVisitStats,
   seedNeonDatabase,
   seedTursoDatabase: seedNeonDatabase, // Alias for backward compatibility
   seedDatabase: seedNeonDatabase,

@@ -230,7 +230,7 @@
     ],
     "successTitle": "تم استلام وتأكيد طلبك بنجاح!",
     "successSubtitle": "شكراً لاختيارك ✦ SOKHM ATELIER. تم تسجيل طلبك في نظامنا وسيقوم مندوب الشحن بالتواصل معك هاتفياً قبل التوصيل.",
-    "whatsappPhone": "01274994509",
+    "whatsappPhone": "01098765432",
     "whatsappButtonText": "متابعة الطلب عبر WhatsApp"
   },
   "visibility": {
@@ -279,10 +279,21 @@
     "trackPurchase": true
   },
   "support": {
-    "whatsappPhone": "01274994509",
+    "whatsappPhone": "01098765432",
     "whatsappMessage": "مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني",
     "showFloatingButton": true,
     "showNavSupport": true
+  },
+  "shipping": {
+    "standardFee": 50,
+    "freeShippingThreshold": 1500,
+    "freeShippingEnabled": true,
+    "noticeText": "شحن سريع مجاني لجميع الطلبات بقيمة 1500 ج.م أو أكثر",
+    "governorateRates": {
+      "القاهرة": 45,
+      "الجيزة": 45,
+      "الإسكندرية": 60
+    }
   },
   "categories": [
     {

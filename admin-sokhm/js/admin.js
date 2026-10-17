@@ -43,6 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     homepage: {},
     productPage: {},
     checkout: {},
+    shipping: {
+      standardFee: 50,
+      freeShippingThreshold: 2500,
+      freeShippingEnabled: true,
+      noticeText: 'شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر',
+      governorateRates: {}
+    },
     visibility: {},
     categories: [],
     metaPixel: {
@@ -136,6 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupHomepageFormHandlers();
     setupProductPageFormHandlers();
     setupCheckoutFormHandlers();
+    setupShippingFormHandlers();
     setupSupportFormHandlers();
     setupMetaPixelHandlers();
     setupCategoriesHandlers();
@@ -158,6 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           populateHomepageForm();
           populateProductPageForm();
           populateCheckoutForm();
+          populateShippingForm();
           populateSupportForm();
           populateMetaPixelForm();
           populateCategoryDropdowns();
@@ -173,6 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           renderDiscounts();
         }).catch(e => console.warn('Discounts render error:', e)),
 
+        loadVisitStats().catch(e => console.warn('Visit stats error:', e)),
         loadDbStats().catch(e => console.warn('Db stats error:', e))
       ]);
     } catch (err) {
@@ -182,6 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. تحديث الإحصائيات والأيقونات في النهاية
     try {
       renderOrderStats();
+      loadVisitStats();
       loadDbStats();
       setupLucide();
     } catch (e) {
@@ -275,6 +286,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderOrdersTable();
         renderOrderStats();
       });
+      loadVisitStats();
+    } else if (targetTabId === 'tab-shipping') {
+      populateShippingForm();
     } else if (targetTabId === 'tab-categories') {
       loadSiteContent().then(() => {
         renderCategoriesList();
@@ -351,6 +365,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pendingEl) pendingEl.textContent = pending;
     if (shippedEl) shippedEl.textContent = shipped;
     if (revenueEl) revenueEl.textContent = revenue.toLocaleString('en-US') + ' ج.م';
+  }
+
+  // ================= 3.1. إحصائيات وعداد الزيارات (SITE VISITS COUNTER) =================
+  async function loadVisitStats() {
+    try {
+      const res = await fetch('/api/visits');
+      if (res.ok) {
+        const data = await res.json();
+        renderVisitStats(data);
+      }
+    } catch (e) {
+      console.warn('تعذر جلب إحصائيات الزيارات من السيرفر:', e);
+    }
+  }
+
+  function renderVisitStats(data) {
+    if (!data || typeof data !== 'object') return;
+    const total = Number(data.totalVisits) || 0;
+    const today = Number(data.todayVisits) || 0;
+    const unique = Number(data.uniqueVisitors) || 0;
+
+    const totalEl = document.getElementById('metricTotalVisits');
+    const todayEl = document.getElementById('metricTodayVisits');
+    const uniqueEl = document.getElementById('metricUniqueVisitors');
+    const headerVisitsEl = document.getElementById('headerVisitsCount');
+
+    if (totalEl) totalEl.textContent = total.toLocaleString('en-US');
+    if (todayEl) todayEl.textContent = `+${today.toLocaleString('en-US')} اليوم`;
+    if (uniqueEl) uniqueEl.textContent = `${unique.toLocaleString('en-US')} زائر فريد`;
+    if (headerVisitsEl) headerVisitsEl.textContent = total.toLocaleString('en-US');
   }
 
   function renderOrdersTable() {
@@ -548,11 +592,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
         refreshBtn.classList.add('animate-spin');
-        await loadOrders();
+        await Promise.allSettled([
+          loadOrders(),
+          loadVisitStats()
+        ]);
         renderOrdersTable();
         renderOrderStats();
         setTimeout(() => refreshBtn.classList.remove('animate-spin'), 400);
-        showToast('تم تحديث قائمة الطلبات بنجاح');
+        showToast('تم تحديث قائمة الطلبات وإحصائيات الزيارات بنجاح');
       });
     }
 
@@ -751,6 +798,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         whatsappMessage: 'مرحباً SOKHM، أود الاستفسار والتواصل مع فريق الدعم الفني',
         showFloatingButton: true,
         showNavSupport: true
+      };
+    }
+    if (!siteContent.shipping || typeof siteContent.shipping !== 'object') {
+      siteContent.shipping = {
+        standardFee: (typeof siteContent.checkout?.standardShippingFee === 'number') ? siteContent.checkout.standardShippingFee : (parseFloat(siteContent.checkout?.standardShippingFee) || 50),
+        freeShippingThreshold: (typeof siteContent.checkout?.freeShippingThreshold === 'number') ? siteContent.checkout.freeShippingThreshold : (parseFloat(siteContent.checkout?.freeShippingThreshold) || 2500),
+        freeShippingEnabled: true,
+        noticeText: siteContent.checkout?.shippingRuleText || 'شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر',
+        governorateRates: {}
       };
     }
     if (!Array.isArray(siteContent.categories)) siteContent.categories = [];
@@ -1304,6 +1360,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       chk.whatsappPhone = getVal('chk_whatsappPhone');
       chk.whatsappButtonText = getVal('chk_whatsappButtonText');
 
+      // Keep shipping object in sync
+      if (!siteContent.shipping) siteContent.shipping = {};
+      siteContent.shipping.standardFee = chk.standardShippingFee;
+      siteContent.shipping.freeShippingThreshold = chk.freeShippingThreshold;
+      siteContent.shipping.noticeText = chk.shippingRuleText;
+
       // Sync with support
       if (!siteContent.support) siteContent.support = {};
       siteContent.support.whatsappPhone = chk.whatsappPhone;
@@ -1318,11 +1380,208 @@ document.addEventListener('DOMContentLoaded', async () => {
       const ok = await saveSiteContent();
       if (ok) {
         populateSupportForm();
+        populateShippingForm();
         showToast('تم حفظ وتحديث إعدادات وتخصيصات الشراء بنجاح!');
       } else {
         alert('تعذر حفظ إعدادات الشراء في السيرفر');
       }
     });
+  }
+
+  // ================= 7.3. أسعار وقواعد الشحن لجميع المحافظات (SHIPPING RATES & RULES) =================
+  const EGYPT_GOVERNORATES = {
+    major: [
+      { id: 'cairo', name: 'القاهرة', en: 'Cairo' },
+      { id: 'giza', name: 'الجيزة', en: 'Giza' },
+      { id: 'alex', name: 'الإسكندرية', en: 'Alexandria' }
+    ],
+    delta: [
+      { id: 'qalyubia', name: 'القليوبية', en: 'Qalyubia' },
+      { id: 'sharqia', name: 'الشرقية', en: 'Sharqia' },
+      { id: 'dakahlia', name: 'الدقهلية', en: 'Dakahlia' },
+      { id: 'monufia', name: 'المنوفية', en: 'Monufia' },
+      { id: 'gharbia', name: 'الغربية', en: 'Gharbia' },
+      { id: 'kafr', name: 'كفر الشيخ', en: 'Kafr El Sheikh' },
+      { id: 'damietta', name: 'دمياط', en: 'Damietta' },
+      { id: 'beheira', name: 'البحيرة', en: 'Beheira' },
+      { id: 'ismailia', name: 'الإسماعيلية', en: 'Ismailia' },
+      { id: 'portsaid', name: 'بورسعيد', en: 'Port Said' },
+      { id: 'suez', name: 'السويس', en: 'Suez' }
+    ],
+    upper: [
+      { id: 'fayoum', name: 'الفيوم', en: 'Fayoum' },
+      { id: 'benisuef', name: 'بني سويف', en: 'Beni Suef' },
+      { id: 'minya', name: 'المنيا', en: 'Minya' },
+      { id: 'asyut', name: 'أسيوط', en: 'Asyut' },
+      { id: 'sohag', name: 'سوهاج', en: 'Sohag' },
+      { id: 'qena', name: 'قنا', en: 'Qena' },
+      { id: 'luxor', name: 'الأقصر', en: 'Luxor' },
+      { id: 'aswan', name: 'أسوان', en: 'Aswan' }
+    ],
+    remote: [
+      { id: 'redsea', name: 'البحر الأحمر', en: 'Red Sea' },
+      { id: 'matrouh', name: 'مطروح', en: 'Matrouh' },
+      { id: 'newvalley', name: 'الوادي الجديد', en: 'New Valley' },
+      { id: 'nsinai', name: 'شمال سيناء', en: 'North Sinai' },
+      { id: 'ssinai', name: 'جنوب سيناء', en: 'South Sinai' }
+    ]
+  };
+
+  function populateShippingForm() {
+    const ship = siteContent.shipping || {};
+    const chk = siteContent.checkout || {};
+
+    const standardFee = (ship.standardFee !== undefined) 
+      ? Number(ship.standardFee) 
+      : ((typeof chk.standardShippingFee === 'number') ? chk.standardShippingFee : (parseFloat(chk.standardShippingFee) || 50));
+
+    const freeThreshold = (ship.freeShippingThreshold !== undefined)
+      ? Number(ship.freeShippingThreshold)
+      : ((typeof chk.freeShippingThreshold === 'number') ? chk.freeShippingThreshold : (parseFloat(chk.freeShippingThreshold) || 2500));
+
+    const freeEnabled = ship.freeShippingEnabled !== false;
+    const noticeText = ship.noticeText || chk.shippingRuleText || 'شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر';
+
+    setVal('ship_standardFee', standardFee);
+    setVal('ship_freeThreshold', freeThreshold);
+    setVal('ship_noticeText', noticeText);
+
+    const freeCb = document.getElementById('ship_freeEnabled');
+    const freeText = document.getElementById('ship_freeEnabledText');
+    if (freeCb) {
+      freeCb.checked = freeEnabled;
+      if (freeText) {
+        freeText.textContent = freeEnabled ? 'مُفعل' : 'معطل';
+        freeText.className = freeEnabled ? 'vis-text text-[10px] font-bold text-emerald-400' : 'vis-text text-[10px] font-bold text-neutral-500';
+      }
+    }
+
+    const shipHeaderBadge = document.getElementById('shippingHeaderBadge');
+    if (shipHeaderBadge) {
+      shipHeaderBadge.textContent = `${standardFee} ج.م`;
+    }
+
+    const govRates = (ship.governorateRates && typeof ship.governorateRates === 'object') ? ship.governorateRates : {};
+
+    function renderGovGroup(containerId, list) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = list.map(gov => {
+        const customRate = (govRates[gov.name] !== undefined && govRates[gov.name] !== null && govRates[gov.name] !== '')
+          ? govRates[gov.name]
+          : '';
+        return `
+          <div class="p-3 rounded-xl bg-[#080808] border border-[#1A1A1A] hover:border-[#2A2A2A] transition-all">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-white">${gov.name}</span>
+              <span class="text-[10px] text-neutral-500 font-mono">${gov.en}</span>
+            </div>
+            <div class="relative">
+              <input 
+                type="number" 
+                min="0" 
+                step="any" 
+                data-gov="${gov.name}" 
+                class="gov-rate-input cms-input w-full font-mono pl-12 text-xs font-bold text-emerald-400" 
+                placeholder="${standardFee}" 
+                value="${customRate}">
+              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-neutral-500 font-bold">ج.م</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    renderGovGroup('govGroupMajor', EGYPT_GOVERNORATES.major);
+    renderGovGroup('govGroupDelta', EGYPT_GOVERNORATES.delta);
+    renderGovGroup('govGroupUpper', EGYPT_GOVERNORATES.upper);
+    renderGovGroup('govGroupRemote', EGYPT_GOVERNORATES.remote);
+  }
+
+  function setupShippingFormHandlers() {
+    const freeCb = document.getElementById('ship_freeEnabled');
+    const freeText = document.getElementById('ship_freeEnabledText');
+    if (freeCb) {
+      freeCb.addEventListener('change', () => {
+        if (freeText) {
+          freeText.textContent = freeCb.checked ? 'مُفعل' : 'معطل';
+          freeText.className = freeCb.checked ? 'vis-text text-[10px] font-bold text-emerald-400' : 'vis-text text-[10px] font-bold text-neutral-500';
+        }
+      });
+    }
+
+    const standardInput = document.getElementById('ship_standardFee');
+    if (standardInput) {
+      standardInput.addEventListener('input', () => {
+        const val = standardInput.value.trim();
+        const placeholderFee = val || '50';
+        document.querySelectorAll('.gov-rate-input').forEach(input => {
+          input.placeholder = placeholderFee;
+        });
+        const badge = document.getElementById('shippingHeaderBadge');
+        if (badge) badge.textContent = `${placeholderFee} ج.م`;
+      });
+    }
+
+    async function handleSaveShipping() {
+      const standardFeeRaw = getVal('ship_standardFee');
+      const standardFee = (standardFeeRaw !== '' && !isNaN(Number(standardFeeRaw))) ? Number(standardFeeRaw) : 50;
+
+      const freeThresholdRaw = getVal('ship_freeThreshold');
+      const freeShippingThreshold = (freeThresholdRaw !== '' && !isNaN(Number(freeThresholdRaw))) ? Number(freeThresholdRaw) : 2500;
+
+      const freeCbEl = document.getElementById('ship_freeEnabled');
+      const freeShippingEnabled = freeCbEl ? freeCbEl.checked : true;
+
+      const noticeText = getVal('ship_noticeText') || 'شحن سريع مجاني لجميع الطلبات بقيمة 2,500 ج.م أو أكثر';
+
+      const governorateRates = {};
+      document.querySelectorAll('input[data-gov]').forEach(input => {
+        const gov = input.getAttribute('data-gov');
+        const val = input.value.trim();
+        if (gov && val !== '' && !isNaN(Number(val))) {
+          governorateRates[gov] = Number(val);
+        }
+      });
+
+      siteContent.shipping = {
+        standardFee,
+        freeShippingThreshold,
+        freeShippingEnabled,
+        noticeText,
+        governorateRates
+      };
+
+      // Keep legacy checkout object fully in sync
+      if (!siteContent.checkout) siteContent.checkout = {};
+      siteContent.checkout.standardShippingFee = standardFee;
+      siteContent.checkout.freeShippingThreshold = freeShippingThreshold;
+      siteContent.checkout.shippingRuleText = noticeText;
+
+      // Sync form fields in checkout tab
+      setVal('chk_standardFee', standardFee);
+      setVal('chk_freeThreshold', freeShippingThreshold);
+      setVal('chk_shippingRuleText', noticeText);
+
+      const shipHeaderBadge = document.getElementById('shippingHeaderBadge');
+      if (shipHeaderBadge) shipHeaderBadge.textContent = `${standardFee} ج.م`;
+
+      const ok = await saveSiteContent();
+      if (ok) {
+        showToast('تم حفظ وتحديث جميع أسعار وقواعد الشحن بنجاح!');
+      } else {
+        alert('تعذر حفظ أسعار الشحن في السيرفر');
+      }
+    }
+
+    const saveBtn = document.getElementById('saveShippingRatesBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', handleSaveShipping);
+    }
+    const saveBtnBottom = document.getElementById('saveShippingRatesBtnBottom');
+    if (saveBtnBottom) {
+      saveBtnBottom.addEventListener('click', handleSaveShipping);
+    }
   }
 
   // ================= 7.4. إعدادات واتساب الدعم الفني (TECH SUPPORT WHATSAPP) =================
@@ -3367,6 +3626,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dbHeaderBadge.className = 'hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-800/60 text-[11px] font-bold text-emerald-300';
               }
             }
+          }
+
+          if (stats.visits) {
+            renderVisitStats(stats.visits);
           }
         }
       }

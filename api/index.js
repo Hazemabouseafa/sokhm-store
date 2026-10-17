@@ -413,9 +413,34 @@ module.exports = async (req, res) => {
       }
     }
 
+    // 5.8 Site Visits Tracking
+    if ((pathname === '/api/visits' || pathname === '/api/track-visit') && req.method === 'POST') {
+      const body = await parseBody(req);
+      const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+      const userAgent = req.headers['user-agent'] || '';
+      if (db.recordVisit) {
+        await db.recordVisit({
+          page: body.page || '/',
+          visitorId: body.visitorId || body.visitor_id,
+          referrer: body.referrer || req.headers['referer'] || '',
+          userAgent,
+          ip
+        });
+      }
+      return sendJson(res, 200, { success: true });
+    }
+
+    if ((pathname === '/api/visits' || pathname === '/api/visits/stats') && req.method === 'GET') {
+      const stats = db.getVisitStats ? await db.getVisitStats() : { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0 };
+      return sendJson(res, 200, stats);
+    }
+
     // 6. Stats
     if (pathname === '/api/stats' && req.method === 'GET') {
       const stats = await db.getStats();
+      if (db.getVisitStats) {
+        stats.visits = await db.getVisitStats();
+      }
       return sendJson(res, 200, stats);
     }
 

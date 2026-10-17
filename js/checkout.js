@@ -117,7 +117,7 @@
                   required 
                   class="w-full bg-[#070707] border border-[#222] rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white text-xs cursor-pointer transition-colors"
                 >
-                  ${GOVERNORATES.map(gov => `<option value="${gov.split(' ')[0]}">${gov}</option>`).join('')}
+                  ${GOVERNORATES.map(gov => `<option value="${gov.split(' (')[0].trim()}">${gov}</option>`).join('')}
                 </select>
               </div>
 
@@ -461,6 +461,68 @@
         renderOrderSummary();
       });
     }
+
+    const citySelect = document.getElementById('coCustomerCity');
+    if (citySelect) {
+      citySelect.addEventListener('change', () => {
+        renderOrderSummary();
+      });
+    }
+  }
+
+  function getShippingConfig() {
+    try {
+      let fullContent = null;
+      if (window.sokhmContent) {
+        if (typeof window.sokhmContent.getAll === 'function') fullContent = window.sokhmContent.getAll();
+        else if (typeof window.sokhmContent.getContent === 'function') fullContent = window.sokhmContent.getContent();
+      }
+      if (!fullContent) {
+        const cached = localStorage.getItem('sokhm_site_content_v1');
+        if (cached) fullContent = JSON.parse(cached);
+      }
+      if (fullContent && fullContent.shipping) {
+        return fullContent.shipping;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function calculateShipping(subtotal, customerCity) {
+    const shippingCfg = getShippingConfig() || {};
+    const chkCfg = getCheckoutConfig() || {};
+
+    const standardFee = (shippingCfg.standardFee !== undefined) 
+      ? Number(shippingCfg.standardFee) 
+      : ((typeof chkCfg.standardShippingFee === 'number') ? chkCfg.standardShippingFee : (parseFloat(chkCfg.standardShippingFee) || 50));
+
+    const threshold = (shippingCfg.freeShippingThreshold !== undefined)
+      ? Number(shippingCfg.freeShippingThreshold)
+      : ((typeof chkCfg.freeShippingThreshold === 'number') ? chkCfg.freeShippingThreshold : (parseFloat(chkCfg.freeShippingThreshold) || 2500));
+
+    const isFreeEnabled = shippingCfg.freeShippingEnabled !== false;
+    const isFree = isFreeEnabled && (subtotal >= threshold);
+
+    let fee = standardFee;
+    const cleanCity = String(customerCity || '').trim();
+    if (cleanCity && shippingCfg.governorateRates && typeof shippingCfg.governorateRates === 'object') {
+      for (const [gov, rate] of Object.entries(shippingCfg.governorateRates)) {
+        if (rate !== undefined && rate !== null && rate !== '' && !isNaN(Number(rate))) {
+          if (cleanCity.includes(gov) || gov.includes(cleanCity)) {
+            fee = Number(rate);
+            break;
+          }
+        }
+      }
+    }
+
+    return {
+      fee: isFree ? 0 : fee,
+      isFree,
+      standardFee,
+      threshold,
+      noticeText: shippingCfg.noticeText || chkCfg.shippingRuleText
+    };
   }
 
   function getCheckoutConfig() {
@@ -563,8 +625,10 @@
     });
 
     const cfg = getCheckoutConfig();
-    const threshold = typeof cfg.freeShippingThreshold === 'number' ? cfg.freeShippingThreshold : (parseFloat(cfg.freeShippingThreshold) || 2500);
-    const standardFee = typeof cfg.standardShippingFee === 'number' ? cfg.standardShippingFee : (parseFloat(cfg.standardShippingFee) || 75);
+    const citySelect = document.getElementById('coCustomerCity');
+    const selectedCity = citySelect ? citySelect.value : '';
+    const shipCalc = calculateShipping(subtotal, selectedCity);
+    const threshold = shipCalc.threshold;
 
     // Calculate discount if applied
     let discountAmount = 0;
@@ -592,9 +656,9 @@
       if (discountRow) discountRow.classList.add('hidden');
     }
 
-    // Shipping calculation
-    const isFreeShipping = subtotal >= threshold;
-    const shippingFee = isFreeShipping ? 0 : standardFee;
+    // Dynamic Shipping calculation
+    const isFreeShipping = shipCalc.isFree;
+    const shippingFee = shipCalc.fee;
     const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
     if (badgeEl) badgeEl.textContent = `${totalCount} ${totalCount === 1 ? 'قطعة' : 'قطع'}`;
@@ -604,8 +668,8 @@
       shippingEl.className = isFreeShipping ? 'font-bold text-emerald-400 font-mono' : 'font-bold text-neutral-300 font-mono';
     }
     if (shippingNoticeEl) {
-      if (cfg.shippingRuleText) {
-        shippingNoticeEl.textContent = cfg.shippingRuleText;
+      if (shipCalc.noticeText) {
+        shippingNoticeEl.textContent = shipCalc.noticeText;
       } else {
         shippingNoticeEl.textContent = `شحن سريع مجاني لجميع الطلبات بقيمة ${threshold.toLocaleString('en-US')} ج.م أو أكثر`;
       }
@@ -646,9 +710,6 @@
     }
 
     const cfg = getCheckoutConfig();
-    const threshold = typeof cfg.freeShippingThreshold === 'number' ? cfg.freeShippingThreshold : (parseFloat(cfg.freeShippingThreshold) || 2500);
-    const standardFee = typeof cfg.standardShippingFee === 'number' ? cfg.standardShippingFee : (parseFloat(cfg.standardShippingFee) || 75);
-
     let subtotal = 0;
     currentOrderItems.forEach(i => {
       const p = typeof i.price === 'number' ? i.price : parseFloat(i.price) || 0;
@@ -664,7 +725,8 @@
       }
     }
 
-    const shippingFee = subtotal >= threshold ? 0 : standardFee;
+    const shipCalc = calculateShipping(subtotal, customerCity);
+    const shippingFee = shipCalc.fee;
     const totalPrice = Math.max(0, subtotal - discountAmount + shippingFee);
 
     const payload = {
@@ -680,6 +742,8 @@
       discount_amount: discountAmount,
       subtotalPrice: subtotal,
       subtotal_price: subtotal,
+      shippingFee,
+      shipping_fee: shippingFee,
       totalPrice,
       status: 'pending'
     };
