@@ -197,8 +197,39 @@ module.exports = async (req, res) => {
 
     if (pathname === '/api/products') {
       if (req.method === 'GET') {
+        const queryId = parsedUrl.searchParams.get('id') || parsedUrl.searchParams.get('slug');
+        if (queryId) {
+          const prod = await db.getProductById(queryId);
+          if (!prod) return sendJson(res, 404, { success: false, error: 'المنتج غير موجود' });
+          return sendJson(res, 200, prod, 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400');
+        }
+
+        const isFull = parsedUrl.searchParams.get('full') === '1' || parsedUrl.searchParams.get('full') === 'true';
         const prods = await db.getProducts();
-        return sendJson(res, 200, prods, 'public, max-age=15, s-maxage=60, stale-while-revalidate=600');
+
+        if (isFull) {
+          return sendJson(res, 200, prods, 'public, max-age=15, s-maxage=60, stale-while-revalidate=600');
+        }
+
+        // Lightweight catalog for storefront listing:
+        // Strip heavy secondary gallery slide arrays (c.images) from each color object
+        // and keep only the thumbnail image needed for card display and color swatch switching.
+        const catalog = prods.map(p => {
+          const colors = Array.isArray(p.colors) ? p.colors.map(c => {
+            if (typeof c === 'object' && c !== null) {
+              const { images, ...rest } = c;
+              return rest;
+            }
+            return c;
+          }) : [];
+          return {
+            ...p,
+            images: Array.isArray(p.images) && p.images.length > 0 ? [p.images[0]] : (p.image ? [p.image] : []),
+            colors
+          };
+        });
+
+        return sendJson(res, 200, catalog, 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400');
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
@@ -228,7 +259,7 @@ module.exports = async (req, res) => {
       if (req.method === 'GET') {
         const prod = await db.getProductById(id);
         if (!prod) return sendJson(res, 404, { success: false, error: 'المنتج غير موجود' });
-        return sendJson(res, 200, prod, 'public, max-age=15, s-maxage=60, stale-while-revalidate=600');
+        return sendJson(res, 200, prod, 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400');
       }
       if (req.method === 'PUT') {
         const body = await parseBody(req);

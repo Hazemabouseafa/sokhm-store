@@ -543,41 +543,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (_) {}
 
-  // ================= 1. FETCH FRESH PRODUCTS VIA EDGE CDN =================
+  // ================= 1. FETCH TARGET PRODUCT VIA EDGE CDN =================
   let apiLoaded = false;
   try {
-    const apiRes = await fetch(`/api/products?_t=${Date.now()}`);
+    const apiRes = await fetch(`/api/products/${encodeURIComponent(targetId)}`);
     if (apiRes.ok) {
       const data = await apiRes.json();
-      if (Array.isArray(data) && data.length > 0) {
-        products = data;
+      if (data && data.id) {
+        currentProduct = data;
         apiLoaded = true;
-        try {
-          localStorage.setItem('sokhm_products_cache_v1', JSON.stringify(data));
-        } catch (_) {}
+        hydrateProductUI(currentProduct);
       }
     }
   } catch (apiErr) {
-    console.warn('API fetch products failed, trying static fallback:', apiErr.message);
+    console.warn('API fetch single product failed, trying catalog fallback:', apiErr.message);
   }
 
-  if (!apiLoaded && products.length === 0) {
+  // Background fetch catalog for related products
+  try {
+    const catRes = await fetch('/api/products');
+    if (catRes.ok) {
+      const allProds = await catRes.json();
+      if (Array.isArray(allProds) && allProds.length > 0) {
+        products = allProds;
+        if (!apiLoaded) {
+          const fallbackTarget = products.find(p => p.id === targetId || p.slug === targetId) || products[0];
+          if (fallbackTarget) {
+            currentProduct = fallbackTarget;
+            apiLoaded = true;
+            hydrateProductUI(currentProduct);
+          }
+        } else {
+          renderRelatedHoodies();
+        }
+      }
+    }
+  } catch (_) {}
+
+  if (!apiLoaded && (!currentProduct || products.length === 0)) {
     try {
-      const res = await fetch(`data/products.json?_t=${Date.now()}`);
+      const res = await fetch('data/products.json');
       if (res.ok) {
         products = await res.json();
+        const fallbackTarget = products.find(p => p.id === targetId || p.slug === targetId) || products[0];
+        if (fallbackTarget) {
+          hydrateProductUI(fallbackTarget);
+        }
       }
-    } catch (e) {
-      console.warn('Failed to fetch products.json fallback:', e);
-    }
-  }
-
-  // Locate product from fresh list and rehydrate
-  if (products.length > 0) {
-    const freshTarget = products.find(p => p.id === targetId || p.slug === targetId) || products[0];
-    if (freshTarget) {
-      hydrateProductUI(freshTarget);
-    }
+    } catch (e) {}
   }
 
   // CTAs

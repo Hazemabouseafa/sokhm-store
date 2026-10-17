@@ -96,17 +96,52 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 1. FETCH SOKHM PRODUCTS =================
   async function loadProducts() {
     try {
-      // 1. Fetch live database products (supported by Edge CDN)
-      const apiRes = await fetch('/api/products');
-      if (apiRes.ok) {
+      // 1. Parallel fetch for products and categories (Edge CDN cached)
+      const [apiRes, catRes] = await Promise.all([
+        fetch('/api/products'),
+        fetch('/api/categories').catch(() => null)
+      ]);
+
+      if (catRes && catRes.ok) {
+        try {
+          const catsData = await catRes.json();
+          if (Array.isArray(catsData) && catsData.length > 0) {
+            categories = catsData;
+            renderCategoryFilters();
+          }
+        } catch (_) {}
+      }
+
+      if (apiRes && apiRes.ok) {
         const data = await apiRes.json();
         if (Array.isArray(data) && data.length > 0) {
           products = data;
-          try {
-            localStorage.setItem('sokhm_products_cache_v1', JSON.stringify(data));
-          } catch (_) {}
-          await loadCategories();
           renderBestSellers();
+
+          // Store clean compact catalog in localStorage (fits cleanly under browser quota)
+          try {
+            const compact = data.map(p => ({
+              id: p.id,
+              name: p.name,
+              subtitle: p.subtitle,
+              category: p.category,
+              category_id: p.category_id,
+              price: p.price,
+              formattedPrice: p.formattedPrice,
+              image: p.image,
+              show_on_homepage: p.show_on_homepage,
+              showOnHomepage: p.showOnHomepage,
+              slug: p.slug,
+              colors: (p.colors || []).map(c => ({
+                name: typeof c === 'object' ? c.name : c,
+                hex: typeof c === 'object' ? c.hex : '#111',
+                image: typeof c === 'object' ? c.image : p.image,
+                isMain: typeof c === 'object' ? Boolean(c.isMain) : false
+              })),
+              sizes: p.sizes
+            }));
+            localStorage.setItem('sokhm_products_cache_v1', JSON.stringify(compact));
+          } catch (_) {}
           return;
         }
       }
@@ -188,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 1.5 CATEGORY FILTERS & PRODUCTS DROPDOWN =================
   async function loadCategories() {
     try {
-      const res = await fetch(`/api/categories?_t=${Date.now()}`);
+      const res = await fetch('/api/categories');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
