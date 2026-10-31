@@ -7,14 +7,12 @@ services:
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
-      PORT: ${PORT:-3000}
+      PORT: "3000"
       DB_DRIVER: sqlite
       USE_LOCAL_SQLITE: "true"
       STORAGE_DIR: /app/storage
     expose:
       - "3000"
-    ports:
-      - "${APP_EXTERNAL_PORT:-3000}:3000"
     volumes:
       # Persistent local VPS storage: SQLite DB (sokhm.db + WAL) + Uploaded Product Images + JSON Backups
       - sokhm_storage:/app/storage
