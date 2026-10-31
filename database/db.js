@@ -9,16 +9,34 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('node:crypto');
 
-// Ensure database directory exists
-const dbDir = path.join(__dirname);
+// Ensure database directory exists (supports persistent Coolify VPS volume via STORAGE_DIR or SQLITE_DB_PATH)
+const bundledDbPath = path.join(__dirname, 'sokhm.db');
+const storageRoot = process.env.STORAGE_DIR ? path.resolve(process.env.STORAGE_DIR) : null;
+const dbPath = process.env.SQLITE_DB_PATH
+  ? path.resolve(process.env.SQLITE_DB_PATH)
+  : (storageRoot ? path.join(storageRoot, 'database', 'sokhm.db') : bundledDbPath);
+
+const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const dbPath = path.join(dbDir, 'sokhm.db');
+// On first boot with an external persistent volume (e.g. Coolify VPS), seed from bundled sokhm.db if available
+if (dbPath !== bundledDbPath && !fs.existsSync(dbPath) && fs.existsSync(bundledDbPath)) {
+  try {
+    fs.copyFileSync(bundledDbPath, dbPath);
+    console.log(`✓ Initialized persistent VPS SQLite database at ${dbPath} from bundled sokhm.db`);
+  } catch (copyErr) {
+    console.warn('Could not copy bundled sokhm.db, will initialize fresh schema:', copyErr.message);
+  }
+}
+
 const db = new DatabaseSync(dbPath);
 
 // Enable WAL mode for high performance concurrent reads and foreign keys
+try {
+  db.exec('PRAGMA journal_mode = WAL;');
+} catch (_) {}
 db.exec('PRAGMA foreign_keys = ON;');
 
 /**
@@ -206,6 +224,12 @@ function initSchema() {
 
   try {
     db.exec('ALTER TABLE orders ADD COLUMN subtotal_price REAL;');
+  } catch (e) {
+    // Column already exists
+  }
+
+  try {
+    db.exec('ALTER TABLE orders ADD COLUMN shipping_fee REAL DEFAULT 0;');
   } catch (e) {
     // Column already exists
   }
@@ -404,7 +428,9 @@ autoSeed();
 // Backup file sync helper
 function syncJsonBackups(siteContent, productsList) {
   try {
-    const dataDir = path.join(__dirname, '..', 'data');
+    const dataDir = storageRoot
+      ? path.join(storageRoot, 'backups')
+      : path.join(__dirname, '..', 'data');
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
     if (siteContent) {
@@ -603,6 +629,77 @@ function saveSiteContent(content) {
 }
 
 /**
+ * Helper: Normalize product colors & multi-image arrays so no secondary images or selected colors are ever lost
+ */
+function normalizeProductImagesAndColors(rawImagesJson, rawColorsJson) {
+  let rawImages = [];
+  try {
+    rawImages = Array.isArray(rawImagesJson) ? rawImagesJson : JSON.parse(rawImagesJson || '[]');
+  } catch (_) {
+    rawImages = [];
+  }
+  rawImages = rawImages.filter(Boolean);
+
+  let rawColors = [];
+  try {
+    rawColors = Array.isArray(rawColorsJson) ? rawColorsJson : JSON.parse(rawColorsJson || '[]');
+  } catch (_) {
+    rawColors = [];
+  }
+
+  const fallbackImg = rawImages[0] || 'assets/sokhm-card-1.jpg';
+  const colors = Array.isArray(rawColors) ? rawColors.map((c) => {
+    if (typeof c === 'string') {
+      return {
+        name: c,
+        hex: '#111111',
+        image: fallbackImg,
+        images: rawImages.length > 0 ? [...rawImages] : [fallbackImg],
+        isMain: false
+      };
+    }
+    const cObj = c || {};
+    const cImgs = Array.isArray(cObj.images) && cObj.images.filter(Boolean).length > 0
+      ? cObj.images.filter(Boolean)
+      : (cObj.image ? [cObj.image] : [fallbackImg]);
+    return {
+      name: cObj.name || 'Standard',
+      hex: cObj.hex || '#111111',
+      image: cImgs[0] || cObj.image || fallbackImg,
+      images: cImgs,
+      isMain: Boolean(cObj.isMain)
+    };
+  }) : [];
+
+  if (colors.length > 0 && !colors.some(c => c.isMain)) {
+    const matchMainIdx = colors.findIndex(c => c.image === fallbackImg);
+    colors[matchMainIdx >= 0 ? matchMainIdx : 0].isMain = true;
+  }
+
+  const mainColor = colors.find(c => c.isMain) || colors[0];
+  const mainImage = (mainColor && mainColor.image) ? mainColor.image : fallbackImg;
+
+  const allImages = [];
+  if (mainImage) allImages.push(mainImage);
+  rawImages.forEach(img => {
+    if (img && !allImages.includes(img)) allImages.push(img);
+  });
+  colors.forEach(c => {
+    if (Array.isArray(c.images)) {
+      c.images.forEach(img => {
+        if (img && !allImages.includes(img)) allImages.push(img);
+      });
+    }
+  });
+
+  return {
+    mainImage,
+    images: allImages.length > 0 ? allImages : ['assets/sokhm-card-1.jpg'],
+    colors
+  };
+}
+
+/**
  * Products: Get all products
  */
 function getProducts() {
@@ -614,10 +711,8 @@ function getProducts() {
   }
 
   const list = rows.map(r => {
-    const images = JSON.parse(r.images_json || '[]');
-    const mainImage = images[0] || 'assets/sokhm-card-1.jpg';
+    const { mainImage, images, colors } = normalizeProductImagesAndColors(r.images_json, r.colors_json);
     const sizes = JSON.parse(r.sizes_json || '[]');
-    const colors = JSON.parse(r.colors_json || '[]');
     return {
       id: r.id,
       name: r.name,
@@ -685,12 +780,11 @@ function getProducts() {
  * Products: Get single product by ID
  */
 function getProductById(id) {
-  const r = db.prepare("SELECT * FROM products WHERE id = ?").get(String(id));
+  const sid = String(id).trim();
+  const r = db.prepare("SELECT * FROM products WHERE id = ? OR LOWER(id) = LOWER(?)").get(sid, sid);
   if (!r) return null;
-  const images = JSON.parse(r.images_json || '[]');
-  const mainImage = images[0] || 'assets/sokhm-card-1.jpg';
+  const { mainImage, images, colors } = normalizeProductImagesAndColors(r.images_json, r.colors_json);
   const sizes = JSON.parse(r.sizes_json || '[]');
-  const colors = JSON.parse(r.colors_json || '[]');
   return {
     id: r.id,
     name: r.name,
@@ -821,10 +915,17 @@ function upsertProduct(p) {
   const id = String(p.id || p.slug || ('sokhm-' + Date.now()));
   const category = p.category || p.category_id || 'hoodies';
   const price = typeof p.price === 'number' ? p.price : (parseFloat(p.price) || 0);
-  const image = p.image || (Array.isArray(p.images) && p.images[0]) || 'assets/sokhm-card-1.jpg';
-  const images = Array.isArray(p.images) && p.images.length > 0 ? p.images : [image];
+  const hasColorsWithImgs = Array.isArray(p.colors) && p.colors.some(c => c && (c.image || (Array.isArray(c.images) && c.images.length > 0)));
+  const rawImgList = Array.isArray(p.images) && p.images.length > 0
+    ? p.images.filter(Boolean)
+    : (p.image ? [p.image] : (hasColorsWithImgs ? [] : ['assets/sokhm-card-1.jpg']));
+  const rawColorsList = Array.isArray(p.colors) && p.colors.length > 0
+    ? p.colors
+    : [{ name: 'Standard', hex: '#111111', image: rawImgList[0], images: rawImgList, isMain: true }];
+  const normalized = normalizeProductImagesAndColors(rawImgList, rawColorsList);
+  const images = normalized.images;
+  const colors = normalized.colors;
   const sizes = Array.isArray(p.sizes) ? p.sizes : (typeof p.sizes === 'string' ? p.sizes.split(',').map(s => s.trim()) : ['M', 'L']);
-  const colors = Array.isArray(p.colors) ? p.colors : [{ name: 'Standard', hex: '#111' }];
   const modelInfo = p.model_info || p.modelInfo || '';
   const stockStatus = p.stock_status || p.stockStatus || 'in_stock';
   const showOnHomepage = (p.show_on_homepage === false || p.show_on_homepage === 0 || p.show_on_homepage === '0' || p.showOnHomepage === false) ? 0 : 1;
@@ -944,13 +1045,14 @@ function createOrder(order) {
   const discountCode = (order.discountCode || order.discount_code || '').trim().toUpperCase();
   const discountAmount = typeof order.discountAmount === 'number' ? order.discountAmount : (parseFloat(order.discountAmount || order.discount_amount) || 0);
   const subtotalPrice = typeof order.subtotalPrice === 'number' ? order.subtotalPrice : (parseFloat(order.subtotalPrice || order.subtotal_price) || 0);
+  const shippingFee = typeof order.shippingFee === 'number' ? order.shippingFee : (parseFloat(order.shippingFee || order.shipping_fee) || 0);
   const totalPrice = typeof order.totalPrice === 'number' ? order.totalPrice : (parseFloat(order.totalPrice || order.total_price) || parseFloat(order.total) || 0);
   
   db.prepare(`
     INSERT INTO orders (
       id, customer_name, customer_phone, customer_city, customer_address, customer_notes,
-      items_json, total_price, status, created_at, discount_code, discount_amount, subtotal_price
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      items_json, total_price, status, created_at, discount_code, discount_amount, subtotal_price, shipping_fee
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     order.customerName || order.customer_name || 'عميل المتجر',
@@ -964,7 +1066,8 @@ function createOrder(order) {
     nowIso,
     discountCode || null,
     discountAmount,
-    subtotalPrice || totalPrice
+    subtotalPrice || totalPrice,
+    shippingFee
   );
 
   if (discountCode) {
@@ -1003,6 +1106,8 @@ function getOrderById(id) {
     discount_amount: r.discount_amount || 0,
     subtotalPrice: r.subtotal_price || r.total_price,
     subtotal_price: r.subtotal_price || r.total_price,
+    shippingFee: r.shipping_fee || 0,
+    shipping_fee: r.shipping_fee || 0,
     status: r.status,
     createdAt: isoDate,
     created_at: isoDate,
@@ -1045,6 +1150,8 @@ function getOrders(statusFilter = 'all') {
       discount_amount: r.discount_amount || 0,
       subtotalPrice: r.subtotal_price || r.total_price,
       subtotal_price: r.subtotal_price || r.total_price,
+      shippingFee: r.shipping_fee || 0,
+      shipping_fee: r.shipping_fee || 0,
       status: r.status,
       createdAt: isoDate,
       created_at: isoDate,
@@ -1286,6 +1393,24 @@ function getVisitStats() {
   }
 }
 
+function getRecentVisits(limit = 1000) {
+  try {
+    const safeLimit = Math.min(5000, Math.max(1, parseInt(limit, 10) || 1000));
+    const rows = db.prepare('SELECT id, page, visitor_id, referrer, user_agent, created_at FROM site_visits ORDER BY id DESC LIMIT ?').all(safeLimit);
+    return rows.map(r => ({
+      id: r.id,
+      page: r.page || '/',
+      visitorId: r.visitor_id || '',
+      referrer: r.referrer || '',
+      userAgent: r.user_agent || '',
+      createdAt: normalizeUtcDate(r.created_at),
+      createdAtCairo: formatCairoDateTime(r.created_at)
+    }));
+  } catch (err) {
+    return [];
+  }
+}
+
 /**
  * System Stats
  */
@@ -1301,8 +1426,8 @@ function getStats() {
   }
 
   return {
-    engine: 'SQLite 3 (node:sqlite)',
-    dbPath: 'database/sokhm.db',
+    engine: 'SQLite 3 (Local VPS / node:sqlite)',
+    dbPath: path.relative(path.join(__dirname, '..'), dbPath).replace(/\\/g, '/') || dbPath,
     dbSizeBytes,
     dbSizeFormatted: (dbSizeBytes / 1024).toFixed(1) + ' KB',
     productsCount: prodCount,
@@ -1472,6 +1597,8 @@ module.exports = {
   getStats,
   recordVisit,
   getVisitStats,
+  getRecentVisits,
+  dbPath,
   seedTursoDatabase: async () => ({ success: true, message: 'Native SQLite already initialized' }),
   verifyAdminCredentials,
   updateAdminPassword,

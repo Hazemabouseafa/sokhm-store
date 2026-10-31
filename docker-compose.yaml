@@ -1,0 +1,29 @@
+services:
+  sokhm-store:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: ${PORT:-3000}
+      DB_DRIVER: sqlite
+      USE_LOCAL_SQLITE: "true"
+      STORAGE_DIR: /app/storage
+    expose:
+      - "3000"
+    ports:
+      - "${APP_EXTERNAL_PORT:-3000}:3000"
+    volumes:
+      # Persistent local VPS storage: SQLite DB (sokhm.db + WAL) + Uploaded Product Images + JSON Backups
+      - sokhm_storage:/app/storage
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  sokhm_storage:

@@ -387,8 +387,37 @@ function parseProductRow(row) {
     if (row.colors) colors = typeof row.colors === 'string' ? JSON.parse(row.colors) : row.colors;
   } catch (e) {}
 
-  const image = row.image || (Array.isArray(row.images) && row.images[0]) || 'assets/sokhm-card-1.jpg';
-  const images = Array.isArray(row.images) && row.images.length > 0 ? row.images : [image];
+  const rawImg = row.image || (Array.isArray(row.images) && row.images[0]) || 'assets/sokhm-card-1.jpg';
+  const normalizedColors = (Array.isArray(colors) ? colors : [{ name: 'Standard', hex: '#111111' }]).map(c => {
+    if (typeof c === 'string') return { name: c, hex: '#111111', image: rawImg, images: [rawImg], isMain: false };
+    const cObj = c || {};
+    const cImgs = Array.isArray(cObj.images) && cObj.images.filter(Boolean).length > 0
+      ? cObj.images.filter(Boolean)
+      : (cObj.image ? [cObj.image] : [rawImg]);
+    return {
+      name: cObj.name || 'Standard',
+      hex: cObj.hex || '#111111',
+      image: cImgs[0] || cObj.image || rawImg,
+      images: cImgs,
+      isMain: Boolean(cObj.isMain)
+    };
+  });
+  if (normalizedColors.length > 0 && !normalizedColors.some(c => c.isMain)) {
+    const mIdx = normalizedColors.findIndex(c => c.image === rawImg);
+    normalizedColors[mIdx >= 0 ? mIdx : 0].isMain = true;
+  }
+  const mainColor = normalizedColors.find(c => c.isMain) || normalizedColors[0];
+  const image = (mainColor && mainColor.image) ? mainColor.image : rawImg;
+  const images = [];
+  if (image) images.push(image);
+  if (Array.isArray(row.images)) {
+    row.images.forEach(img => { if (img && !images.includes(img)) images.push(img); });
+  }
+  normalizedColors.forEach(c => {
+    if (Array.isArray(c.images)) {
+      c.images.forEach(img => { if (img && !images.includes(img)) images.push(img); });
+    }
+  });
 
   return {
     id: String(row.id),
@@ -397,10 +426,10 @@ function parseProductRow(row) {
     price: Number(row.price) || 0,
     category: row.category || row.category_id || 'hoodies',
     image: image,
-    images: images,
+    images: images.length > 0 ? images : [image],
     description: row.description || '',
     sizes: Array.isArray(sizes) ? sizes : ['M', 'L'],
-    colors: Array.isArray(colors) ? colors : [{ name: 'Standard', hex: '#111' }],
+    colors: normalizedColors,
     model_info: row.model_info || row.modelInfo || '',
     modelInfo: row.model_info || row.modelInfo || '',
     stock_status: row.stock_status || row.stockStatus || 'in_stock',

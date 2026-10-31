@@ -699,21 +699,36 @@ document.addEventListener('DOMContentLoaded', async () => {
           </table>
         </div>
 
-        ${(order.discount_code || (order.discount_amount && parseFloat(order.discount_amount) > 0)) ? `
-          <div class="pt-2 border-t border-[#1A1A1A] space-y-1 text-xs">
-            <div class="flex items-center justify-between text-neutral-400">
-              <span>المجموع الفرعي (Subtotal):</span>
-              <span class="font-mono text-neutral-200">${((parseFloat(order.subtotal_price) || (totalPrice + (parseFloat(order.discount_amount) || 0)))).toLocaleString('en-US')} ج.م</span>
-            </div>
-            <div class="flex items-center justify-between text-amber-400 font-bold">
-              <span class="flex items-center gap-1">
-                <i data-lucide="tag" class="w-3 h-3"></i>
-                <span>خصم الكوبون (${order.discount_code}):</span>
-              </span>
-              <span class="font-mono">-${((parseFloat(order.discount_amount) || 0)).toLocaleString('en-US')} ج.م</span>
-            </div>
-          </div>
-        ` : ''}
+        <div class="pt-2 border-t border-[#1A1A1A] space-y-1 text-xs">
+          ${(() => {
+            const discAmt = parseFloat(order.discount_amount ?? order.discountAmount) || 0;
+            const itemsSum = items.reduce((s, it) => s + ((parseFloat(it.price) || 0) * (parseInt(it.quantity, 10) || 1)), 0);
+            const subAmt = parseFloat(order.subtotal_price ?? order.subtotalPrice) || itemsSum || totalPrice;
+            const rawShip = order.shipping_fee ?? order.shippingFee;
+            const shipAmt = (rawShip !== undefined && rawShip !== null)
+              ? (parseFloat(rawShip) || 0)
+              : Math.max(0, totalPrice - (subAmt - discAmt));
+            return `
+              <div class="flex items-center justify-between text-neutral-400">
+                <span>المجموع الفرعي (Subtotal):</span>
+                <span class="font-mono text-neutral-200">${subAmt.toLocaleString('en-US')} ج.م</span>
+              </div>
+              ${(order.discount_code || discAmt > 0) ? `
+                <div class="flex items-center justify-between text-amber-400 font-bold">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="tag" class="w-3 h-3"></i>
+                    <span>خصم الكوبون (${order.discount_code || 'PROMO'}):</span>
+                  </span>
+                  <span class="font-mono">-${discAmt.toLocaleString('en-US')} ج.م</span>
+                </div>
+              ` : ''}
+              <div class="flex items-center justify-between text-neutral-400">
+                <span>مصاريف الشحن (${customerCity || 'قياسي'}):</span>
+                <span class="font-mono ${shipAmt === 0 ? 'text-emerald-400 font-bold' : 'text-neutral-200'}">${shipAmt === 0 ? 'مجاناً' : shipAmt.toLocaleString('en-US') + ' ج.م'}</span>
+              </div>
+            `;
+          })()}
+        </div>
 
         <div class="pt-3 border-t border-[#222] flex items-center justify-between text-sm font-bold">
           <span>المبلغ المطلوب تحصيله (COD):</span>
@@ -1976,7 +1991,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 9. كتالوج المنتجات (PRODUCTS) =================
   async function loadProducts() {
     try {
-      const res = await fetch(`/api/products?_t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/products?full=1&_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         products = Array.isArray(data) ? data : (Array.isArray(data?.products) ? data.products : []);
@@ -2326,9 +2341,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function normalizeHexColor(val, fallback = '#0B0B0B') {
+    const clean = String(val || '').trim();
+    if (/^#[0-9A-Fa-f]{6}$/.test(clean)) return clean.toUpperCase();
+    if (/^[0-9A-Fa-f]{6}$/.test(clean)) return ('#' + clean).toUpperCase();
+    if (/^#[0-9A-Fa-f]{3}$/.test(clean)) {
+      return ('#' + clean[1] + clean[1] + clean[2] + clean[2] + clean[3] + clean[3]).toUpperCase();
+    }
+    return fallback;
+  }
+
   // ================= 10. نافذة إضافة وتعديل المنتج (PRODUCT MODAL) =================
-  function openProductModal(prod) {
+  async function openProductModal(prod) {
     if (!productModal) return;
+
+    // Fetch fresh full product from DB so secondary images & edited colors are NEVER stale
+    if (prod && prod.id) {
+      try {
+        const freshRes = await fetch(`/api/products/${encodeURIComponent(prod.id)}?_t=${Date.now()}`, { cache: 'no-store' });
+        if (freshRes.ok) {
+          const freshProd = await freshRes.json();
+          if (freshProd && freshProd.id) {
+            prod = freshProd;
+          }
+        }
+      } catch (_) {}
+    }
+
     editingProductId = prod ? prod.id : null;
 
     const modalTitle = document.getElementById('productModalTitle');
@@ -2397,28 +2436,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Colors
       const rawColors = Array.isArray(prod.colors) ? prod.colors : [];
+      const explicitMainIdx = rawColors.findIndex(c => typeof c === 'object' && c && c.isMain);
       let matchedMain = false;
-      modalColorsList = rawColors.map(c => {
+      modalColorsList = rawColors.map((c, cIdx) => {
         const name = typeof c === 'object' ? (c.name || 'Standard') : c;
-        const hex = typeof c === 'object' ? (c.hex || '#111111') : '#111111';
+        const hex = normalizeHexColor(typeof c === 'object' ? c.hex : '#0B0B0B', '#0B0B0B');
         let images = [];
-        if (typeof c === 'object' && Array.isArray(c.images) && c.images.length > 0) {
+        if (typeof c === 'object' && Array.isArray(c.images) && c.images.filter(Boolean).length > 0) {
           images = c.images.filter(Boolean);
         } else if (typeof c === 'object' && c.image) {
           images = [c.image];
+        } else if (Array.isArray(prod.images) && prod.images.length > 0) {
+          images = [...prod.images.filter(Boolean)];
         } else if (prod.image) {
           images = [prod.image];
         } else {
           images = ['assets/sokhm-card-1.jpg'];
         }
         const image = images[0] || 'assets/sokhm-card-1.jpg';
-        const isMain = (!matchedMain && (image === prod.image || (typeof c === 'object' && c.isMain)));
+        const isMain = explicitMainIdx >= 0
+          ? (cIdx === explicitMainIdx)
+          : (!matchedMain && image === prod.image);
         if (isMain) matchedMain = true;
         return { name, hex, image, images, isMain };
       });
 
       if (modalColorsList.length === 0) {
-        modalColorsList = [{ name: 'اللون الرئيسي', hex: '#111111', image: prod.image || 'assets/sokhm-card-1.jpg', images: [prod.image || 'assets/sokhm-card-1.jpg'], isMain: true }];
+        const fallbackImgs = Array.isArray(prod.images) && prod.images.length > 0 ? [...prod.images] : [prod.image || 'assets/sokhm-card-1.jpg'];
+        modalColorsList = [{ name: 'اللون الرئيسي', hex: '#0B0B0B', image: fallbackImgs[0], images: fallbackImgs, isMain: true }];
         matchedMain = true;
       } else if (!matchedMain) {
         modalColorsList[0].isMain = true;
@@ -2454,10 +2499,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       pendingNewColorImages = [];
       renderPendingNewColorImages();
 
-      modalColorsList = [
-        { name: 'أسود فحمي / Onyx Black', hex: '#0B0B0B', image: 'assets/sokhm-card-1.jpg', images: ['assets/sokhm-card-1.jpg'], isMain: true },
-        { name: 'بيج رملي / Sand Cream', hex: '#D6CDBF', image: 'assets/sokhm-card-2.jpg', images: ['assets/sokhm-card-2.jpg'], isMain: false }
-      ];
+      const cNameIn = document.getElementById('newColorNameInput');
+      const cHexIn = document.getElementById('newColorHexInput');
+      const cHexTextIn = document.getElementById('newColorHexTextInput');
+      const cImgIn = document.getElementById('newColorImgInput');
+      if (cNameIn) cNameIn.value = '';
+      if (cHexIn) cHexIn.value = '#0B0B0B';
+      if (cHexTextIn) cHexTextIn.value = '#0B0B0B';
+      if (cImgIn) cImgIn.value = '';
+
+      modalColorsList = [];
       renderModalColors();
 
       document.querySelectorAll('input[name="pm_sizes"]').forEach(cb => {
@@ -2566,8 +2617,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (mainColorIndicator) mainColorIndicator.textContent = mainColor ? `(اللون المعتمد: ${mainColor.name})` : '';
 
     list.innerHTML = modalColorsList.map((c, idx) => {
-      const hex = typeof c === 'object' ? (c.hex || '#111') : '#111';
+      const hex = normalizeHexColor(typeof c === 'object' ? c.hex : '#0B0B0B', '#0B0B0B');
       const name = typeof c === 'object' ? (c.name || 'Color') : c;
+      const safeNameAttr = String(name).replace(/"/g, '&quot;');
       const images = (typeof c === 'object' && Array.isArray(c.images) && c.images.length > 0)
         ? c.images
         : (c.image ? [c.image] : ['assets/sokhm-card-1.jpg']);
@@ -2575,14 +2627,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       return `
         <div class="p-3 rounded-xl ${isMain ? 'bg-[#141414] border-amber-500/60 ring-1 ring-amber-500/20' : 'bg-[#101010] border-[#1E1E1E]'} border text-xs text-white space-y-2.5 transition-all shadow-sm">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="w-4 h-4 rounded-full border border-white/20 shadow-inner flex-shrink-0" style="background-color: ${hex}"></span>
-              <span class="font-bold text-xs">${name}</span>
-              <span class="text-[10px] text-neutral-400 font-mono">(${images.length} ${images.length === 1 ? 'صورة' : 'صور'})</span>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <input type="color" class="edit-color-hex-picker w-7 h-7 p-0.5 rounded-lg bg-[#080808] border border-white/25 cursor-pointer flex-shrink-0" data-idx="${idx}" value="${hex}" title="تعديل درجة اللون مباشرة">
+              <input type="text" class="edit-color-hex-text w-20 bg-[#080808] border border-[#282828] focus:border-white rounded-lg px-2 py-1 font-mono text-[10px] text-neutral-300 uppercase" dir="ltr" maxlength="7" data-idx="${idx}" value="${hex}" title="كود اللون HEX">
+              <input type="text" class="edit-color-name-input flex-1 min-w-[110px] bg-[#080808] border border-[#282828] focus:border-white rounded-lg px-2.5 py-1 font-bold text-xs text-white" data-idx="${idx}" value="${safeNameAttr}" placeholder="اسم اللون">
+              <span class="text-[10px] text-emerald-400 font-mono whitespace-nowrap">(${images.length} ${images.length === 1 ? 'صورة' : 'صور'})</span>
             </div>
             
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 self-end sm:self-auto">
               ${isMain ? `
                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold">
                   <i data-lucide="star" class="w-2.5 h-2.5 fill-amber-300"></i>
@@ -2754,30 +2807,83 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
+    // Attach Inline Color Picker, Hex Input & Name Input Events
+    list.querySelectorAll('.edit-color-hex-picker').forEach(picker => {
+      const updateHexFromPicker = () => {
+        const idx = parseInt(picker.getAttribute('data-idx'), 10);
+        if (!modalColorsList[idx]) return;
+        const cleanHex = normalizeHexColor(picker.value, '#0B0B0B');
+        modalColorsList[idx].hex = cleanHex;
+        const hexText = list.querySelector(`.edit-color-hex-text[data-idx="${idx}"]`);
+        if (hexText) hexText.value = cleanHex;
+      };
+      picker.addEventListener('input', updateHexFromPicker);
+      picker.addEventListener('change', updateHexFromPicker);
+    });
+
+    list.querySelectorAll('.edit-color-hex-text').forEach(hexIn => {
+      const updateHexFromText = () => {
+        const idx = parseInt(hexIn.getAttribute('data-idx'), 10);
+        if (!modalColorsList[idx]) return;
+        const raw = hexIn.value.trim();
+        if (/^#?[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/.test(raw)) {
+          const cleanHex = normalizeHexColor(raw, modalColorsList[idx].hex || '#0B0B0B');
+          modalColorsList[idx].hex = cleanHex;
+          const picker = list.querySelector(`.edit-color-hex-picker[data-idx="${idx}"]`);
+          if (picker) picker.value = cleanHex;
+        }
+      };
+      hexIn.addEventListener('input', updateHexFromText);
+      hexIn.addEventListener('blur', () => {
+        const idx = parseInt(hexIn.getAttribute('data-idx'), 10);
+        if (modalColorsList[idx]) hexIn.value = modalColorsList[idx].hex || '#0B0B0B';
+      });
+    });
+
+    list.querySelectorAll('.edit-color-name-input').forEach(nameIn => {
+      nameIn.addEventListener('input', () => {
+        const idx = parseInt(nameIn.getAttribute('data-idx'), 10);
+        if (!modalColorsList[idx]) return;
+        modalColorsList[idx].name = nameIn.value.trim() || 'Standard';
+        if (modalColorsList[idx].isMain) {
+          if (mainColorBadge) mainColorBadge.textContent = `اللون: ${modalColorsList[idx].name}`;
+          if (mainColorIndicator) mainColorIndicator.textContent = `(اللون المعتمد: ${modalColorsList[idx].name})`;
+        }
+      });
+    });
+
     // Attach Upload Extra Images to Color
     list.querySelectorAll('.color-extra-file-input').forEach(input => {
       input.addEventListener('change', async (e) => {
         const colorIdx = parseInt(input.getAttribute('data-color-idx'), 10);
         const files = Array.from(e.target.files || []);
+        e.target.value = ''; // Allow re-selecting additional files seamlessly
         if (files.length === 0 || !modalColorsList[colorIdx]) return;
 
         showToast(`جاري ضغط ورفع ${files.length} صور للون ${modalColorsList[colorIdx].name}...`);
+        let addedCount = 0;
         for (const file of files) {
           try {
             const uploadedUrl = await uploadImageFile(file);
             if (uploadedUrl) {
               if (!Array.isArray(modalColorsList[colorIdx].images)) {
-                modalColorsList[colorIdx].images = [modalColorsList[colorIdx].image || uploadedUrl];
+                modalColorsList[colorIdx].images = modalColorsList[colorIdx].image ? [modalColorsList[colorIdx].image] : [];
               }
-              modalColorsList[colorIdx].images.push(uploadedUrl);
+              // Replace default placeholder image if it was the only placeholder
+              if (modalColorsList[colorIdx].images.length === 1 && modalColorsList[colorIdx].images[0] === 'assets/sokhm-card-1.jpg' && addedCount === 0) {
+                modalColorsList[colorIdx].images = [uploadedUrl];
+              } else {
+                modalColorsList[colorIdx].images.push(uploadedUrl);
+              }
               modalColorsList[colorIdx].image = modalColorsList[colorIdx].images[0];
+              addedCount++;
             }
           } catch (err) {
             console.error('Error uploading extra image:', err);
           }
         }
         renderModalColors();
-        showToast(`تمت إضافة الصور الجديدة للون بنجاح`);
+        showToast(`تمت إضافة ${addedCount} صور جديدة للون "${modalColorsList[colorIdx].name}" بنجاح`);
       });
     });
   }
@@ -2927,14 +3033,41 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // Color hex input listener
+    // Color hex input + hex text + quick presets listeners
     const colorHexIn = document.getElementById('newColorHexInput');
-    const colorHexValText = document.getElementById('newColorHexValueText');
-    if (colorHexIn && colorHexValText) {
-      colorHexIn.addEventListener('input', () => {
-        colorHexValText.textContent = colorHexIn.value.toUpperCase();
+    const colorHexTextIn = document.getElementById('newColorHexTextInput');
+    const colorNameIn = document.getElementById('newColorNameInput');
+
+    if (colorHexIn && colorHexTextIn) {
+      const syncFromColorWheel = () => {
+        colorHexTextIn.value = normalizeHexColor(colorHexIn.value, '#0B0B0B');
+      };
+      colorHexIn.addEventListener('input', syncFromColorWheel);
+      colorHexIn.addEventListener('change', syncFromColorWheel);
+
+      colorHexTextIn.addEventListener('input', () => {
+        const raw = colorHexTextIn.value.trim();
+        if (/^#?[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/.test(raw)) {
+          colorHexIn.value = normalizeHexColor(raw, '#0B0B0B');
+        }
+      });
+      colorHexTextIn.addEventListener('blur', () => {
+        const clean = normalizeHexColor(colorHexTextIn.value, colorHexIn.value || '#0B0B0B');
+        colorHexTextIn.value = clean;
+        colorHexIn.value = clean;
       });
     }
+
+    document.querySelectorAll('.quick-color-preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const presetName = btn.getAttribute('data-name') || '';
+        const presetHex = normalizeHexColor(btn.getAttribute('data-hex'), '#0B0B0B');
+        if (colorNameIn) colorNameIn.value = presetName;
+        if (colorHexIn) colorHexIn.value = presetHex;
+        if (colorHexTextIn) colorHexTextIn.value = presetHex;
+      });
+    });
 
     // Color image file input listener
     const colorImgFileInput = document.getElementById('newColorImgFileInput');
@@ -2944,14 +3077,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (colorImgFileInput) {
       colorImgFileInput.addEventListener('change', async (e) => {
         const files = Array.from(e.target.files || []);
+        e.target.value = ''; // Reset input so user can pick more files in consecutive clicks
         if (files.length === 0) return;
         try {
           showToast(`جاري معالجة ورفع ${files.length} صور للون...`);
+          let uploadedCount = 0;
           for (const file of files) {
             const uploadedUrl = await uploadImageFile(file);
             if (uploadedUrl) {
               pendingNewColorImages.push(uploadedUrl);
-              if (colorImgIn) colorImgIn.value = uploadedUrl;
+              uploadedCount++;
               if (colorPreviewThumb) {
                 colorPreviewThumb.src = uploadedUrl.startsWith('http') || uploadedUrl.startsWith('data:')
                   ? uploadedUrl
@@ -2959,8 +3094,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               }
             }
           }
+          if (colorImgIn) colorImgIn.value = '';
           renderPendingNewColorImages();
-          showToast(`تم رفع وتجهيز ${files.length} صور للون بنجاح!`);
+          showToast(`تم رفع وتجهيز ${uploadedCount} صور للون (${pendingNewColorImages.length} صور إجمالاً)!`);
         } catch (err) {
           alert('تعذر قراءة ملفات الصور');
         }
@@ -2988,16 +3124,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Add color button
     const addColorBtn = document.getElementById('addColorToModalBtn');
-    const colorNameIn = document.getElementById('newColorNameInput');
 
     if (addColorBtn && colorNameIn && colorHexIn) {
       addColorBtn.addEventListener('click', () => {
         const name = colorNameIn.value.trim();
-        const hex = colorHexIn.value || '#111111';
+        const hex = normalizeHexColor(colorHexTextIn ? colorHexTextIn.value : colorHexIn.value, normalizeHexColor(colorHexIn.value, '#0B0B0B'));
         const singleImg = (colorImgIn ? colorImgIn.value.trim() : '');
 
         if (!name) {
-          alert('يرجى كتابة اسم اللون أولاً (مثال: أسود فحمي / Onyx Black)');
+          alert('يرجى اختيار لون من الشريط السريع أو كتابة اسم اللون أولاً (مثال: أسود فحمي / Onyx Black)');
           colorNameIn.focus();
           return;
         }
@@ -3005,6 +3140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let colorImages = [];
         if (pendingNewColorImages.length > 0) {
           colorImages = [...pendingNewColorImages];
+          if (singleImg && !colorImages.includes(singleImg)) colorImages.push(singleImg);
         } else if (singleImg) {
           colorImages = [singleImg];
         } else {
@@ -3021,7 +3157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (colorPreviewThumb) colorPreviewThumb.src = '../assets/sokhm-card-1.jpg';
         pendingNewColorImages = [];
         renderPendingNewColorImages();
-        showToast(`تمت إضافة اللون "${name}" ومعه ${colorImages.length} صور بنجاح`);
+        showToast(`تمت إضافة اللون "${name}" (${hex}) ومعه ${colorImages.length} صور بنجاح`);
       });
     }
 
@@ -3030,6 +3166,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // AUTO-COMMIT GUARD: Never lose pending uploaded images or chosen color if user clicks Save directly!
+        const pendingName = colorNameIn ? colorNameIn.value.trim() : '';
+        const pendingSingleUrl = colorImgIn ? colorImgIn.value.trim() : '';
+        const pendingHex = normalizeHexColor(
+          colorHexTextIn ? colorHexTextIn.value : (colorHexIn ? colorHexIn.value : '#0B0B0B'),
+          normalizeHexColor(colorHexIn ? colorHexIn.value : '#0B0B0B', '#0B0B0B')
+        );
+
+        const stagedImgs = [...pendingNewColorImages];
+        if (pendingSingleUrl && !stagedImgs.includes(pendingSingleUrl)) {
+          stagedImgs.push(pendingSingleUrl);
+        }
+
+        if (stagedImgs.length > 0 || pendingName) {
+          if (pendingName || modalColorsList.length === 0) {
+            const finalImgs = stagedImgs.length > 0 ? stagedImgs : ['assets/sokhm-card-1.jpg'];
+            modalColorsList.push({
+              name: pendingName || 'اللون الأساسي',
+              hex: pendingHex,
+              image: finalImgs[0],
+              images: finalImgs,
+              isMain: modalColorsList.length === 0
+            });
+          } else {
+            // Append pending uploaded photos to the main color so none are lost!
+            const targetCol = modalColorsList.find(c => c.isMain) || modalColorsList[0];
+            if (targetCol) {
+              if (!Array.isArray(targetCol.images)) {
+                targetCol.images = targetCol.image ? [targetCol.image] : [];
+              }
+              if (targetCol.images.length === 1 && targetCol.images[0] === 'assets/sokhm-card-1.jpg') {
+                targetCol.images = [...stagedImgs];
+              } else {
+                stagedImgs.forEach(u => {
+                  if (u && !targetCol.images.includes(u)) targetCol.images.push(u);
+                });
+              }
+              targetCol.image = targetCol.images[0];
+            }
+          }
+          if (colorNameIn) colorNameIn.value = '';
+          if (colorImgIn) colorImgIn.value = '';
+          pendingNewColorImages = [];
+          renderPendingNewColorImages();
+          renderModalColors();
+        }
         const formId = getVal('pm_id');
         const formSlug = getVal('pm_slug');
         const id = editingProductId || formId || formSlug || ('sokhm-' + Date.now());
@@ -3638,12 +3821,293 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ================= 14. أدوات النظام وقاعدة البيانات (SYSTEM HANDLERS) =================
+  // ================= 14. أدوات النظام وتصدير البيانات (SYSTEM & CSV EXPORT HANDLERS) =================
+  function escapeCsvCellClient(val) {
+    if (val === null || val === undefined) return '';
+    const str = String(val).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (/[",\n]/.test(str) || str.startsWith(' ') || str.endsWith(' ')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  function buildClientFallbackCsv(type, extraQuery = {}) {
+    const BOM = '\uFEFF';
+    const makeSheet = (headers, rows) =>
+      BOM + [headers.map(escapeCsvCellClient).join(','), ...rows.map(r => r.map(escapeCsvCellClient).join(','))].join('\r\n');
+
+    if (type === 'orders') {
+      const statusFilter = extraQuery.status || 'all';
+      const list = (Array.isArray(orders) ? orders : []).filter(o => statusFilter === 'all' || o.status === statusFilter);
+      return makeSheet(
+        ['رقم الطلب', 'التاريخ (القاهرة)', 'اسم العميل', 'رقم الهاتف', 'المحافظة', 'العنوان', 'المنتجات', 'الإجمالي (ج.م)', 'الحالة'],
+        list.map(o => {
+          let items = [];
+          try { items = typeof o.items_json === 'string' ? JSON.parse(o.items_json) : (o.items || []); } catch (_) {}
+          const summary = items.map(it => `${it.name || ''} (${it.size || 'M'}${it.color ? ' - ' + it.color : ''}) x${it.quantity || 1}`).join(' | ');
+          const ph = String(o.customer_phone || o.customerPhone || '').trim();
+          return [
+            o.id || '',
+            formatCairoDate(o.created_at || o.createdAt),
+            o.customer_name || o.customerName || '',
+            /^0\d+$/.test(ph) ? `="${ph}"` : ph,
+            o.customer_city || o.customerCity || '',
+            o.customer_address || o.customerAddress || '',
+            summary,
+            o.total_price ?? o.totalPrice ?? 0,
+            o.status || 'pending'
+          ];
+        })
+      );
+    }
+
+    if (type === 'products') {
+      const list = Array.isArray(products) ? products : [];
+      return makeSheet(
+        ['كود المنتج', 'الاسم', 'السعر (ج.م)', 'التصنيف', 'المقاسات', 'الألوان', 'عدد الصور'],
+        list.map(p => [
+          p.id || '',
+          p.name || '',
+          p.price || 0,
+          p.category || '',
+          Array.isArray(p.sizes) ? p.sizes.join(' | ') : '',
+          Array.isArray(p.colors) ? p.colors.map(c => `${c.name || ''} (${c.hex || ''})`).join(' | ') : '',
+          Array.isArray(p.images) ? p.images.length : 1
+        ])
+      );
+    }
+
+    if (type === 'discounts') {
+      const list = Array.isArray(discounts) ? discounts : [];
+      return makeSheet(
+        ['كود الخصم', 'النوع', 'القيمة', 'الحد الأدنى', 'مرات الاستخدام', 'الحالة'],
+        list.map(d => [
+          d.code || '',
+          d.discount_type === 'percentage' ? 'نسبة مئوية (%)' : 'مبلغ ثابت (ج.م)',
+          d.discount_value || 0,
+          d.min_order_amount || 0,
+          d.used_count || 0,
+          d.active ? 'نشط' : 'متوقف'
+        ])
+      );
+    }
+
+    if (type === 'shipping') {
+      const shipCfg = (siteContent && siteContent.shipping) || {};
+      const rates = shipCfg.governorateRates || {};
+      const std = shipCfg.standardFee ?? 50;
+      const allGovs = (typeof EGYPT_GOVERNORATES === 'object' && EGYPT_GOVERNORATES)
+        ? [...(EGYPT_GOVERNORATES.major || []), ...(EGYPT_GOVERNORATES.delta || []), ...(EGYPT_GOVERNORATES.upper || []), ...(EGYPT_GOVERNORATES.remote || [])]
+        : [];
+      return makeSheet(
+        ['المحافظة', 'الاسم بالإنجليزية', 'سعر الشحن المعتمد (ج.م)'],
+        allGovs.map(g => [
+          g.name,
+          g.en || '',
+          (rates[g.name] !== undefined && rates[g.name] !== '') ? rates[g.name] : std
+        ])
+      );
+    }
+
+    return makeSheet(['البيان'], [['لا توجد بيانات متاحة حالياً']]);
+  }
+
+  async function downloadCsvExport(type = 'orders', extraQuery = {}, triggerBtn = null) {
+    const cleanType = String(type || 'orders').trim().toLowerCase();
+    const origHtml = triggerBtn ? triggerBtn.innerHTML : '';
+    if (triggerBtn) {
+      triggerBtn.disabled = true;
+      triggerBtn.innerHTML = '<span class="inline-block animate-spin">✦</span><span>جاري السحب...</span>';
+    }
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    let filename = `sokhm-${cleanType}-${dateStamp}.csv`;
+
+    try {
+      const params = new URLSearchParams({
+        type: cleanType,
+        _t: String(Date.now())
+      });
+      if (extraQuery.status) params.set('status', extraQuery.status);
+
+      const res = await fetch(`/api/admin/export?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'x-admin-token': token
+        },
+        cache: 'no-store'
+      });
+
+      let csvText = '';
+      if (res.ok) {
+        const disp = res.headers.get('Content-Disposition') || '';
+        const match = disp.match(/filename="?([^";]+)"?/i);
+        if (match && match[1]) filename = match[1];
+        csvText = await res.text();
+      } else if (res.status === 401) {
+        alert('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول');
+        return;
+      } else {
+        csvText = buildClientFallbackCsv(cleanType, extraQuery);
+      }
+
+      if (!csvText.startsWith('\uFEFF')) {
+        csvText = '\uFEFF' + csvText;
+      }
+
+      const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 250);
+
+      const labelsMap = {
+        orders: 'الطلبات والفواتير',
+        customers: 'قاعدة بيانات العملاء',
+        products: 'المنتجات والألوان والمقاسات',
+        discounts: 'أكواد وكوبونات الخصم',
+        shipping: 'أسعار شحن المحافظات',
+        visits: 'سجل وإحصائيات الزيارات'
+      };
+      showToast(`تم سحب وتصدير ملف CSV (${labelsMap[cleanType] || cleanType}) بنجاح ✦`);
+    } catch (err) {
+      console.error('CSV export error:', err);
+      try {
+        const fallbackText = buildClientFallbackCsv(cleanType, extraQuery);
+        const blob = new Blob([fallbackText], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 250);
+        showToast('تم تصدير ملف CSV من الذاكرة المحلية بنجاح');
+      } catch (e2) {
+        alert('تعذر تصدير ملف CSV: ' + err.message);
+      }
+    } finally {
+      if (triggerBtn) {
+        triggerBtn.disabled = false;
+        triggerBtn.innerHTML = origHtml;
+        setupLucide();
+      }
+    }
+  }
+
+  async function downloadFullBackupJson(triggerBtn = null) {
+    const origHtml = triggerBtn ? triggerBtn.innerHTML : '';
+    if (triggerBtn) {
+      triggerBtn.disabled = true;
+      triggerBtn.innerHTML = '<span class="inline-block animate-spin">✦</span><span>جاري تجهيز النسخة الاحتياطية...</span>';
+    }
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    let filename = `sokhm-full-backup-${dateStamp}.json`;
+
+    try {
+      const res = await fetch(`/api/admin/backup-json?_t=${Date.now()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'x-admin-token': token
+        },
+        cache: 'no-store'
+      });
+
+      if (!res.ok) {
+        throw new Error('تعذر جلب النسخة الاحتياطية من السيرفر');
+      }
+
+      const disp = res.headers.get('Content-Disposition') || '';
+      const match = disp.match(/filename="?([^";]+)"?/i);
+      if (match && match[1]) filename = match[1];
+
+      const jsonText = await res.text();
+      const blob = new Blob([jsonText], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 250);
+
+      showToast('تم سحب النسخة الاحتياطية الكاملة للمتجر (JSON Backup) بنجاح ✦');
+    } catch (err) {
+      console.error('JSON backup error:', err);
+      alert('حدث خطأ أثناء تحميل النسخة الاحتياطية: ' + err.message);
+    } finally {
+      if (triggerBtn) {
+        triggerBtn.disabled = false;
+        triggerBtn.innerHTML = origHtml;
+        setupLucide();
+      }
+    }
+  }
+
   function setupSystemHandlers() {
+    // Direct section CSV export buttons
+    const exportOrdersBtn = document.getElementById('exportOrdersCsvBtn');
+    if (exportOrdersBtn) {
+      exportOrdersBtn.addEventListener('click', () => {
+        downloadCsvExport('orders', { status: orderStatusFilterValue || 'all' }, exportOrdersBtn);
+      });
+    }
+
+    const exportProductsBtn = document.getElementById('exportProductsCsvBtn');
+    if (exportProductsBtn) {
+      exportProductsBtn.addEventListener('click', () => {
+        downloadCsvExport('products', {}, exportProductsBtn);
+      });
+    }
+
+    const exportShippingBtn = document.getElementById('exportShippingCsvBtn');
+    if (exportShippingBtn) {
+      exportShippingBtn.addEventListener('click', () => {
+        downloadCsvExport('shipping', {}, exportShippingBtn);
+      });
+    }
+
+    const exportDiscountsBtn = document.getElementById('exportDiscountsCsvBtn');
+    if (exportDiscountsBtn) {
+      exportDiscountsBtn.addEventListener('click', () => {
+        downloadCsvExport('discounts', {}, exportDiscountsBtn);
+      });
+    }
+
+    // Export Center cards in Settings tab
+    document.querySelectorAll('.csv-export-trigger').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const exportType = btn.getAttribute('data-export-csv') || 'orders';
+        downloadCsvExport(exportType, {}, btn);
+      });
+    });
+
+    const backupJsonBtn = document.getElementById('exportFullBackupJsonBtn');
+    if (backupJsonBtn) {
+      backupJsonBtn.addEventListener('click', () => {
+        downloadFullBackupJson(backupJsonBtn);
+      });
+    }
+
     const seedBtn = document.getElementById('seedTursoBtn');
     if (seedBtn) {
       seedBtn.addEventListener('click', async () => {
-        if (!confirm('هل تريد مزامنة وتهيئة البيانات الأولية إلى قاعدة البيانات السحابية (Neon / Turso) الآن؟ سيتم التأكد من وجود المنتجات والتصنيفات والمحتوى الأساسي وتحديث الإحصائيات.')) return;
+        if (!confirm('هل تريد مزامنة وتهيئة البيانات الأولية بقاعدة البيانات الآن؟ سيتم التأكد من وجود المنتجات والتصنيفات والمحتوى الأساسي وتحديث الإحصائيات دون مسح أي طلبات حالية.')) return;
 
         seedBtn.disabled = true;
         seedBtn.innerHTML = '<span class="inline-block animate-spin mr-2">✦</span> جاري مزامنة وتهيئة البيانات...';
@@ -3670,7 +4134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             populateCategoryDropdowns();
             renderCategoriesList();
             renderOrderStats();
-            showToast(`تمت مزامنة البيانات السحابية بنجاح! تم تجهيز ${data.products || 0} منتج و ${data.categories || 0} تصنيف ★`);
+            showToast(`تمت مزامنة وتهيئة قاعدة البيانات بنجاح! تم تجهيز ${data.products || 0} منتج و ${data.categories || 0} تصنيف ★`);
           } else {
             alert(data.error || 'تعذر استكمال المزامنة');
           }
@@ -3678,7 +4142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           alert('خطأ في الاتصال أثناء المزامنة: ' + err.message);
         } finally {
           seedBtn.disabled = false;
-          seedBtn.innerHTML = '<i data-lucide="database-backup" class="w-4 h-4"></i><span>مزامنة وتهيئة البيانات السحابية الآن</span>';
+          seedBtn.innerHTML = '<i data-lucide="database-backup" class="w-4 h-4"></i><span>مزامنة وتهيئة قاعدة البيانات الآن</span>';
           setupLucide();
         }
       });

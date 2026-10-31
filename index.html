@@ -384,11 +384,14 @@
               var priceNum = typeof p.price === 'number' ? p.price : (parseFloat(p.price) || 0);
               var fPrice = p.formattedPrice || (priceNum.toLocaleString('en-US') + ' EGP');
               var colors = Array.isArray(p.colors) ? p.colors : [];
+              var mainIdx = colors.findIndex(function(c) { return typeof c === 'object' && c.isMain; });
+              if (mainIdx < 0) mainIdx = colors.findIndex(function(c) { return typeof c === 'object' && c.image === mainImg; });
+              if (mainIdx < 0) mainIdx = 0;
               var swatches = colors.map(function(c, i) {
                 var hex = typeof c === 'object' ? (c.hex || '#111') : '#111';
                 var name = typeof c === 'object' ? (c.name || 'Color') : c;
                 var cImg = (typeof c === 'object' && c.image) ? c.image : mainImg;
-                return '<button type="button" class="swatch-dot-dark ' + (i === 0 ? 'active' : '') + '" style="background-color: ' + hex + '" title="' + name + '" data-image="' + cImg + '"></button>';
+                return '<button type="button" class="swatch-dot-dark ' + (i === mainIdx ? 'active' : '') + '" style="background-color: ' + hex + '" title="' + name + '" data-image="' + cImg + '"></button>';
               }).join('');
 
               html += '<div class="sokhm-card flex flex-col group cursor-pointer" onclick="window.location.href=\'product.html?id=' + (p.id || p.slug) + '\'">' +
@@ -476,7 +479,7 @@
       </button>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        <div class="aspect-[1.25/1] rounded-[10px] overflow-hidden bg-neutral-900 border border-[#222]">
+        <div class="aspect-[3/4] rounded-[10px] overflow-hidden bg-neutral-900 border border-[#222]">
           <img id="modalImg" src="" alt="Product Photo" class="w-full h-full object-cover">
         </div>
 
@@ -488,6 +491,16 @@
           </div>
 
           <p id="modalDesc" class="text-xs text-neutral-400 leading-relaxed font-light"></p>
+
+          <div id="modalColorSection" class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-semibold text-neutral-300 uppercase tracking-wider">SELECT COLOR:</span>
+              <span id="modalSelectedColorLabel" class="font-mono font-bold text-white text-[11px]"></span>
+            </div>
+            <div id="modalColorPicker" class="flex flex-wrap items-center gap-2.5 pt-0.5">
+              <!-- Populated dynamically from product colors -->
+            </div>
+          </div>
 
           <div class="space-y-2">
             <span class="text-xs font-semibold text-neutral-300 block uppercase tracking-wider">SELECT SIZE:</span>
@@ -635,7 +648,7 @@
   <!-- SCRIPTS -->
   <script src="js/store.js?v=5.0"></script>
   <script src="js/meta-pixel.js?v=1.0"></script>
-  <script src="js/checkout.js?v=5.0"></script>
-  <script src="js/app.js?v=6.0"></script>
+  <script src="js/checkout.js?v=7.0"></script>
+  <script src="js/app.js?v=7.0"></script>
 </body>
 </html>

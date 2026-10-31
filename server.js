@@ -1,33 +1,56 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { generateCsvExport, generateFullJsonBackup } = require('./database/csv-export.js');
 
-let db;
-if (
+const driver = String(process.env.DB_DRIVER || '').toLowerCase().trim();
+const pgUrl =
+  process.env.NEON_DATABASE_URL ||
   process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
   process.env.POSTGRES_URL_NON_POOLING ||
-  process.env.NEON_DATABASE_URL
-) {
+  '';
+
+let db;
+if (driver === 'sqlite' || process.env.USE_LOCAL_SQLITE === 'true' || process.env.USE_LOCAL_SQLITE === '1') {
+  db = require('./database/db.js');
+} else if (driver === 'neon' || pgUrl.includes('neon.tech')) {
   db = require('./database/neon.js');
-} else if (process.env.TURSO_DATABASE_URL) {
+} else if (driver === 'turso' || process.env.TURSO_DATABASE_URL) {
   db = require('./database/turso.js');
 } else {
   db = require('./database/db.js');
 }
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+const STORAGE_ROOT = process.env.STORAGE_DIR ? path.resolve(process.env.STORAGE_DIR) : null;
+const PERSISTENT_UPLOADS_DIR = STORAGE_ROOT
+  ? path.join(STORAGE_ROOT, 'uploads')
+  : path.join(__dirname, 'assets', 'uploads');
+
+if (!fs.existsSync(PERSISTENT_UPLOADS_DIR)) {
+  try {
+    fs.mkdirSync(PERSISTENT_UPLOADS_DIR, { recursive: true });
+  } catch (_) {}
+}
+
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
   '.css': 'text/css; charset=UTF-8',
   '.js': 'text/javascript; charset=UTF-8',
   '.json': 'application/json; charset=UTF-8',
+  '.csv': 'text/csv; charset=UTF-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.avif': 'image/avif',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
-  '.webp': 'image/webp'
+  '.webp': 'image/webp',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2'
 };
 
 function readBody(req) {
@@ -35,8 +58,8 @@ function readBody(req) {
     let body = '';
     req.on('data', chunk => {
       body += chunk;
-      // 10MB limit for base64 image uploads
-      if (body.length > 10 * 1024 * 1024) {
+      // 50MB limit for multi-image base64 uploads
+      if (body.length > 50 * 1024 * 1024) {
         req.destroy();
         reject(new Error('Payload too large'));
       }
@@ -90,11 +113,30 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost:3000'}`);
-  const pathname = parsedUrl.pathname;
+  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost:' + PORT}`);
+  let pathname = parsedUrl.pathname || '';
+  if (pathname.endsWith('/') && pathname.length > 1 && pathname.startsWith('/api/')) {
+    pathname = pathname.slice(0, -1);
+  }
 
   // ================= REST API ENDPOINTS (SQLITE DATABASE) =================
   if (pathname.startsWith('/api/')) {
+
+    // 0.0 Healthcheck Endpoint (Coolify / Docker Healthcheck)
+    if (pathname === '/api/health' && req.method === 'GET') {
+      try {
+        const stats = await db.getStats();
+        return sendJson(res, 200, {
+          status: 'ok',
+          service: 'sokhm-store',
+          engine: stats.engine,
+          dbPath: stats.dbPath,
+          timestamp: new Date().toISOString()
+        });
+      } catch (err) {
+        return sendJson(res, 500, { status: 'error', error: err.message });
+      }
+    }
     
     // 0.1 Admin Login: POST /api/admin/login
     if (pathname === '/api/admin/login' && req.method === 'POST') {
@@ -174,6 +216,74 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 0.5 Admin Seed Database: POST /api/admin/seed-database
+    if ((pathname === '/api/admin/seed-turso' || pathname === '/api/admin/seed-neon' || pathname === '/api/admin/seed-database') && req.method === 'POST') {
+      try {
+        const token = getBearerToken(req);
+        const session = await db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول أولاً' });
+        }
+        if (db.seedNeonDatabase) {
+          const result = await db.seedNeonDatabase(true);
+          return sendJson(res, 200, result);
+        }
+        if (db.seedTursoDatabase) {
+          const result = await db.seedTursoDatabase(true);
+          return sendJson(res, 200, result);
+        }
+        const prods = await db.getProducts();
+        const cats = await db.getCategories();
+        return sendJson(res, 200, { success: true, products: prods.length, categories: cats.length, message: 'قاعدة البيانات المحلية جاهزة ومحدثة' });
+      } catch (err) {
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
+    }
+
+    // 0.6 Admin Data Export (CSV & Full JSON Backup)
+    if (pathname === '/api/admin/export' && req.method === 'GET') {
+      try {
+        const token = getBearerToken(req) || parsedUrl.searchParams.get('token');
+        const session = await db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لتصدير البيانات' });
+        }
+        const exportType = parsedUrl.searchParams.get('type') || 'orders';
+        const statusFilter = parsedUrl.searchParams.get('status') || 'all';
+        const { filename, csv } = await generateCsvExport(db, exportType, { status: statusFilter });
+        res.writeHead(200, {
+          'Content-Type': 'text/csv; charset=UTF-8',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Access-Control-Allow-Origin': '*'
+        });
+        return res.end(csv, 'utf8');
+      } catch (err) {
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
+    }
+
+    if (pathname === '/api/admin/backup-json' && req.method === 'GET') {
+      try {
+        const token = getBearerToken(req) || parsedUrl.searchParams.get('token');
+        const session = await db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لتحميل النسخة الاحتياطية' });
+        }
+        const backup = await generateFullJsonBackup(db);
+        const filename = `sokhm-full-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        res.writeHead(200, {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Access-Control-Allow-Origin': '*'
+        });
+        return res.end(JSON.stringify(backup, null, 2), 'utf8');
+      } catch (err) {
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
+    }
+
     // 1. GET /api/site-content
     if (pathname === '/api/site-content' && req.method === 'GET') {
       try {
@@ -198,6 +308,12 @@ const server = http.createServer(async (req, res) => {
     // 3. GET /api/products
     if (pathname === '/api/products' && req.method === 'GET') {
       try {
+        const queryId = parsedUrl.searchParams.get('id') || parsedUrl.searchParams.get('slug');
+        if (queryId) {
+          const prod = await db.getProductById(queryId);
+          if (!prod) return sendJson(res, 404, { success: false, error: 'Product not found' });
+          return sendJson(res, 200, prod);
+        }
         const products = await db.getProducts();
         return sendJson(res, 200, products);
       } catch (e) {
@@ -308,7 +424,9 @@ const server = http.createServer(async (req, res) => {
     const catMatch = pathname.match(/^\/api\/categories\/([^\/]+)$/);
     if ((pathname === '/api/categories' || catMatch) && req.method === 'DELETE') {
       try {
-        const slug = catMatch ? catMatch[1] : parsedUrl.searchParams.get('slug');
+        const slug = catMatch
+          ? decodeURIComponent(catMatch[1])
+          : (parsedUrl.searchParams.get('slug') || parsedUrl.searchParams.get('id'));
         if (!slug) return sendJson(res, 400, { error: 'Missing slug parameter' });
         const cats = await db.deleteCategory(slug);
         return sendJson(res, 200, { success: true, categories: cats });
@@ -317,10 +435,43 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 7.5 Site Visits Tracking & Analytics
+    if ((pathname === '/api/visits' || pathname === '/api/track-visit') && req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+        const userAgent = req.headers['user-agent'] || '';
+        if (db.recordVisit) {
+          await db.recordVisit({
+            page: body.page || '/',
+            visitorId: body.visitorId || body.visitor_id,
+            referrer: body.referrer || req.headers['referer'] || '',
+            userAgent,
+            ip
+          });
+        }
+        return sendJson(res, 200, { success: true });
+      } catch (e) {
+        return sendJson(res, 200, { success: false });
+      }
+    }
+
+    if ((pathname === '/api/visits' || pathname === '/api/visits/stats') && req.method === 'GET') {
+      try {
+        const stats = db.getVisitStats ? await db.getVisitStats() : { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0 };
+        return sendJson(res, 200, stats);
+      } catch (e) {
+        return sendJson(res, 200, { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0 });
+      }
+    }
+
     // 8. GET /api/stats (Database Health & Counts)
     if (pathname === '/api/stats' && req.method === 'GET') {
       try {
         const stats = await db.getStats();
+        if (db.getVisitStats) {
+          stats.visits = await db.getVisitStats();
+        }
         return sendJson(res, 200, stats);
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
@@ -465,7 +616,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const body = await readBody(req);
         const filename = body.filename || 'upload';
-        const base64 = body.base64 || body.image || body.dataUrl;
+        const base64 = body.base64 || body.image || body.dataUrl || body.imageBase64;
         if (!base64) {
           return sendJson(res, 400, { success: false, error: 'Missing base64 image data' });
         }
@@ -483,23 +634,25 @@ const server = http.createServer(async (req, res) => {
           buffer = Buffer.from(base64, 'base64');
         }
 
-        const safeBaseName = path.basename(filename, path.extname(filename))
+        const rawBaseName = path.basename(filename, path.extname(filename))
           .replace(/[^a-zA-Z0-9_-]/g, '_')
-          .toLowerCase() || 'upload';
-        const safeName = `sokhm_${safeBaseName}_${Date.now()}${ext}`;
-        const assetsDir = path.join(__dirname, 'assets');
-        if (!fs.existsSync(assetsDir)) {
-          fs.mkdirSync(assetsDir, { recursive: true });
+          .replace(/_+/g, '_')
+          .replace(/^_|_$/g, '')
+          .toLowerCase() || 'img';
+        const randSuffix = Math.random().toString(36).substring(2, 8);
+        const safeName = `sokhm_${rawBaseName}_${Date.now()}_${randSuffix}${ext}`;
+        if (!fs.existsSync(PERSISTENT_UPLOADS_DIR)) {
+          fs.mkdirSync(PERSISTENT_UPLOADS_DIR, { recursive: true });
         }
-        const destPath = path.join(assetsDir, safeName);
+        const destPath = path.join(PERSISTENT_UPLOADS_DIR, safeName);
 
         try {
           fs.writeFileSync(destPath, buffer);
           console.log(`Image uploaded successfully: ${safeName} (${buffer.length} bytes)`);
           return sendJson(res, 200, {
             success: true,
-            url: `assets/${safeName}`,
-            path: `assets/${safeName}`,
+            url: `assets/uploads/${safeName}`,
+            path: `assets/uploads/${safeName}`,
             name: safeName
           });
         } catch (writeErr) {
@@ -516,11 +669,11 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    return sendJson(res, 404, { error: 'API route not found' });
+    return sendJson(res, 404, { error: 'API route not found: ' + pathname });
   }
 
   // ================= STATIC FILE SERVING =================
-  let reqPath = pathname;
+  let reqPath = decodeURIComponent(pathname || '/');
   if (reqPath === '/' || reqPath === '') {
     reqPath = '/index.html';
   } else if (reqPath === '/admin.html' || reqPath === '/admin-sokhm') {
@@ -530,9 +683,40 @@ const server = http.createServer(async (req, res) => {
     reqPath = '/admin-sokhm/index.html';
   }
 
-  const filePath = path.join(__dirname, reqPath);
+  // Block sensitive server/database files from direct static access
+  const lowerReq = reqPath.toLowerCase();
+  if (
+    lowerReq.startsWith('/database/') ||
+    lowerReq.startsWith('/storage/') ||
+    lowerReq.startsWith('/.env') ||
+    lowerReq.startsWith('/.git') ||
+    lowerReq === '/server.js' ||
+    lowerReq.endsWith('.db') ||
+    lowerReq.endsWith('.db-wal') ||
+    lowerReq.endsWith('.db-shm')
+  ) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=UTF-8' });
+    return res.end('403 Forbidden');
+  }
+
+  let filePath = path.resolve(__dirname, '.' + reqPath);
+
+  // Serve persistent uploaded images from STORAGE_DIR/uploads when mapped to /assets/uploads/*
+  if (reqPath.startsWith('/assets/uploads/')) {
+    const uploadBase = path.basename(reqPath);
+    const persistentCandidate = path.join(PERSISTENT_UPLOADS_DIR, uploadBase);
+    if (fs.existsSync(persistentCandidate)) {
+      filePath = persistentCandidate;
+    }
+  } else if (!filePath.startsWith(path.resolve(__dirname))) {
+    // Path traversal guard
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=UTF-8' });
+    return res.end('403 Forbidden');
+  }
+
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+  const isImageOrFont = ['.png', '.jpg', '.jpeg', '.webp', '.avif', '.svg', '.ico', '.woff', '.woff2'].includes(ext);
 
   fs.readFile(filePath, (err, content) => {
     if (err) {
@@ -544,7 +728,13 @@ const server = http.createServer(async (req, res) => {
         res.end('500 Server Error: ' + err.code);
       }
     } else {
-      res.writeHead(200, { 'Content-Type': contentType });
+      const headers = { 'Content-Type': contentType };
+      if (isImageOrFont) {
+        headers['Cache-Control'] = 'public, max-age=86400';
+      } else if (ext === '.html') {
+        headers['Cache-Control'] = 'no-cache';
+      }
+      res.writeHead(200, headers);
       res.end(content);
     }
   });
@@ -562,8 +752,9 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-server.listen(PORT, () => {
-  console.log(`SOKHM STORE with CMS API is live at http://localhost:${PORT}`);
-  console.log(`Storefront: http://localhost:${PORT}/index.html`);
-  console.log(`Admin Portal: http://localhost:${PORT}/admin-sokhm/`);
+server.listen(PORT, HOST, () => {
+  console.log(`✦ SOKHM STORE Server is live at http://${HOST}:${PORT}`);
+  console.log(`✦ Storefront: http://localhost:${PORT}/index.html`);
+  console.log(`✦ Admin Portal: http://localhost:${PORT}/admin-sokhm/`);
+  console.log(`✦ Healthcheck: http://localhost:${PORT}/api/health`);
 });

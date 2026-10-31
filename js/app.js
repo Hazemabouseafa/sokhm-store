@@ -6,6 +6,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
   let products = [];
   let selectedModalSize = 'M';
+  let selectedModalColor = null;
+  let selectedModalColorIdx = 0;
   let activeModalProduct = null;
   let cart = [];
   let categories = [];
@@ -40,6 +42,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modalTitle = document.getElementById('modalTitle');
   const modalPrice = document.getElementById('modalPrice');
   const modalDesc = document.getElementById('modalDesc');
+  const modalColorSection = document.getElementById('modalColorSection');
+  const modalColorPicker = document.getElementById('modalColorPicker');
+  const modalSelectedColorLabel = document.getElementById('modalSelectedColorLabel');
   const modalSizePicker = document.getElementById('modalSizePicker');
   const modalAddToCartBtn = document.getElementById('modalAddToCartBtn');
 
@@ -132,12 +137,19 @@ document.addEventListener('DOMContentLoaded', async () => {
               show_on_homepage: p.show_on_homepage,
               showOnHomepage: p.showOnHomepage,
               slug: p.slug,
-              colors: (p.colors || []).map(c => ({
-                name: typeof c === 'object' ? c.name : c,
-                hex: typeof c === 'object' ? c.hex : '#111',
-                image: typeof c === 'object' ? c.image : p.image,
-                isMain: typeof c === 'object' ? Boolean(c.isMain) : false
-              })),
+              colors: (p.colors || []).map(c => {
+                const cObj = typeof c === 'object' && c !== null ? c : { name: c, hex: '#111' };
+                const urlImgs = Array.isArray(cObj.images)
+                  ? cObj.images.filter(im => typeof im === 'string' && !im.startsWith('data:image/'))
+                  : [];
+                return {
+                  name: cObj.name || 'Standard',
+                  hex: cObj.hex || '#111',
+                  image: cObj.image || p.image,
+                  images: urlImgs.length > 0 ? urlImgs : (cObj.image && !String(cObj.image).startsWith('data:image/') ? [cObj.image] : []),
+                  isMain: Boolean(cObj.isMain)
+                };
+              }),
               sizes: p.sizes
             }));
             localStorage.setItem('sokhm_products_cache_v1', JSON.stringify(compact));
@@ -453,16 +465,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       const mainImg = prod.image || (Array.isArray(prod.images) && prod.images[0]) || 'assets/sokhm-card-1.jpg';
       const priceNum = typeof prod.price === 'number' ? prod.price : (parseFloat(prod.price) || 0);
 
-      // Build swatches
+      // Build swatches (ensure strictly ONE active swatch matching main color)
       const colorsList = Array.isArray(prod.colors) ? prod.colors : [];
-      const hasExplicitMain = colorsList.some(c => (typeof c === 'object' && c.isMain) || (typeof c === 'object' && c.image === mainImg));
+      let initialColorIdx = colorsList.findIndex(c => typeof c === 'object' && c && c.isMain);
+      if (initialColorIdx < 0) {
+        initialColorIdx = colorsList.findIndex(c => typeof c === 'object' && c && c.image === mainImg);
+      }
+      if (initialColorIdx < 0) initialColorIdx = 0;
+
+      let activeCardColorIdx = initialColorIdx;
+      const initialActiveCol = colorsList[initialColorIdx];
+      const initialCardImg = (initialActiveCol && typeof initialActiveCol === 'object' && initialActiveCol.image)
+        ? initialActiveCol.image
+        : mainImg;
+
       const swatchesHtml = colorsList.map((col, idx) => {
         const hex = typeof col === 'object' ? (col.hex || '#111') : '#111';
         const name = typeof col === 'object' ? (col.name || 'Color') : col;
         const img = (typeof col === 'object' && col.image) ? col.image : mainImg;
-        const isActive = hasExplicitMain
-          ? ((typeof col === 'object' && col.isMain) || (typeof col === 'object' && col.image === mainImg))
-          : (idx === 0);
+        const isActive = (idx === initialColorIdx);
         return `
         <button 
           type="button"
@@ -470,13 +491,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           style="background-color: ${hex}" 
           title="${name}"
           data-image="${img}"
+          data-color-idx="${idx}"
+          data-color-name="${name.replace(/"/g, '&quot;')}"
         ></button>
       `;
       }).join('');
 
       card.innerHTML = `
         <div class="sokhm-card-media relative">
-          <img src="${mainImg}" alt="${prod.name}" class="card-product-img" loading="lazy">
+          <img src="${initialCardImg}" alt="${prod.name}" class="card-product-img" loading="lazy">
           
           <button type="button" class="wishlist-btn-dark" title="Add to Wishlist">
             <i data-lucide="heart" class="w-3.5 h-3.5 stroke-[1.8]"></i>
@@ -522,37 +545,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
 
-      // Quick View click
+      // Quick View click (preserves the exact color swatch clicked on the card)
       const quickViewBtn = card.querySelector('.quick-view-btn');
       if (quickViewBtn) {
         quickViewBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          openProductModal(prod);
+          openProductModal(prod, activeCardColorIdx);
         });
       }
 
       // Swatch click
       const swatchBtns = card.querySelectorAll('.swatch-dot-dark');
       const cardImg = card.querySelector('.card-product-img');
-      swatchBtns.forEach((btn) => {
+      swatchBtns.forEach((btn, idx) => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
+          activeCardColorIdx = idx;
           swatchBtns.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const newImg = btn.dataset.image;
-          if (newImg && cardImg) {
-            cardImg.style.opacity = '0.35';
-            setTimeout(() => {
-              cardImg.src = newImg;
-              cardImg.style.opacity = '1';
-            }, 100);
+          if (newImg && cardImg && cardImg.getAttribute('src') !== newImg) {
+            cardImg.src = newImg;
           }
         });
       });
 
-      // Navigate to dedicated product page
+      // Navigate to dedicated product page with selected color
       card.addEventListener('click', () => {
-        window.location.href = `product.html?id=${prod.id}`;
+        const pickedCol = colorsList[activeCardColorIdx];
+        const pickedName = pickedCol ? (typeof pickedCol === 'object' ? pickedCol.name : pickedCol) : '';
+        const colorQuery = pickedName ? `&color=${encodeURIComponent(pickedName)}&colorIdx=${activeCardColorIdx}` : '';
+        window.location.href = `product.html?id=${encodeURIComponent(prod.id)}${colorQuery}`;
       });
 
       noirBestSellersGrid.appendChild(card);
@@ -564,7 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ================= 3. PRODUCT MODAL =================
-  function openProductModal(prod) {
+  function openProductModal(prod, initialColorIndex = null) {
     activeModalProduct = prod;
     selectedModalSize = 'M';
 
@@ -572,12 +595,56 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.sokhmPixel.trackViewContent(prod);
     }
 
-    if (modalImg) modalImg.src = prod.image || (Array.isArray(prod.images) && prod.images[0]) || 'assets/sokhm-card-1.jpg';
+    const pMainImg = prod.image || (Array.isArray(prod.images) && prod.images[0]) || 'assets/sokhm-card-1.jpg';
+    const normalizedColors = (Array.isArray(prod.colors) && prod.colors.length > 0)
+      ? prod.colors.map(c => ({
+          name: typeof c === 'object' ? (c.name || 'Standard') : c,
+          hex: typeof c === 'object' ? (c.hex || '#111111') : '#111111',
+          image: (typeof c === 'object' && c.image) ? c.image : pMainImg,
+          isMain: typeof c === 'object' ? Boolean(c.isMain) : false
+        }))
+      : [{ name: 'Standard', hex: '#111111', image: pMainImg, isMain: true }];
+
+    let startIdx = (typeof initialColorIndex === 'number' && initialColorIndex >= 0 && initialColorIndex < normalizedColors.length)
+      ? initialColorIndex
+      : normalizedColors.findIndex(c => c.isMain);
+    if (startIdx < 0) startIdx = normalizedColors.findIndex(c => c.image === pMainImg);
+    if (startIdx < 0) startIdx = 0;
+
+    selectedModalColorIdx = startIdx;
+    selectedModalColor = normalizedColors[startIdx];
+
+    if (modalImg) modalImg.src = (selectedModalColor && selectedModalColor.image) || pMainImg;
     if (modalKicker) modalKicker.textContent = prod.categoryLabel || prod.category || '✦ SOKHM ATELIER';
     if (modalTitle) modalTitle.textContent = prod.name;
     const pNum = typeof prod.price === 'number' ? prod.price : (parseFloat(prod.price) || 0);
     if (modalPrice) modalPrice.textContent = prod.formattedPrice || `${pNum.toLocaleString('en-US')} EGP`;
     if (modalDesc) modalDesc.textContent = prod.description || '500 GSM architectural heavyweight combed cotton fleece. Built different.';
+
+    // Render Color Picker inside Quick View Modal
+    if (modalColorPicker) {
+      modalColorPicker.innerHTML = '';
+      if (modalSelectedColorLabel) {
+        modalSelectedColorLabel.textContent = selectedModalColor ? selectedModalColor.name : 'Standard';
+      }
+      normalizedColors.forEach((col, cIdx) => {
+        const sw = document.createElement('button');
+        sw.type = 'button';
+        sw.className = `product-swatch-dot ${cIdx === selectedModalColorIdx ? 'active' : ''}`;
+        sw.style.backgroundColor = col.hex || '#111111';
+        sw.title = col.name;
+        sw.setAttribute('aria-label', col.name);
+        sw.onclick = () => {
+          selectedModalColorIdx = cIdx;
+          selectedModalColor = col;
+          modalColorPicker.querySelectorAll('.product-swatch-dot').forEach(b => b.classList.remove('active'));
+          sw.classList.add('active');
+          if (modalSelectedColorLabel) modalSelectedColorLabel.textContent = col.name;
+          if (modalImg && col.image) modalImg.src = col.image;
+        };
+        modalColorPicker.appendChild(sw);
+      });
+    }
 
     // Size buttons (strictly dynamic for selected product)
     if (modalSizePicker) {
@@ -635,7 +702,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (modalAddToCartBtn) {
     modalAddToCartBtn.addEventListener('click', () => {
       if (!activeModalProduct) return;
-      addToBag(activeModalProduct, selectedModalSize);
+      addToBag(
+        activeModalProduct,
+        selectedModalSize,
+        selectedModalColor ? selectedModalColor.name : null,
+        selectedModalColor ? selectedModalColor.image : null
+      );
       productModal.close();
       openCart();
     });
@@ -662,9 +734,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (closeCartBtn) closeCartBtn.addEventListener('click', closeCart);
   if (cartBackdrop) cartBackdrop.addEventListener('click', closeCart);
 
-  function addToBag(product, size = 'M', colorName = null) {
-    const pMainImage = product.image || (Array.isArray(product.images) && product.images[0]) || 'assets/sokhm-card-1.jpg';
-    const cName = colorName || (Array.isArray(product.colors) && product.colors[0] ? (typeof product.colors[0] === 'object' ? product.colors[0].name : product.colors[0]) : 'Standard');
+  function addToBag(product, size = 'M', colorName = null, colorImage = null) {
+    const fallbackColor = Array.isArray(product.colors)
+      ? (product.colors.find(c => typeof c === 'object' && c.isMain) || product.colors[0])
+      : null;
+    const cName = colorName || (fallbackColor ? (typeof fallbackColor === 'object' ? fallbackColor.name : fallbackColor) : 'Standard');
+    const matchedColObj = Array.isArray(product.colors)
+      ? product.colors.find(c => typeof c === 'object' && c.name === cName)
+      : null;
+    const pMainImage = colorImage
+      || (matchedColObj && matchedColObj.image)
+      || product.image
+      || (Array.isArray(product.images) && product.images[0])
+      || 'assets/sokhm-card-1.jpg';
     const itemId = `${product.id}-${size}-${cName}`;
     const existing = cart.find(i => i.id === itemId);
     const priceNum = typeof product.price === 'number' ? product.price : (parseFloat(String(product.price).replace(/[^0-9.]/g, '')) || 0);
@@ -824,13 +906,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       matched.forEach(p => {
         const item = document.createElement('div');
+        const pThumb = p.image || (Array.isArray(p.images) && p.images[0]) || 'assets/sokhm-card-1.jpg';
+        const pPriceNum = typeof p.price === 'number' ? p.price : (parseFloat(p.price) || 0);
         item.className = 'p-2 rounded-lg hover:bg-neutral-900 border border-transparent hover:border-[#222] flex items-center justify-between cursor-pointer';
         item.innerHTML = `
           <div class="flex items-center gap-2.5">
-            <img src="${p.images[0]}" class="w-9 h-9 object-cover rounded border border-[#222]">
+            <img src="${pThumb}" class="w-9 h-9 object-cover rounded border border-[#222]">
             <span class="text-xs font-bold text-white uppercase">${p.name}</span>
           </div>
-          <span class="text-xs font-bold text-white">${p.formattedPrice || (p.price.toLocaleString() + ' EGP')}</span>
+          <span class="text-xs font-bold text-white">${p.formattedPrice || (pPriceNum.toLocaleString('en-US') + ' EGP')}</span>
         `;
         item.addEventListener('click', () => {
           searchDialog.close();

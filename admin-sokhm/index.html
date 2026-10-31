@@ -279,7 +279,11 @@
           </p>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <button id="exportOrdersCsvBtn" type="button" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/50">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>تصدير CSV (Export)</span>
+          </button>
           <button id="refreshOrdersBtn" class="px-4 py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             <span>تحديث الطلبات</span>
@@ -414,10 +418,16 @@
           </p>
         </div>
 
-        <button id="addNewProductBtn" class="px-5 py-2.5 rounded-full bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer shadow-lg whitespace-nowrap">
-          <i data-lucide="plus" class="w-4 h-4"></i>
-          <span>إضافة قطعة جديدة</span>
-        </button>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <button id="exportProductsCsvBtn" type="button" class="px-4 py-2.5 rounded-full border border-[#2A2A2A] hover:border-emerald-400 bg-[#111] hover:bg-emerald-500 hover:text-black text-emerald-400 font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>تصدير الكتالوج CSV</span>
+          </button>
+          <button id="addNewProductBtn" class="px-5 py-2.5 rounded-full bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer shadow-lg whitespace-nowrap">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>إضافة قطعة جديدة</span>
+          </button>
+        </div>
       </div>
 
       <!-- Filters & Search Toolbar -->
@@ -1418,7 +1428,11 @@
           </p>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <button id="exportShippingCsvBtn" type="button" class="px-4 py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black text-neutral-300 font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>تصدير الشحن CSV</span>
+          </button>
           <button id="saveShippingRatesBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/50">
             <i data-lucide="save" class="w-4 h-4"></i>
             <span>حفظ أسعار الشحن</span>
@@ -1605,7 +1619,11 @@
           </p>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <button id="exportDiscountsCsvBtn" type="button" class="px-4 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500 border border-emerald-500/40 text-emerald-400 hover:text-black font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>تصدير الأكواد CSV</span>
+          </button>
           <button id="refreshDiscountsBtn" class="px-4 py-2.5 rounded-xl border border-[#2A2A2A] hover:border-white bg-[#111] hover:bg-white hover:text-black font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             <span>تحديث الأكواد</span>
@@ -2227,6 +2245,105 @@
         </div>
       </div>
 
+      <!-- Data Export & CSV Hub (مركز سحب وتصدير البيانات CSV) -->
+      <div class="cms-card p-6 space-y-5 border border-emerald-900/40 bg-gradient-to-br from-[#0B0B0B] to-[#08120e]">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#1A1A1A]">
+          <div>
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
+              <span>مركز سحب وتصدير البيانات (Export CSV & Full Backup)</span>
+            </h3>
+            <p class="text-xs text-neutral-400 mt-1">
+              سحب تقارير المتجر بصيغة CSV متوافقة تماماً مع اللغة العربية في برنامج Excel و Google Sheets (UTF-8 BOM) وحفظ أرقام الهواتف المصرية بصيغتها الصحيحة.
+            </p>
+          </div>
+          <button id="exportFullBackupJsonBtn" type="button" class="px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-200 text-black font-extrabold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md whitespace-nowrap">
+            <i data-lucide="hard-drive-download" class="w-4 h-4"></i>
+            <span>نسخة احتياطية شاملة (JSON Backup)</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <button type="button" data-export-csv="orders" class="csv-export-trigger p-3.5 rounded-xl bg-[#0C0C0C] hover:bg-[#141414] border border-[#1E1E1E] hover:border-emerald-500/60 flex items-center justify-between transition-all cursor-pointer group text-right">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="font-bold text-white block group-hover:text-emerald-300 transition-colors">سجل الطلبات والمبيعات</span>
+                <span class="text-[10px] text-neutral-500 font-mono">Orders CSV</span>
+              </div>
+            </div>
+            <i data-lucide="download" class="w-4 h-4 text-neutral-500 group-hover:text-emerald-400"></i>
+          </button>
+
+          <button type="button" data-export-csv="customers" class="csv-export-trigger p-3.5 rounded-xl bg-[#0C0C0C] hover:bg-[#141414] border border-[#1E1E1E] hover:border-emerald-500/60 flex items-center justify-between transition-all cursor-pointer group text-right">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <i data-lucide="users" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="font-bold text-white block group-hover:text-blue-300 transition-colors">بيانات العملاء والهواتف</span>
+                <span class="text-[10px] text-neutral-500 font-mono">Customers CSV</span>
+              </div>
+            </div>
+            <i data-lucide="download" class="w-4 h-4 text-neutral-500 group-hover:text-blue-400"></i>
+          </button>
+
+          <button type="button" data-export-csv="products" class="csv-export-trigger p-3.5 rounded-xl bg-[#0C0C0C] hover:bg-[#141414] border border-[#1E1E1E] hover:border-emerald-500/60 flex items-center justify-between transition-all cursor-pointer group text-right">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <i data-lucide="shirt" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="font-bold text-white block group-hover:text-amber-300 transition-colors">كتالوج المنتجات والمخزون</span>
+                <span class="text-[10px] text-neutral-500 font-mono">Products CSV</span>
+              </div>
+            </div>
+            <i data-lucide="download" class="w-4 h-4 text-neutral-500 group-hover:text-amber-400"></i>
+          </button>
+
+          <button type="button" data-export-csv="discounts" class="csv-export-trigger p-3.5 rounded-xl bg-[#0C0C0C] hover:bg-[#141414] border border-[#1E1E1E] hover:border-emerald-500/60 flex items-center justify-between transition-all cursor-pointer group text-right">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
+                <i data-lucide="percent" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="font-bold text-white block group-hover:text-pink-300 transition-colors">أكواد الخصم والكوبونات</span>
+                <span class="text-[10px] text-neutral-500 font-mono">Discounts CSV</span>
+              </div>
+            </div>
+            <i data-lucide="download" class="w-4 h-4 text-neutral-500 group-hover:text-pink-400"></i>
+          </button>
+
+          <button type="button" data-export-csv="shipping" class="csv-export-trigger p-3.5 rounded-xl bg-[#0C0C0C] hover:bg-[#141414] border border-[#1E1E1E] hover:border-emerald-500/60 flex items-center justify-between transition-all cursor-pointer group text-right">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                <i data-lucide="truck" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="font-bold text-white block group-hover:text-cyan-300 transition-colors">أسعار الشحن (27 محافظة)</span>
+                <span class="text-[10px] text-neutral-500 font-mono">Shipping Rates CSV</span>
+              </div>
+            </div>
+            <i data-lucide="download" class="w-4 h-4 text-neutral-500 group-hover:text-cyan-400"></i>
+          </button>
+
+          <button type="button" data-export-csv="visits" class="csv-export-trigger p-3.5 rounded-xl bg-[#0C0C0C] hover:bg-[#141414] border border-[#1E1E1E] hover:border-emerald-500/60 flex items-center justify-between transition-all cursor-pointer group text-right">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="font-bold text-white block group-hover:text-purple-300 transition-colors">سجل وإحصائيات الزيارات</span>
+                <span class="text-[10px] text-neutral-500 font-mono">Visits Log CSV</span>
+              </div>
+            </div>
+            <i data-lucide="download" class="w-4 h-4 text-neutral-500 group-hover:text-purple-400"></i>
+          </button>
+        </div>
+      </div>
+
       <!-- Cloud Database Seed & Sync Tool -->
       <div class="cms-card p-6 space-y-4 border border-amber-900/30 bg-[#0B0B0B]">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2467,25 +2584,66 @@
         </div>
         
         <div class="p-3.5 bg-[#080808] rounded-xl border border-[#1A1A1A] space-y-3.5">
+          <!-- Quick Color Presets Bar -->
+          <div class="space-y-1.5">
+            <span class="text-[10px] text-neutral-400 font-bold block">اختيار سريع للألوان الأكثر طلباً (اضغط على اللون لتعبئته فوراً):</span>
+            <div id="quickColorPresetsBar" class="flex items-center gap-1.5 flex-wrap">
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="أسود فحمي / Onyx Black" data-hex="#0B0B0B">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#0B0B0B"></span><span>أسود</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="أبيض ناصع / Pure White" data-hex="#FFFFFF">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#FFFFFF"></span><span>أبيض</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="أوف وايت / Off-White" data-hex="#F5F2EB">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#F5F2EB"></span><span>أوف وايت</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="بيج رملي / Sand Cream" data-hex="#D6CDBF">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#D6CDBF"></span><span>بيج / Sand</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="رمادي أسمنتي / Cement Grey" data-hex="#8E8E8E">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#8E8E8E"></span><span>رمادي فاتح</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="رمادي داكن / Charcoal" data-hex="#2B2B2B">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#2B2B2B"></span><span>رمادي غامق</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="زيتي تكتيكي / Tactical Olive" data-hex="#3B4436">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#3B4436"></span><span>زيتي / Olive</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="كحلي ملكي / Midnight Navy" data-hex="#141E30">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#141E30"></span><span>كحلي / Navy</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="نبيتي / Burgundy" data-hex="#5C1624">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#5C1624"></span><span>نبيتي</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="بني إسبريسو / Espresso Brown" data-hex="#3E2723">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#3E2723"></span><span>بني</span>
+              </button>
+              <button type="button" class="quick-color-preset-btn px-2 py-1 rounded-lg bg-[#121212] hover:bg-[#1E1E1E] border border-[#262626] hover:border-white text-[10px] text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-all" data-name="بيبي بلو / Baby Blue" data-hex="#89CFF0">
+                <span class="w-3 h-3 rounded-full border border-white/30" style="background-color:#89CFF0"></span><span>بيبي بلو</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Color Add Inputs -->
           <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
             <!-- Name -->
-            <div class="sm:col-span-4">
-              <input type="text" id="newColorNameInput" placeholder="اسم اللون (مثال: أسود فحمي / Onyx Black)" class="cms-input w-full text-xs">
+            <div class="sm:col-span-3">
+              <input type="text" id="newColorNameInput" placeholder="اسم اللون (مثال: أسود فحمي)" class="cms-input w-full text-xs">
             </div>
-            <!-- Hex picker -->
-            <div class="sm:col-span-2 flex items-center gap-1.5">
-              <input type="color" id="newColorHexInput" value="#111111" class="w-8 h-8 p-0.5 rounded-lg bg-[#080808] border border-[#222] cursor-pointer flex-shrink-0">
-              <span id="newColorHexValueText" class="font-mono text-[10px] text-neutral-400">#111111</span>
+            <!-- Hex picker + editable hex text -->
+            <div class="sm:col-span-3 flex items-center gap-1.5">
+              <input type="color" id="newColorHexInput" value="#0B0B0B" class="w-9 h-9 p-0.5 rounded-lg bg-[#080808] border border-[#333] cursor-pointer flex-shrink-0" title="اضغط لاختيار درجة اللون">
+              <input type="text" id="newColorHexTextInput" value="#0B0B0B" maxlength="7" dir="ltr" class="cms-input w-full font-mono text-[11px] uppercase px-2 py-2" placeholder="#0B0B0B">
             </div>
             <!-- Image input & upload -->
             <div class="sm:col-span-4 flex items-center gap-1.5">
               <div class="relative flex-grow">
-                <input type="text" id="newColorImgInput" placeholder="رابط صورة هذا اللون أو ارفع ملفات..." class="cms-input w-full font-mono text-[11px] pr-8">
+                <input type="text" id="newColorImgInput" placeholder="رابط صورة أو اضغط رفع صور..." class="cms-input w-full font-mono text-[11px] pr-8">
                 <img id="newColorPreviewThumb" src="../assets/sokhm-card-1.jpg" class="w-5 h-5 rounded object-cover absolute right-1.5 top-1/2 -translate-y-1/2 border border-[#333]">
               </div>
-              <label class="p-2 rounded-lg bg-[#141414] hover:bg-white hover:text-black border border-[#2A2A2A] text-white text-[11px] font-bold cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors" title="رفع صورة أو عدة صور لهذا اللون من جهازك">
+              <label class="px-2.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 hover:text-black border border-emerald-500/40 text-emerald-400 text-[11px] font-bold cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors" title="اختر صورة أو عدة صور معاً لهذا اللون">
                 <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                <span>رفع صور</span>
                 <input type="file" id="newColorImgFileInput" accept="image/*" multiple class="hidden">
               </label>
             </div>
@@ -2600,6 +2758,6 @@
   </footer>
 
   <script src="../js/meta-pixel.js?v=1.0"></script>
-  <script src="js/admin.js?v=6.0"></script>
+  <script src="js/admin.js?v=7.0"></script>
 </body>
 </html>

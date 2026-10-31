@@ -18,7 +18,7 @@
   "author": "✦ SOKHM ATELIER",
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.5.0"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

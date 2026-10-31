@@ -1,23 +1,29 @@
 const path = require('path');
 const url = require('url');
+const { generateCsvExport, generateFullJsonBackup } = require('../database/csv-export.js');
 
-// Determine database adapter: Neon PostgreSQL, Turso Cloud, or native SQLite
+// Determine database adapter: Local SQLite (default for VPS/Coolify), Neon Cloud HTTP, or Turso Cloud
 function getDb() {
-  if (
+  const driver = String(process.env.DB_DRIVER || '').toLowerCase().trim();
+  if (driver === 'sqlite' || process.env.USE_LOCAL_SQLITE === 'true' || process.env.USE_LOCAL_SQLITE === '1') {
+    return require('../database/db.js');
+  }
+  const pgUrl =
+    process.env.NEON_DATABASE_URL ||
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_URL_NON_POOLING ||
-    process.env.NEON_DATABASE_URL
-  ) {
+    '';
+  if (driver === 'neon' || pgUrl.includes('neon.tech')) {
     return require('../database/neon.js');
   }
-  if (process.env.TURSO_DATABASE_URL) {
+  if (driver === 'turso' || process.env.TURSO_DATABASE_URL) {
     return require('../database/turso.js');
   }
   try {
     return require('../database/db.js');
   } catch (err) {
-    console.warn('Native SQLite unavailable, falling back to Neon/Turso adapter:', err.message);
+    console.warn('Native SQLite unavailable, falling back to Neon adapter:', err.message);
     return require('../database/neon.js');
   }
 }
@@ -93,6 +99,17 @@ module.exports = async (req, res) => {
   const db = getDb();
 
   try {
+    // 0. Healthcheck Endpoint (Coolify / Monitoring)
+    if (pathname === '/api/health' && req.method === 'GET') {
+      const stats = await db.getStats();
+      return sendJson(res, 200, {
+        status: 'ok',
+        service: 'sokhm-store',
+        engine: stats.engine,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // 1. Admin Authentication Endpoints
     if (pathname === '/api/admin/login' && req.method === 'POST') {
       const body = await parseBody(req);
@@ -171,6 +188,40 @@ module.exports = async (req, res) => {
       return sendJson(res, 200, { success: true, message: 'قاعدة البيانات جاهزة ومحدثة' });
     }
 
+    // 1.5 Admin Data Export (CSV & Full JSON Backup)
+    if (pathname === '/api/admin/export' && req.method === 'GET') {
+      const token = getBearerToken(req) || parsedUrl.searchParams.get('token');
+      const session = await db.validateSession(token);
+      if (!session) {
+        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لتصدير البيانات' });
+      }
+      const exportType = parsedUrl.searchParams.get('type') || 'orders';
+      const statusFilter = parsedUrl.searchParams.get('status') || 'all';
+      const { filename, csv } = await generateCsvExport(db, exportType, { status: statusFilter });
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'text/csv; charset=UTF-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.end(csv, 'utf8');
+    }
+
+    if (pathname === '/api/admin/backup-json' && req.method === 'GET') {
+      const token = getBearerToken(req) || parsedUrl.searchParams.get('token');
+      const session = await db.validateSession(token);
+      if (!session) {
+        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لتحميل النسخة الاحتياطية' });
+      }
+      const backup = await generateFullJsonBackup(db);
+      const filename = `sokhm-full-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.end(JSON.stringify(backup, null, 2), 'utf8');
+    }
+
     // 2. Site Content
     if (pathname === '/api/site-content') {
       if (req.method === 'GET') {
@@ -201,35 +252,37 @@ module.exports = async (req, res) => {
         if (queryId) {
           const prod = await db.getProductById(queryId);
           if (!prod) return sendJson(res, 404, { success: false, error: 'المنتج غير موجود' });
-          return sendJson(res, 200, prod, 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400');
+          return sendJson(res, 200, prod, 'public, max-age=0, s-maxage=15, stale-while-revalidate=60');
         }
 
         const isFull = parsedUrl.searchParams.get('full') === '1' || parsedUrl.searchParams.get('full') === 'true';
         const prods = await db.getProducts();
 
         if (isFull) {
-          return sendJson(res, 200, prods, 'public, max-age=15, s-maxage=60, stale-while-revalidate=600');
+          return sendJson(res, 200, prods);
         }
 
-        // Lightweight catalog for storefront listing:
-        // Strip heavy secondary gallery slide arrays (c.images) from each color object
-        // and keep only the thumbnail image needed for card display and color swatch switching.
+        // Storefront catalog: keep URL-based image arrays intact; only trim giant secondary base64 payloads
         const catalog = prods.map(p => {
           const colors = Array.isArray(p.colors) ? p.colors.map(c => {
-            if (typeof c === 'object' && c !== null) {
-              const { images, ...rest } = c;
-              return rest;
+            if (typeof c === 'object' && c !== null && Array.isArray(c.images)) {
+              const hasHeavyBase64 = c.images.some((im, i) => i > 0 && typeof im === 'string' && im.startsWith('data:image/') && im.length > 4096);
+              if (hasHeavyBase64) {
+                return { ...c, images: [c.images[0]] };
+              }
             }
             return c;
           }) : [];
+          const pImgs = Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []);
+          const hasHeavyRootBase64 = pImgs.some((im, i) => i > 0 && typeof im === 'string' && im.startsWith('data:image/') && im.length > 4096);
           return {
             ...p,
-            images: Array.isArray(p.images) && p.images.length > 0 ? [p.images[0]] : (p.image ? [p.image] : []),
+            images: hasHeavyRootBase64 ? [pImgs[0]] : pImgs,
             colors
           };
         });
 
-        return sendJson(res, 200, catalog, 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400');
+        return sendJson(res, 200, catalog, 'public, max-age=0, s-maxage=15, stale-while-revalidate=60');
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
@@ -259,7 +312,7 @@ module.exports = async (req, res) => {
       if (req.method === 'GET') {
         const prod = await db.getProductById(id);
         if (!prod) return sendJson(res, 404, { success: false, error: 'المنتج غير موجود' });
-        return sendJson(res, 200, prod, 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400');
+        return sendJson(res, 200, prod, 'public, max-age=0, s-maxage=15, stale-while-revalidate=60');
       }
       if (req.method === 'PUT') {
         const body = await parseBody(req);
@@ -447,7 +500,7 @@ module.exports = async (req, res) => {
     // 7. Base64 Image Upload
     if (pathname === '/api/upload-image' && req.method === 'POST') {
       const body = await parseBody(req);
-      const imgData = body.dataUrl || body.image || body.base64;
+      const imgData = body.dataUrl || body.image || body.base64 || body.imageBase64;
       if (imgData) {
         return sendJson(res, 200, { success: true, url: imgData });
       }

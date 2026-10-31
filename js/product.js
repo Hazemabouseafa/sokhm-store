@@ -15,12 +15,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentProduct = null;
   let selectedSize = 'M';
   let selectedColor = null;
+  let selectedColorIdx = -1;
+  let userPickedColorManually = false;
   let quantity = 1;
   let cart = [];
 
   // --- PARSE URL PARAMETERS ---
   const urlParams = new URLSearchParams(window.location.search);
   const targetId = urlParams.get('id') || 'sokhm-noir-01';
+  const requestedColorName = urlParams.get('color') ? urlParams.get('color').trim() : null;
+  const requestedColorIdx = urlParams.has('colorIdx') ? parseInt(urlParams.get('colorIdx'), 10) : -1;
 
   // --- DOM REFERENCES ---
   const pageTitle = document.getElementById('pageTitle');
@@ -323,10 +327,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     colorSwatchesContainer.innerHTML = '';
     selectedColorLabel.textContent = selectedColor ? selectedColor.name : 'Standard';
 
-    colorsList.forEach((col) => {
+    colorsList.forEach((col, idx) => {
       const swBtn = document.createElement('button');
       swBtn.type = 'button';
-      const isActive = selectedColor && (selectedColor.name === col.name);
+      const isActive = (selectedColorIdx >= 0)
+        ? (idx === selectedColorIdx)
+        : (selectedColor && selectedColor.name === col.name);
       swBtn.className = `product-swatch-dot ${isActive ? 'active' : ''}`;
       swBtn.style.backgroundColor = col.hex || '#000000';
       swBtn.title = col.name;
@@ -335,6 +341,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       swBtn.addEventListener('click', () => {
         colorSwatchesContainer.querySelectorAll('.product-swatch-dot').forEach(b => b.classList.remove('active'));
         swBtn.classList.add('active');
+        userPickedColorManually = true;
+        selectedColorIdx = idx;
         selectedColor = col;
         selectedColorLabel.textContent = col.name;
 
@@ -482,9 +490,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       : [{ name: 'Standard', hex: '#111', image: pMainImage, images: [pMainImage], isMain: true }];
 
-    if (!selectedColor || !productColors.some(c => c.name === selectedColor.name)) {
-      selectedColor = productColors.find(c => c.isMain || c.image === pMainImage) || productColors[0];
+    // Resolve active color index AND ALWAYS refresh selectedColor reference from latest productColors
+    // (fixes stale 1-image localStorage cache object preventing multi-image gallery upgrade!)
+    let resolvedIdx = -1;
+    if (userPickedColorManually && selectedColorIdx >= 0 && selectedColorIdx < productColors.length) {
+      resolvedIdx = selectedColorIdx;
+    } else if (userPickedColorManually && selectedColor) {
+      resolvedIdx = productColors.findIndex(c => c.name === selectedColor.name);
     }
+
+    if (resolvedIdx < 0 && requestedColorIdx >= 0 && requestedColorIdx < productColors.length) {
+      resolvedIdx = requestedColorIdx;
+    }
+    if (resolvedIdx < 0 && requestedColorName) {
+      resolvedIdx = productColors.findIndex(c => c.name.toLowerCase() === requestedColorName.toLowerCase());
+    }
+    if (resolvedIdx < 0) {
+      resolvedIdx = productColors.findIndex(c => c.isMain);
+    }
+    if (resolvedIdx < 0) {
+      resolvedIdx = productColors.findIndex(c => c.image === pMainImage);
+    }
+    if (resolvedIdx < 0) {
+      resolvedIdx = 0;
+    }
+
+    selectedColorIdx = resolvedIdx;
+    selectedColor = productColors[resolvedIdx];
 
     if (pageTitle) pageTitle.textContent = `✦ SOKHM | ${prod.name}`;
     if (breadcrumbCurrent) breadcrumbCurrent.textContent = prod.name;
@@ -535,7 +567,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const parsed = JSON.parse(cachedProds);
       if (Array.isArray(parsed) && parsed.length > 0) {
         products = parsed;
-        const initialTarget = products.find(p => p.id === targetId || p.slug === targetId) || products[0];
+        const initialTarget = products.find(p => p.id === targetId || p.slug === targetId);
         if (initialTarget) {
           hydrateProductUI(initialTarget);
         }
@@ -543,10 +575,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (_) {}
 
-  // ================= 1. FETCH TARGET PRODUCT VIA EDGE CDN =================
+  // ================= 1. FETCH TARGET PRODUCT =================
   let apiLoaded = false;
   try {
-    const apiRes = await fetch(`/api/products/${encodeURIComponent(targetId)}`);
+    const apiRes = await fetch(`/api/products/${encodeURIComponent(targetId)}?_t=${Date.now()}`, { cache: 'no-store' });
     if (apiRes.ok) {
       const data = await apiRes.json();
       if (data && data.id) {
