@@ -5,9 +5,10 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   // ================= 0. التحقق من الهوية والأمان (AUTH GUARD) =================
+  const LOGIN_PAGE_URL = window.location.protocol === 'file:' ? 'login.html' : '/admin-sokhm/login.html';
   const token = localStorage.getItem('sokhm_admin_token') || getCookie('sokhm_admin_token');
   if (!token) {
-    window.location.replace('login.html');
+    window.location.replace(LOGIN_PAGE_URL);
     return;
   }
 
@@ -28,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!token.startsWith('sokhm_sess_')) {
         localStorage.removeItem('sokhm_admin_token');
         document.cookie = 'sokhm_admin_token=; path=/; max-age=0;';
-        window.location.replace('login.html');
+        window.location.replace(LOGIN_PAGE_URL);
         return;
       }
     }
@@ -240,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {}
         localStorage.removeItem('sokhm_admin_token');
         document.cookie = 'sokhm_admin_token=; path=/; max-age=0;';
-        window.location.href = 'login.html';
+        window.location.href = LOGIN_PAGE_URL;
       });
     }
 

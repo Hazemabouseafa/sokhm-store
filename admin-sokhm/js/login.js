@@ -27,6 +27,8 @@
 
   if (window.lucide) window.lucide.createIcons();
 
+  const ADMIN_HOME_URL = window.location.protocol === 'file:' ? 'index.html' : '/admin-sokhm/';
+
   // If already logged in, check session with backend
   const existingToken = localStorage.getItem('sokhm_admin_token') || getCookie('sokhm_admin_token');
   if (existingToken && existingToken.length > 5) {
@@ -37,7 +39,7 @@
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         if (data && data.authenticated) {
-          window.location.replace('index.html');
+          window.location.replace(ADMIN_HOME_URL);
           return;
         }
       }
@@ -46,7 +48,7 @@
     .catch(() => {
       // Offline fallback: if token starts with sokhm_sess_
       if (existingToken.startsWith('sokhm_sess_')) {
-        window.location.replace('index.html');
+        window.location.replace(ADMIN_HOME_URL);
       }
     });
   }
@@ -142,7 +144,7 @@
 
         successAlert.classList.remove('hidden');
         setTimeout(() => {
-          window.location.replace('index.html');
+          window.location.replace(ADMIN_HOME_URL);
         }, 300);
       } else {
         errorText.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة. يرجى كتابة: websiteadmin';

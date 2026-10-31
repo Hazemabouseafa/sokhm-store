@@ -674,13 +674,37 @@ const server = http.createServer(async (req, res) => {
 
   // ================= STATIC FILE SERVING =================
   let reqPath = decodeURIComponent(pathname || '/');
+  const lowerPathOnly = reqPath.toLowerCase();
+
+  // Friendly Admin & Auth URL routing (supports /admin, /admin-sokhm, /dashboard, /login, etc.)
   if (reqPath === '/' || reqPath === '') {
     reqPath = '/index.html';
-  } else if (reqPath === '/admin.html' || reqPath === '/admin-sokhm') {
+  } else if (
+    lowerPathOnly === '/admin' ||
+    lowerPathOnly === '/admin/' ||
+    lowerPathOnly === '/admin.html' ||
+    lowerPathOnly === '/admin-sokhm' ||
+    lowerPathOnly === '/dashboard' ||
+    lowerPathOnly === '/dashboard/'
+  ) {
     res.writeHead(302, { Location: '/admin-sokhm/' });
     return res.end();
-  } else if (reqPath === '/admin-sokhm/') {
+  } else if (
+    lowerPathOnly === '/login' ||
+    lowerPathOnly === '/login/' ||
+    lowerPathOnly === '/login.html' ||
+    lowerPathOnly === '/admin/login' ||
+    lowerPathOnly === '/admin/login/' ||
+    lowerPathOnly === '/admin/login.html' ||
+    lowerPathOnly === '/admin-sokhm/login' ||
+    lowerPathOnly === '/admin-sokhm/login/'
+  ) {
+    res.writeHead(302, { Location: '/admin-sokhm/login.html' });
+    return res.end();
+  } else if (lowerPathOnly === '/admin-sokhm/' || lowerPathOnly === '/admin-sokhm/index') {
     reqPath = '/admin-sokhm/index.html';
+  } else if (lowerPathOnly.startsWith('/admin/')) {
+    reqPath = '/admin-sokhm/' + reqPath.slice('/admin/'.length);
   }
 
   // Block sensitive server/database files from direct static access
@@ -713,6 +737,18 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(403, { 'Content-Type': 'text/plain; charset=UTF-8' });
     return res.end('403 Forbidden');
   }
+
+  // Support clean extensionless URLs (e.g. /product -> /product.html) and directory index.html fallback
+  try {
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+      const idxCandidate = path.join(filePath, 'index.html');
+      if (fs.existsSync(idxCandidate)) {
+        filePath = idxCandidate;
+      }
+    } else if (!path.extname(filePath) && fs.existsSync(filePath + '.html')) {
+      filePath = filePath + '.html';
+    }
+  } catch (_) {}
 
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
