@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 1. Slide inside track
       const slide = document.createElement('div');
       slide.className = 'gallery-slider-slide';
-      slide.innerHTML = `<img src="${imgSrc}" alt="${currentProduct ? currentProduct.name : 'Product'} - View ${idx + 1}" loading="${idx === 0 ? 'eager' : 'lazy'}" onerror="this.src='assets/sokhm-card-1.jpg'">`;
+      slide.innerHTML = `<img src="${imgSrc}" alt="${currentProduct ? currentProduct.name : 'Product'} - View ${idx + 1}" loading="${idx === 0 ? 'eager' : 'lazy'}" fetchpriority="${idx === 0 ? 'high' : 'auto'}" decoding="async" onerror="this.src='assets/sokhm-card-1.jpg'">`;
       gallerySliderTrack.appendChild(slide);
 
       // 2. Pagination Dot
@@ -243,8 +243,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (galleryThumbnails) {
         const thumbBtn = document.createElement('button');
         thumbBtn.type = 'button';
-        thumbBtn.className = `aspect-[3/4] rounded-[8px] overflow-hidden border ${idx === 0 ? 'border-white ring-1 ring-white' : 'border-[#222]'} cursor-pointer bg-[#111] transition-all hover:border-neutral-500`;
-        thumbBtn.innerHTML = `<img src="${imgSrc}" class="w-full h-full object-cover object-center" onerror="this.src='assets/sokhm-card-1.jpg'">`;
+        thumbBtn.className = `aspect-[3/4] rounded-[8px] overflow-hidden border ${idx === 0 ? 'border-white ring-1 ring-white' : 'border-[#222]'} cursor-pointer bg-[#111] transition-all hover:border-neutral-500 p-0.5`;
+        thumbBtn.innerHTML = `<img src="${imgSrc}" class="w-full h-full object-contain object-center" loading="lazy" decoding="async" onerror="this.src='assets/sokhm-card-1.jpg'">`;
         thumbBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           scrollToSlide(idx);
@@ -551,6 +551,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Related Hoodies
     renderRelatedHoodies();
+
+    // Preload all color variant images in background so clicking any swatch switches in 0ms
+    if (Array.isArray(productColors) && productColors.length > 1) {
+      setTimeout(() => {
+        productColors.forEach(c => {
+          if (c && c.image) {
+            const im = new Image();
+            im.decoding = 'async';
+            im.src = c.image;
+          }
+          if (c && Array.isArray(c.images)) {
+            c.images.forEach(u => {
+              if (u) {
+                const im = new Image();
+                im.decoding = 'async';
+                im.src = u;
+              }
+            });
+          }
+        });
+      }, 150);
+    }
+
+    // Load Customer Reviews for this product
+    loadProductReviews(prod.id || targetId);
 
     // Meta Pixel ViewContent event
     if (window.sokhmPixel && typeof window.sokhmPixel.trackViewContent === 'function') {
@@ -1176,6 +1201,95 @@ document.addEventListener('DOMContentLoaded', async () => {
           else el.classList.remove('hidden');
         }
       });
+    } catch (_) {}
+  }
+
+  // ================= CUSTOMER REVIEWS FOR PRODUCT PAGE =================
+  function renderProductReviews(reviewsList) {
+    const section = document.getElementById('productReviewsSection');
+    const grid = document.getElementById('productReviewsGrid');
+    const avgBadge = document.getElementById('prodReviewsAvgBadge');
+    const totalBadge = document.getElementById('prodReviewsTotalBadge');
+    const topRatingText = document.getElementById('productRatingText');
+    const topCountText = document.getElementById('productReviewsCountText');
+    if (!grid || !section) return;
+
+    const list = Array.isArray(reviewsList) ? reviewsList : [];
+    if (list.length === 0) {
+      section.classList.add('hidden');
+      return;
+    }
+    section.classList.remove('hidden');
+
+    const totalRating = list.reduce((sum, r) => sum + (Number(r.rating) || 5), 0);
+    const avg = (totalRating / list.length).toFixed(2);
+    if (avgBadge) avgBadge.textContent = avg;
+    if (totalBadge) totalBadge.textContent = `${list.length} تقييم موثق`;
+    if (topRatingText) topRatingText.textContent = avg;
+    if (topCountText) topCountText.textContent = `(${list.length} تقييم)`;
+
+    grid.innerHTML = list.map((rev) => {
+      const rating = Math.min(5, Math.max(1, Number(rev.rating) || 5));
+      const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+      const name = String(rev.customerName || rev.customer_name || 'عميل SOKHM').replace(/</g, '&lt;');
+      const loc = String(rev.customerLocation || rev.customer_location || 'مصر').replace(/</g, '&lt;');
+      const comment = String(rev.comment || '').replace(/</g, '&lt;');
+      const prodBadge = String(rev.productName || rev.product_name || 'SOKHM Collection').replace(/</g, '&lt;');
+      const initial = name.trim().charAt(0) || 'S';
+
+      return `
+        <article class="sokhm-review-card">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <span class="text-amber-400 text-sm tracking-widest font-mono">${stars}</span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-[10px] font-bold">
+                <span>✓</span>
+                <span>عميل موثق</span>
+              </span>
+            </div>
+            <p class="text-xs sm:text-[13px] text-neutral-200 leading-relaxed font-sans mb-4">"${comment}"</p>
+          </div>
+          <div class="pt-3 border-t border-[#1D1D1D] flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                ${initial}
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-bold text-white truncate">${name}</h4>
+                <span class="text-[10px] text-neutral-400 block truncate">${loc}</span>
+              </div>
+            </div>
+            <span class="text-[9px] font-mono text-neutral-400 bg-[#161616] border border-[#262626] px-2 py-1 rounded truncate max-w-[120px]">
+              ${prodBadge}
+            </span>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  let loadedReviewsForProduct = null;
+  async function loadProductReviews(prodId) {
+    if (!prodId || loadedReviewsForProduct === prodId) return;
+    loadedReviewsForProduct = prodId;
+    try {
+      const cached = localStorage.getItem('sokhm_reviews_cache_v1');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          renderProductReviews(parsed);
+        }
+      }
+    } catch (_) {}
+
+    try {
+      const res = await fetch(`/api/reviews?productId=${encodeURIComponent(prodId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          renderProductReviews(data);
+        }
+      }
     } catch (_) {}
   }
 

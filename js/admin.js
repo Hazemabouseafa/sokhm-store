@@ -79,6 +79,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let modalColorsList = [];
   let discounts = [];
   let pendingNewColorImages = [];
+  let reviews = [];
+  let dailyVisitsHistory = [];
+  let selectedVisitDateFilter = '';
 
   // عناصر النوافذ المنبثقة
   const productModal = document.getElementById('productEditModal');
@@ -150,6 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupCategoriesHandlers();
     setupProductsHandlers();
     setupDiscountsHandlers();
+    setupReviewsHandlers();
     setupModalHandlers();
     setupInvoiceHandlers();
     setupSecurityHandlers();
@@ -177,11 +181,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadProducts().then(() => {
           renderProductsTable();
           populateCategoryDropdowns();
+          populateReviewProductDropdown();
         }).catch(e => console.warn('Products render error:', e)),
 
         loadDiscounts().then(() => {
           renderDiscounts();
         }).catch(e => console.warn('Discounts render error:', e)),
+
+        loadReviews().then(() => {
+          renderReviewsAdmin();
+        }).catch(e => console.warn('Reviews render error:', e)),
 
         loadVisitStats().catch(e => console.warn('Visit stats error:', e)),
         loadDbStats().catch(e => console.warn('Db stats error:', e))
@@ -297,6 +306,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     } else if (targetTabId === 'tab-support') {
       populateSupportForm();
+    } else if (targetTabId === 'tab-reviews') {
+      populateReviewProductDropdown();
+      loadReviews().then(() => renderReviewsAdmin());
     } else if (targetTabId === 'tab-pixel') {
       populateMetaPixelForm();
     } else if (targetTabId === 'tab-settings') {
@@ -396,6 +408,109 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (todayEl) todayEl.textContent = `+${today.toLocaleString('en-US')} اليوم`;
     if (uniqueEl) uniqueEl.textContent = `${unique.toLocaleString('en-US')} زائر فريد`;
     if (headerVisitsEl) headerVisitsEl.textContent = total.toLocaleString('en-US');
+
+    dailyVisitsHistory = Array.isArray(data.dailyHistory) ? data.dailyHistory : [];
+    renderVisitsByDateTable();
+  }
+
+  function getArabicWeekdayName(dateStr) {
+    try {
+      const d = new Date(dateStr + 'T12:00:00Z');
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('ar-EG', { weekday: 'long' });
+    } catch (_) {
+      return '-';
+    }
+  }
+
+  function renderVisitsByDateTable() {
+    const tbody = document.getElementById('visitsByDateTableBody');
+    const summaryBanner = document.getElementById('selectedDateVisitsSummary');
+    const summaryLabel = document.getElementById('selectedDateVisitsLabel');
+    const summaryTotal = document.getElementById('selectedDateTotalCount');
+    const summaryUnique = document.getElementById('selectedDateUniqueCount');
+    if (!tbody) return;
+
+    const allDays = Array.isArray(dailyVisitsHistory) ? dailyVisitsHistory : [];
+    let filteredDays = allDays;
+
+    if (selectedVisitDateFilter) {
+      filteredDays = allDays.filter(row => row.date === selectedVisitDateFilter);
+      if (summaryBanner) {
+        summaryBanner.classList.remove('hidden');
+        const matched = filteredDays[0] || { visits: 0, uniqueVisitors: 0, dateLabel: selectedVisitDateFilter };
+        if (summaryLabel) summaryLabel.textContent = `إحصائيات يوم ${matched.dateLabel || selectedVisitDateFilter} (${selectedVisitDateFilter}):`;
+        if (summaryTotal) summaryTotal.textContent = (Number(matched.visits) || 0).toLocaleString('en-US');
+        if (summaryUnique) summaryUnique.textContent = (Number(matched.uniqueVisitors) || 0).toLocaleString('en-US');
+      }
+    } else if (summaryBanner) {
+      summaryBanner.classList.add('hidden');
+    }
+
+    if (filteredDays.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="py-6 text-center text-neutral-500 font-mono">
+            ${selectedVisitDateFilter
+              ? `لا توجد زيارات مسجلة في تاريخ ${selectedVisitDateFilter} (0 زيارة)`
+              : 'لا توجد زيارات مسجلة حالياً في السجل اليومي'}
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    const maxVisits = Math.max(1, ...allDays.map(r => Number(r.visits) || 0));
+
+    tbody.innerHTML = filteredDays.map(row => {
+      const vCount = Number(row.visits) || 0;
+      const uCount = Number(row.uniqueVisitors) || 0;
+      const pct = Math.min(100, Math.max(6, Math.round((vCount / maxVisits) * 100)));
+      const dayName = getArabicWeekdayName(row.date);
+      return `
+        <tr class="hover:bg-[#111] transition-colors">
+          <td class="py-2.5 px-4 font-mono font-bold text-white">${row.date}</td>
+          <td class="py-2.5 px-4 text-neutral-300 font-bold">${row.dateLabel || dayName}</td>
+          <td class="py-2.5 px-4 font-mono font-extrabold text-purple-300">${vCount.toLocaleString('en-US')} زيارة</td>
+          <td class="py-2.5 px-4 font-mono text-emerald-400 font-bold">${uCount.toLocaleString('en-US')} زائر فريد</td>
+          <td class="py-2.5 px-4 w-40">
+            <div class="w-full h-2 rounded-full bg-[#191919] overflow-hidden">
+              <div class="h-full rounded-full bg-gradient-to-r from-purple-500 to-emerald-400" style="width:${pct}%"></div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function handleResetVisitsCounter() {
+    if (!confirm('هل أنت متأكد من تصفير عداد الزيارات وسجل الزيارات اليومي بالكامل والبدء من الصفر (0)؟\n(ملاحظة: هذا الإجراء يصفر الزيارات فقط ولا يؤثر إطلاقاً على المنتجات أو الطلبات).')) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/visits/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token,
+          'x-admin-token': token
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        selectedVisitDateFilter = '';
+        const dateIn = document.getElementById('visitDateFilterInput');
+        if (dateIn) dateIn.value = '';
+        renderVisitStats(data);
+        showToast('تم تصفير عداد الزيارات وسجل الزيارات اليومي بنجاح!');
+      } else {
+        alert('تعذر تصفير عداد الزيارات. يرجى المحاولة مرة أخرى.');
+      }
+    } catch (err) {
+      alert('خطأ في الاتصال بالسيرفر: ' + err.message);
+    }
   }
 
   function renderOrdersTable() {
@@ -623,6 +738,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderOrdersTable();
       });
     });
+
+    // Visits by Date Filter & Reset Handlers
+    const visitDateInput = document.getElementById('visitDateFilterInput');
+    if (visitDateInput) {
+      visitDateInput.addEventListener('change', (e) => {
+        selectedVisitDateFilter = e.target.value.trim();
+        renderVisitsByDateTable();
+      });
+    }
+
+    const clearVisitDateBtn = document.getElementById('clearVisitDateFilterBtn');
+    if (clearVisitDateBtn) {
+      clearVisitDateBtn.addEventListener('click', () => {
+        selectedVisitDateFilter = '';
+        if (visitDateInput) visitDateInput.value = '';
+        renderVisitsByDateTable();
+      });
+    }
+
+    const toggleVisitsHistoryBtn = document.getElementById('toggleVisitsHistoryBtn');
+    const visitsByDatePanel = document.getElementById('visitsByDatePanel');
+    if (toggleVisitsHistoryBtn && visitsByDatePanel) {
+      toggleVisitsHistoryBtn.addEventListener('click', () => {
+        visitsByDatePanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        visitsByDatePanel.classList.add('ring-2', 'ring-purple-500');
+        setTimeout(() => visitsByDatePanel.classList.remove('ring-2', 'ring-purple-500'), 1500);
+      });
+    }
+
+    const resetVisitsBtn = document.getElementById('resetVisitsBtn');
+    if (resetVisitsBtn) {
+      resetVisitsBtn.addEventListener('click', handleResetVisitsCounter);
+    }
+
+    const resetVisitsQuickBtn = document.getElementById('resetVisitsQuickBtn');
+    if (resetVisitsQuickBtn) {
+      resetVisitsQuickBtn.addEventListener('click', handleResetVisitsCounter);
+    }
   }
 
   function openInvoiceModal(order) {
@@ -4090,6 +4243,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
+    const exportReviewsBtn = document.getElementById('exportReviewsCsvBtn');
+    if (exportReviewsBtn) {
+      exportReviewsBtn.addEventListener('click', () => {
+        downloadCsvExport('reviews', {}, exportReviewsBtn);
+      });
+    }
+
     // Export Center cards in Settings tab
     document.querySelectorAll('.csv-export-trigger').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -4148,6 +4308,191 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
     }
+  }
+
+  // ================= 12.5. إدارة آراء وتقييمات العملاء (CUSTOMER REVIEWS MANAGER) =================
+  async function loadReviews() {
+    try {
+      const res = await fetch('/api/reviews');
+      if (res.ok) {
+        const data = await res.json();
+        reviews = Array.isArray(data) ? data : [];
+      }
+    } catch (e) {
+      console.warn('Failed to load reviews:', e);
+    }
+    if (!Array.isArray(reviews)) reviews = [];
+    const headerBadge = document.getElementById('reviewsHeaderCountBadge');
+    if (headerBadge) headerBadge.textContent = reviews.length;
+  }
+
+  function populateReviewProductDropdown() {
+    const sel = document.getElementById('reviewProductId');
+    if (!sel) return;
+    const currentVal = sel.value || 'all';
+    const prodsList = Array.isArray(products) ? products : [];
+    sel.innerHTML = `<option value="all">جميع المنتجات والصفحة الرئيسية (عام)</option>` +
+      prodsList.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    sel.value = currentVal;
+  }
+
+  function renderReviewsAdmin() {
+    const listContainer = document.getElementById('reviewsAdminList');
+    const countText = document.getElementById('reviewsTotalCountText');
+    const headerBadge = document.getElementById('reviewsHeaderCountBadge');
+    if (headerBadge) headerBadge.textContent = reviews.length;
+    if (countText) countText.textContent = `${reviews.length} تقييم`;
+    if (!listContainer) return;
+
+    if (!Array.isArray(reviews) || reviews.length === 0) {
+      listContainer.innerHTML = `
+        <div class="p-8 text-center text-neutral-500 border border-dashed border-[#222] rounded-xl">
+          لا توجد تقييمات مضافة حالياً. استخدم النموذج لإضافة أول تقييم عميل!
+        </div>
+      `;
+      return;
+    }
+
+    listContainer.innerHTML = reviews.map(rev => {
+      const rating = Math.min(5, Math.max(1, Number(rev.rating) || 5));
+      const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+      const showHome = rev.showOnHomepage !== false && rev.show_on_homepage !== 0;
+      const prodLabel = rev.productName || rev.product_name || 'جميع المنتجات';
+      return `
+        <div class="p-4 rounded-xl bg-[#090909] border border-[#1E1E1E] hover:border-[#333] transition-all space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-xs">${rev.customerName || rev.customer_name}</span>
+              <span class="text-[10px] text-neutral-400">(${rev.customerLocation || rev.customer_location || 'مصر'})</span>
+              <span class="text-amber-400 font-mono text-xs tracking-widest">${stars}</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" class="toggle-review-home-btn px-2.5 py-1 rounded-lg text-[10px] font-bold border cursor-pointer transition-all ${showHome ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60' : 'bg-neutral-900 text-neutral-400 border-neutral-800'}" data-review-id="${rev.id}" title="تبديل الظهور في الصفحة الرئيسية">
+                ${showHome ? '✓ معروض بالرئيسية' : 'مخفي من الرئيسية'}
+              </button>
+              <button type="button" class="delete-review-btn p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/70 text-red-400 border border-red-900/40 cursor-pointer transition-colors" data-review-id="${rev.id}" title="حذف التقييم">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+          <p class="text-xs text-neutral-300 leading-relaxed">"${rev.comment || ''}"</p>
+          <div class="flex items-center justify-between text-[10px] text-neutral-500 font-mono pt-1 border-t border-[#151515]">
+            <span>المنتج: <strong class="text-neutral-300">${prodLabel}</strong></span>
+            <span>${formatCairoDate(rev.createdAt || rev.created_at)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    setupLucide();
+
+    listContainer.querySelectorAll('.toggle-review-home-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-review-id');
+        try {
+          const res = await fetch(`/api/reviews/${encodeURIComponent(id)}/toggle`, {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            }
+          });
+          if (res.ok) {
+            await loadReviews();
+            renderReviewsAdmin();
+            try { localStorage.removeItem('sokhm_reviews_cache_v1'); } catch (_) {}
+            showToast('تم تحديث حالة ظهور التقييم في الصفحة الرئيسية');
+          }
+        } catch (err) {
+          alert('تعذر تحديث حالة التقييم');
+        }
+      });
+    });
+
+    listContainer.querySelectorAll('.delete-review-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-review-id');
+        if (!confirm('هل أنت متأكد من حذف هذا التقييم نهائياً؟')) return;
+        try {
+          const res = await fetch(`/api/reviews/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            }
+          });
+          if (res.ok) {
+            await loadReviews();
+            renderReviewsAdmin();
+            try { localStorage.removeItem('sokhm_reviews_cache_v1'); } catch (_) {}
+            showToast('تم حذف التقييم بنجاح');
+          }
+        } catch (err) {
+          alert('تعذر حذف التقييم');
+        }
+      });
+    });
+  }
+
+  function setupReviewsHandlers() {
+    const form = document.getElementById('createReviewForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const customerName = document.getElementById('reviewCustomerName')?.value.trim();
+      const customerLocation = document.getElementById('reviewCustomerLocation')?.value.trim() || 'مصر';
+      const rating = parseInt(document.getElementById('reviewRating')?.value || '5', 10);
+      const productId = document.getElementById('reviewProductId')?.value || 'all';
+      const comment = document.getElementById('reviewComment')?.value.trim();
+      const showOnHomepage = document.getElementById('reviewShowOnHomepage')?.checked !== false;
+
+      if (!customerName || !comment) {
+        alert('يرجى إدخال اسم العميل ونص التقييم');
+        return;
+      }
+
+      let productName = 'SOKHM Collection';
+      if (productId !== 'all') {
+        const matchedProd = (Array.isArray(products) ? products : []).find(p => p.id === productId);
+        if (matchedProd) productName = matchedProd.name;
+      }
+
+      try {
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+            'x-admin-token': token
+          },
+          body: JSON.stringify({
+            customerName,
+            customerLocation,
+            rating,
+            productId,
+            productName,
+            comment,
+            showOnHomepage
+          })
+        });
+
+        if (res.ok) {
+          form.reset();
+          const showCb = document.getElementById('reviewShowOnHomepage');
+          if (showCb) showCb.checked = true;
+          await loadReviews();
+          renderReviewsAdmin();
+          try { localStorage.removeItem('sokhm_reviews_cache_v1'); } catch (_) {}
+          showToast('تم إضافة ونشر تقييم العميل بنجاح ✦');
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.error || 'تعذر إضافة التقييم');
+        }
+      } catch (err) {
+        alert('خطأ في الاتصال بالسيرفر: ' + err.message);
+      }
+    });
   }
 
   // Start initialization

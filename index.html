@@ -396,7 +396,7 @@
 
               html += '<div class="sokhm-card flex flex-col group cursor-pointer" onclick="window.location.href=\'product.html?id=' + (p.id || p.slug) + '\'">' +
                 '<div class="sokhm-card-media relative">' +
-                  '<img src="' + mainImg + '" alt="' + (p.name || '') + '" class="card-product-img" loading="eager">' +
+                  '<img src="' + mainImg + '" alt="' + (p.name || '') + '" class="card-product-img" loading="eager" decoding="async">' +
                 '</div>' +
                 '<div class="pt-2.5 px-1 flex flex-col space-y-1 font-mono">' +
                   '<h3 class="text-xs font-bold text-white group-hover:text-neutral-300 transition-colors uppercase tracking-wider">' + (p.name || '') + '</h3>' +
@@ -411,6 +411,28 @@
         })();
       </script>
 
+    </section>
+
+    <!-- ================= 4.5. CUSTOMER REVIEWS & TESTIMONIALS (AFTER PRODUCTS) ================= -->
+    <section id="reviewsSection" class="max-w-[1280px] mx-auto px-6 sm:px-12 pb-16 sm:pb-20" dir="rtl">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 pb-4 border-b border-[#1A1A1A]">
+        <div>
+          <span class="text-[10px] font-mono font-semibold text-neutral-400 uppercase tracking-[0.2em] block">VERIFIED CLIENT FEEDBACK // آراء العملاء</span>
+          <h2 class="font-heading font-extrabold text-2xl sm:text-3xl text-white uppercase tracking-tight mt-1 flex items-center gap-3">
+            <span>تقييمات وتجارب عملاء SOKHM</span>
+          </h2>
+        </div>
+        <div class="flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-[#111] border border-[#222] text-xs font-mono self-start sm:self-auto">
+          <span class="text-amber-400 tracking-widest">★★★★★</span>
+          <span id="homeReviewsAvgRating" class="font-bold text-white">5.0</span>
+          <span class="text-neutral-500">•</span>
+          <span id="homeReviewsTotalCount" class="text-neutral-300 text-[11px]">عميل موثق</span>
+        </div>
+      </div>
+
+      <div id="homepageReviewsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Populated dynamically via js/app.js -->
+      </div>
     </section>
 
     <!-- ================= 5. "FOR THE ONES WHO KEEP GOING" BOTTOM BANNER ================= -->
@@ -479,8 +501,8 @@
       </button>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        <div class="aspect-[3/4] rounded-[10px] overflow-hidden bg-neutral-900 border border-[#222]">
-          <img id="modalImg" src="" alt="Product Photo" class="w-full h-full object-cover">
+        <div class="aspect-[3/4] max-w-[360px] mx-auto w-full rounded-[10px] overflow-hidden bg-[#0A0A0A] border border-[#222] flex items-center justify-center">
+          <img id="modalImg" src="" alt="Product Photo" class="w-full h-full object-contain object-center" decoding="async">
         </div>
 
         <div class="space-y-4">
@@ -646,9 +668,9 @@
   <div id="toastContainer" class="fixed bottom-24 right-6 z-50 flex flex-col space-y-2 pointer-events-none font-mono"></div>
 
   <!-- SCRIPTS -->
-  <script src="js/store.js?v=5.0"></script>
+  <script src="js/store.js?v=8.0"></script>
   <script src="js/meta-pixel.js?v=1.0"></script>
-  <script src="js/checkout.js?v=7.0"></script>
-  <script src="js/app.js?v=7.0"></script>
+  <script src="js/checkout.js?v=8.0"></script>
+  <script src="js/app.js?v=8.0"></script>
 </body>
 </html>

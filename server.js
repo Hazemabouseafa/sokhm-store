@@ -1,6 +1,8 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
+const crypto = require('crypto');
 const { generateCsvExport, generateFullJsonBackup } = require('./database/csv-export.js');
 
 const driver = String(process.env.DB_DRIVER || '').toLowerCase().trim();
@@ -458,10 +460,84 @@ const server = http.createServer(async (req, res) => {
 
     if ((pathname === '/api/visits' || pathname === '/api/visits/stats') && req.method === 'GET') {
       try {
-        const stats = db.getVisitStats ? await db.getVisitStats() : { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0 };
+        const stats = db.getVisitStats ? await db.getVisitStats() : { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0, dailyHistory: [] };
         return sendJson(res, 200, stats);
       } catch (e) {
-        return sendJson(res, 200, { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0 });
+        return sendJson(res, 200, { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0, dailyHistory: [] });
+      }
+    }
+
+    if ((pathname === '/api/visits/reset' && req.method === 'POST') || (pathname === '/api/visits' && req.method === 'DELETE')) {
+      try {
+        const token = getBearerToken(req);
+        const session = await db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لتصفير الزيارات' });
+        }
+        const cleared = db.resetVisits ? await db.resetVisits() : { success: true, totalVisits: 0, todayVisits: 0, uniqueVisitors: 0, dailyHistory: [] };
+        return sendJson(res, 200, cleared);
+      } catch (e) {
+        return sendJson(res, 500, { success: false, error: e.message });
+      }
+    }
+
+    // 7.6 Customer Reviews & Testimonials Endpoints
+    if (pathname === '/api/reviews' && req.method === 'GET') {
+      try {
+        const productId = parsedUrl.searchParams.get('productId') || parsedUrl.searchParams.get('product_id') || '';
+        const homepageOnly = parsedUrl.searchParams.get('homepage') === '1' || parsedUrl.searchParams.get('homepage') === 'true';
+        const list = db.getReviews ? await db.getReviews({ productId, homepageOnly }) : [];
+        return sendJson(res, 200, list);
+      } catch (e) {
+        return sendJson(res, 500, { error: e.message });
+      }
+    }
+
+    if (pathname === '/api/reviews' && req.method === 'POST') {
+      try {
+        const token = getBearerToken(req);
+        const session = await db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لإضافة تقييم' });
+        }
+        const body = await readBody(req);
+        const review = await db.createReview(body);
+        return sendJson(res, 201, { success: true, review });
+      } catch (e) {
+        return sendJson(res, 400, { success: false, error: e.message });
+      }
+    }
+
+    const revToggleMatch = pathname.match(/^\/api\/reviews\/([^\/]+)\/toggle$/);
+    if (revToggleMatch && (req.method === 'POST' || req.method === 'PUT')) {
+      try {
+        const token = getBearerToken(req);
+        const session = await db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول' });
+        }
+        const id = decodeURIComponent(revToggleMatch[1]);
+        const updated = await db.toggleReviewHomepage(id);
+        return sendJson(res, 200, updated);
+      } catch (e) {
+        return sendJson(res, 400, { success: false, error: e.message });
+      }
+    }
+
+    const revMatch = pathname.match(/^\/api\/reviews\/([^\/]+)$/);
+    if ((pathname === '/api/reviews' || revMatch) && req.method === 'DELETE') {
+      try {
+        const token = getBearerToken(req);
+        const session = await db.validateSession(token);
+        if (!session) {
+          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لحذف التقييم' });
+        }
+        const id = revMatch ? decodeURIComponent(revMatch[1]) : parsedUrl.searchParams.get('id');
+        if (!id) return sendJson(res, 400, { error: 'Missing review id' });
+        await db.deleteReview(id);
+        return sendJson(res, 200, { success: true, id });
+      } catch (e) {
+        return sendJson(res, 400, { success: false, error: e.message });
       }
     }
 
@@ -754,25 +830,55 @@ const server = http.createServer(async (req, res) => {
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
   const isImageOrFont = ['.png', '.jpg', '.jpeg', '.webp', '.avif', '.svg', '.ico', '.woff', '.woff2'].includes(ext);
 
-  fs.readFile(filePath, (err, content) => {
-    if (err) {
-      if (err.code === 'ENOENT') {
-        res.writeHead(404, { 'Content-Type': 'text/plain; charset=UTF-8' });
-        res.end('404 Not Found: ' + reqPath);
-      } else {
+  fs.stat(filePath, (statErr, stats) => {
+    if (statErr || !stats || !stats.isFile()) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=UTF-8' });
+      return res.end('404 Not Found: ' + reqPath);
+    }
+
+    const etag = `W/"${stats.size.toString(16)}-${Math.floor(stats.mtimeMs).toString(16)}"`;
+    if (isImageOrFont && req.headers['if-none-match'] === etag) {
+      res.writeHead(304, {
+        'ETag': etag,
+        'Cache-Control': 'public, max-age=604800, stale-while-revalidate=86400'
+      });
+      return res.end();
+    }
+
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
         res.writeHead(500, { 'Content-Type': 'text/plain; charset=UTF-8' });
-        res.end('500 Server Error: ' + err.code);
+        return res.end('500 Server Error: ' + err.code);
       }
-    } else {
-      const headers = { 'Content-Type': contentType };
+
+      const headers = { 'Content-Type': contentType, 'ETag': etag };
       if (isImageOrFont) {
-        headers['Cache-Control'] = 'public, max-age=86400';
+        headers['Cache-Control'] = 'public, max-age=604800, stale-while-revalidate=86400';
       } else if (ext === '.html') {
         headers['Cache-Control'] = 'no-cache';
+      } else if (ext === '.css' || ext === '.js') {
+        headers['Cache-Control'] = 'public, max-age=3600, stale-while-revalidate=86400';
       }
+
+      const acceptEnc = String(req.headers['accept-encoding'] || '');
+      const isCompressible = ['.html', '.css', '.js', '.json', '.svg'].includes(ext) && content.length > 1024;
+      if (isCompressible && acceptEnc.includes('gzip')) {
+        zlib.gzip(content, (gzErr, compressed) => {
+          if (!gzErr && compressed) {
+            headers['Content-Encoding'] = 'gzip';
+            headers['Vary'] = 'Accept-Encoding';
+            res.writeHead(200, headers);
+            return res.end(compressed);
+          }
+          res.writeHead(200, headers);
+          res.end(content);
+        });
+        return;
+      }
+
       res.writeHead(200, headers);
       res.end(content);
-    }
+    });
   });
 });
 

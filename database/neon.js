@@ -1600,20 +1600,28 @@ async function getVisitStats() {
   if (sql) {
     try {
       await initNeonSchema();
-      const [totalRow, todayRow, uniqueRow] = await Promise.all([
+      const [totalRow, todayRow, uniqueRow, dailyRows] = await Promise.all([
         sql.query('SELECT COUNT(*) as count FROM site_visits'),
         sql.query("SELECT COUNT(*) as count FROM site_visits WHERE created_at >= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Cairo')::date"),
-        sql.query('SELECT COUNT(DISTINCT visitor_id) as count FROM site_visits')
+        sql.query('SELECT COUNT(DISTINCT visitor_id) as count FROM site_visits'),
+        sql.query("SELECT to_char((created_at AT TIME ZONE 'Africa/Cairo')::date, 'YYYY-MM-DD') as visit_date, COUNT(*) as total_visits, COUNT(DISTINCT visitor_id) as unique_visitors FROM site_visits GROUP BY 1 ORDER BY 1 DESC LIMIT 90").catch(() => [])
       ]);
 
       const totalVisits = Number(totalRow[0]?.count || 0);
       const todayVisits = Number(todayRow[0]?.count || 0);
       const uniqueVisitors = Number(uniqueRow[0]?.count || 0);
+      const dailyHistory = Array.isArray(dailyRows) ? dailyRows.map(r => ({
+        date: r.visit_date || '',
+        dateLabel: r.visit_date || '',
+        visits: Number(r.total_visits || 0),
+        uniqueVisitors: Number(r.unique_visitors || 0)
+      })) : [];
 
       return {
         totalVisits,
         todayVisits,
-        uniqueVisitors
+        uniqueVisitors,
+        dailyHistory
       };
     } catch (err) {
       console.error('Neon getVisitStats error:', err.message);
@@ -1626,8 +1634,75 @@ async function getVisitStats() {
   return {
     totalVisits: fallbackVisits.length,
     todayVisits: todayCount,
-    uniqueVisitors: uniqueSet.size
+    uniqueVisitors: uniqueSet.size,
+    dailyHistory: []
   };
+}
+
+let fallbackReviews = [
+  { id: 'rev-sokhm-01', customerName: 'عمر الشافعي', customer_name: 'عمر الشافعي', customerLocation: 'القاهرة • التجمع الخامس', customer_location: 'القاهرة • التجمع الخامس', rating: 5, comment: 'الخامة تقيلة جداً 500 GSM فعلاً والفينش والتفصيلة Oversized مظبوطة بالملي. من أحسن الهوديز اللي جبتها في مصر.', productId: 'all', product_id: 'all', productName: 'تشكيلة SOKHM الأساسية', product_name: 'تشكيلة SOKHM الأساسية', verified: true, showOnHomepage: true, show_on_homepage: 1, createdAt: new Date().toISOString() },
+  { id: 'rev-sokhm-02', customerName: 'يوسف عبد الرحمن', customer_name: 'يوسف عبد الرحمن', customerLocation: 'الإسكندرية • سموحة', customer_location: 'الإسكندرية • سموحة', rating: 5, comment: 'اللون على الطبيعة نفس الصور بالظبط والتقفيل عالمي، والتوصيل وصل في أقل من 24 ساعة.', productId: 'all', product_id: 'all', productName: 'تشكيلة SOKHM الأساسية', product_name: 'تشكيلة SOKHM الأساسية', verified: true, showOnHomepage: true, show_on_homepage: 1, createdAt: new Date().toISOString() },
+  { id: 'rev-sokhm-03', customerName: 'كريم طارق', customer_name: 'كريم طارق', customerLocation: 'الجيزة • الشيخ زايد', customer_location: 'الجيزة • الشيخ زايد', rating: 5, comment: 'القطن تقيل ومريح جداً ومبيوبرش مع الغسيل، المقاس مظبوط على جدول المقاسات. تجربة ممتازة.', productId: 'all', product_id: 'all', productName: 'تشكيلة SOKHM الأساسية', product_name: 'تشكيلة SOKHM الأساسية', verified: true, showOnHomepage: true, show_on_homepage: 1, createdAt: new Date().toISOString() },
+  { id: 'rev-sokhm-04', customerName: 'أحمد نبيل', customer_name: 'أحمد نبيل', customerLocation: 'المنصورة', customer_location: 'المنصورة', rating: 5, comment: 'الباكدجينج فخم جداً والقطعة تقيلة وتستاهل كل جنيه. أكيد مش آخر تعامل مع SOKHM.', productId: 'all', product_id: 'all', productName: 'تشكيلة SOKHM الأساسية', product_name: 'تشكيلة SOKHM الأساسية', verified: true, showOnHomepage: true, show_on_homepage: 1, createdAt: new Date().toISOString() }
+];
+
+async function resetVisits() {
+  const sql = getSql();
+  if (sql) {
+    try { await sql.query('DELETE FROM site_visits'); } catch (_) {}
+  }
+  fallbackVisits = [];
+  return { success: true, totalVisits: 0, todayVisits: 0, uniqueVisitors: 0, dailyHistory: [] };
+}
+
+async function getReviews(filter = {}) {
+  let list = [...fallbackReviews];
+  if (filter.homepageOnly) list = list.filter(x => x.showOnHomepage);
+  if (filter.productId && filter.productId !== 'all') {
+    const pid = String(filter.productId).toLowerCase();
+    list = list.filter(x => !x.productId || x.productId === 'all' || String(x.productId).toLowerCase() === pid);
+  }
+  return list;
+}
+
+async function createReview(data = {}) {
+  const id = String(data.id || ('rev-' + Date.now()));
+  const item = {
+    id,
+    customerName: String(data.customerName || data.customer_name || 'عميل SOKHM').trim(),
+    customer_name: String(data.customerName || data.customer_name || 'عميل SOKHM').trim(),
+    customerLocation: String(data.customerLocation || data.customer_location || '').trim(),
+    customer_location: String(data.customerLocation || data.customer_location || '').trim(),
+    rating: Math.min(5, Math.max(1, parseInt(data.rating, 10) || 5)),
+    comment: String(data.comment || '').trim(),
+    productId: String(data.productId || data.product_id || 'all').trim() || 'all',
+    product_id: String(data.productId || data.product_id || 'all').trim() || 'all',
+    productName: String(data.productName || data.product_name || '').trim(),
+    product_name: String(data.productName || data.product_name || '').trim(),
+    verified: true,
+    showOnHomepage: data.showOnHomepage !== false && data.show_on_homepage !== false && data.show_on_homepage !== 0,
+    show_on_homepage: (data.showOnHomepage !== false && data.show_on_homepage !== false && data.show_on_homepage !== 0) ? 1 : 0,
+    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString()
+  };
+  const idx = fallbackReviews.findIndex(x => x.id === id);
+  if (idx >= 0) fallbackReviews[idx] = item;
+  else fallbackReviews.unshift(item);
+  return item;
+}
+
+async function deleteReview(id) {
+  fallbackReviews = fallbackReviews.filter(x => x.id !== String(id));
+  return { success: true, id };
+}
+
+async function toggleReviewHomepage(id) {
+  const item = fallbackReviews.find(x => x.id === String(id));
+  if (item) {
+    item.showOnHomepage = !item.showOnHomepage;
+    item.show_on_homepage = item.showOnHomepage ? 1 : 0;
+  }
+  return { success: true, id, showOnHomepage: item ? item.showOnHomepage : true };
 }
 
 async function getStats() {
@@ -1718,6 +1793,11 @@ module.exports = {
   getStats,
   recordVisit,
   getVisitStats,
+  resetVisits,
+  getReviews,
+  createReview,
+  deleteReview,
+  toggleReviewHomepage,
   seedNeonDatabase,
   seedTursoDatabase: seedNeonDatabase, // Alias for backward compatibility
   seedDatabase: seedNeonDatabase,

@@ -227,6 +227,13 @@
           <span>الأقسام والتصنيفات (Categories)</span>
         </button>
 
+        <!-- تبويب آراء وتقييمات العملاء (Customer Reviews) -->
+        <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-reviews">
+          <i data-lucide="star" class="w-4 h-4 text-amber-400"></i>
+          <span>آراء وتقييمات العملاء (Reviews)</span>
+          <span id="reviewsHeaderCountBadge" class="px-2 py-0.5 rounded-full bg-amber-950/70 text-amber-400 border border-amber-800 text-[10px] font-mono font-bold">0</span>
+        </button>
+
         <!-- تبويب واتساب والدعم الفني (Tech Support WhatsApp) -->
         <button class="admin-tab-btn px-4 py-3 text-neutral-400 hover:text-white flex items-center gap-2 whitespace-nowrap cursor-pointer" data-tab="tab-support">
           <i data-lucide="message-circle" class="w-4 h-4 text-emerald-400"></i>
@@ -294,17 +301,29 @@
       <!-- 5 Top Metrics Cards (Sales, Orders & Site Visits KPI) -->
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <!-- Site Visits Card -->
-        <div class="cms-card p-4 sm:p-5 flex items-center gap-4 col-span-2 sm:col-span-1 border-purple-500/30 bg-gradient-to-br from-[#0c0c0c] to-[#140c1c]">
-          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-            <i data-lucide="eye" class="w-6 h-6"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-1.5">
-              <span class="text-[11px] font-bold text-neutral-400 block">زيارات المتجر</span>
-              <span id="metricTodayVisits" class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800/60 font-mono">+0 اليوم</span>
+        <div class="cms-card p-4 sm:p-5 flex flex-col justify-between gap-3 col-span-2 sm:col-span-1 border-purple-500/30 bg-gradient-to-br from-[#0c0c0c] to-[#140c1c]">
+          <div class="flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+              <i data-lucide="eye" class="w-5 h-5"></i>
             </div>
-            <span id="metricTotalVisits" class="text-2xl font-black font-mono text-purple-300">0</span>
-            <span id="metricUniqueVisitors" class="text-[10px] text-neutral-500 block font-mono">0 زائر فريد</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[11px] font-bold text-neutral-400 block">زيارات المتجر</span>
+                <span id="metricTodayVisits" class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800/60 font-mono">+0 اليوم</span>
+              </div>
+              <span id="metricTotalVisits" class="text-2xl font-black font-mono text-purple-300">0</span>
+              <span id="metricUniqueVisitors" class="text-[10px] text-neutral-500 block font-mono">0 زائر فريد</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 pt-2 border-t border-purple-500/20">
+            <button id="toggleVisitsHistoryBtn" type="button" class="flex-1 px-2 py-1.5 rounded-lg bg-purple-500/15 hover:bg-purple-500/30 text-purple-200 border border-purple-500/30 text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all">
+              <i data-lucide="calendar" class="w-3 h-3"></i>
+              <span>سجل الزيارات بالتاريخ</span>
+            </button>
+            <button id="resetVisitsQuickBtn" type="button" class="px-2 py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/50 text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all" title="تصفير عداد الزيارات">
+              <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+              <span>تصفير</span>
+            </button>
           </div>
         </div>
 
@@ -346,6 +365,69 @@
             <span class="text-[11px] font-bold text-neutral-400 block">إجمالي المبيعات (EGP)</span>
             <span id="metricTotalRevenue" class="text-2xl font-black font-mono text-emerald-400">0 ج.م</span>
           </div>
+        </div>
+      </div>
+
+      <!-- Daily Site Visits Analytics by Date & Reset Control Panel -->
+      <div id="visitsByDatePanel" class="cms-card p-5 border border-purple-500/30 bg-gradient-to-b from-[#110c18] to-[#0B0B0B] space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-purple-900/30">
+          <div>
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <i data-lucide="calendar-days" class="w-4 h-4 text-purple-400"></i>
+              <span>إحصائيات وسجل زوار الموقع بالتاريخ (Daily Visitor Analytics)</span>
+            </h3>
+            <p class="text-[11px] text-neutral-400 mt-0.5">
+              اختر أي تاريخ لمعرفة عدد الزيارات والزوار الفريدين في ذلك اليوم بدقة، أو قم بتصفير عداد الزيارات للبدء من جديد.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-2 bg-[#080808] border border-[#262626] rounded-xl px-3 py-1.5">
+              <span class="text-[11px] text-neutral-400 font-bold">بحث بالتاريخ:</span>
+              <input type="date" id="visitDateFilterInput" class="bg-transparent text-xs font-mono text-white focus:outline-none cursor-pointer">
+              <button id="clearVisitDateFilterBtn" type="button" class="text-[10px] text-purple-300 hover:text-white px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800/50 cursor-pointer">
+                عرض الكل
+              </button>
+            </div>
+
+            <button id="resetVisitsBtn" type="button" class="px-3.5 py-2 rounded-xl bg-red-950/70 hover:bg-red-600 text-red-200 hover:text-white border border-red-800/60 font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>تصفير عداد الزيارات بالكامل</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Selected Date Quick Highlight Banner -->
+        <div id="selectedDateVisitsSummary" class="hidden p-3.5 rounded-xl bg-purple-950/30 border border-purple-500/40 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-purple-400"></i>
+            <span id="selectedDateVisitsLabel" class="font-bold text-white">إحصائيات التاريخ المحدد:</span>
+          </div>
+          <div class="flex items-center gap-4 font-mono">
+            <span class="text-purple-300 font-bold">إجمالي الزيارات: <strong id="selectedDateTotalCount" class="text-white text-sm">0</strong></span>
+            <span class="text-neutral-500">|</span>
+            <span class="text-emerald-300 font-bold">زوار فريدون: <strong id="selectedDateUniqueCount" class="text-white text-sm">0</strong></span>
+          </div>
+        </div>
+
+        <!-- Daily Visits Table -->
+        <div class="overflow-x-auto max-h-64 overflow-y-auto rounded-xl border border-[#1E1E1E] bg-[#080808]">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-[#121212] text-neutral-400 font-bold border-b border-[#1E1E1E] sticky top-0 z-10">
+              <tr>
+                <th class="py-2.5 px-4">التاريخ (Date)</th>
+                <th class="py-2.5 px-4">اليوم</th>
+                <th class="py-2.5 px-4">إجمالي الزيارات (Total Visits)</th>
+                <th class="py-2.5 px-4">الزوار الفريدون (Unique Visitors)</th>
+                <th class="py-2.5 px-4">مؤشر النشاط</th>
+              </tr>
+            </thead>
+            <tbody id="visitsByDateTableBody" class="divide-y divide-[#151515]">
+              <tr>
+                <td colspan="5" class="py-6 text-center text-neutral-500 font-mono">جاري تحميل سجل الزيارات اليومي...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -2364,6 +2446,103 @@
       </div>
     </section>
 
+    <!-- ========================================================
+         التبويب ١٠: آراء وتقييمات العملاء (CUSTOMER REVIEWS TAB)
+         ======================================================== -->
+    <section id="tab-reviews" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1A1A1A]">
+        <div>
+          <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider block">إدارة الثقة وتجارب الشراء • SOCIAL PROOF</span>
+          <h2 class="font-extrabold text-2xl text-white tracking-tight mt-1 flex items-center gap-3">
+            <span>آراء وتقييمات العملاء (Customer Reviews)</span>
+          </h2>
+          <p class="text-xs text-neutral-400 mt-1">
+            أضف تقييمات وآراء العملاء لتظهر مباشرة بعد المنتجات في الصفحة الرئيسية وفي صفحات المنتجات، مع تحكم كامل في إظهار أو إخفاء أو حذف أي تقييم.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <button id="exportReviewsCsvBtn" type="button" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>تصدير التقييمات CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- نموذج إضافة تقييم جديد -->
+        <form id="createReviewForm" class="cms-card p-6 space-y-4 lg:col-span-5 border border-amber-500/20">
+          <h3 class="font-bold text-sm text-white flex items-center gap-2 pb-2 border-b border-[#1A1A1A]">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-amber-400"></i>
+            <span>إضافة تقييم عميل جديد</span>
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="cms-label">اسم العميل *</label>
+              <input type="text" id="reviewCustomerName" required placeholder="مثال: عمر عبد الرحمن" class="cms-input w-full">
+            </div>
+            <div>
+              <label class="cms-label">المحافظة / المدينة</label>
+              <input type="text" id="reviewCustomerLocation" placeholder="مثال: القاهرة" class="cms-input w-full">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="cms-label">التقييم (عدد النجوم) *</label>
+              <select id="reviewRating" class="cms-input w-full cursor-pointer font-bold text-amber-400">
+                <option value="5">★★★★★ (5 نجوم - ممتاز)</option>
+                <option value="4">★★★★☆ (4 نجوم - جيد جداً)</option>
+                <option value="3">★★★☆☆ (3 نجوم - جيد)</option>
+                <option value="2">★★☆☆☆ (نجمتان)</option>
+                <option value="1">★☆☆☆☆ (نجمة واحدة)</option>
+              </select>
+            </div>
+            <div>
+              <label class="cms-label">المنتج المرتبط بالتقييم *</label>
+              <select id="reviewProductId" class="cms-input w-full cursor-pointer">
+                <option value="all">جميع المنتجات والصفحة الرئيسية (عام)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="cms-label">نص التقييم / رأي العميل *</label>
+            <textarea id="reviewComment" rows="3" required placeholder="اكتب رأي العميل في الخامة، التقفيل، المقاس، وسرعة التوصيل..." class="cms-input w-full leading-relaxed"></textarea>
+          </div>
+
+          <label class="flex items-center justify-between p-3 rounded-xl bg-[#090909] border border-[#222] cursor-pointer">
+            <div>
+              <span class="text-xs font-bold text-white block">إظهار في الصفحة الرئيسية (بعد قسم المنتجات)</span>
+              <span class="text-[10px] text-neutral-400">عند التفعيل يظهر هذا التقييم في الصفحة الرئيسية وكذلك في صفحة المنتج</span>
+            </div>
+            <input type="checkbox" id="reviewShowOnHomepage" checked class="w-4 h-4 accent-amber-400 cursor-pointer">
+          </label>
+
+          <button type="submit" class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg">
+            <i data-lucide="star" class="w-4 h-4"></i>
+            <span>نشر وإضافة التقييم الآن</span>
+          </button>
+        </form>
+
+        <!-- قائمة التقييمات الحالية -->
+        <div class="cms-card p-6 space-y-4 lg:col-span-7">
+          <div class="flex items-center justify-between pb-2 border-b border-[#1A1A1A]">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <i data-lucide="message-square-quote" class="w-4 h-4 text-emerald-400"></i>
+              <span>سجل التقييمات المنشورة في الموقع</span>
+            </h3>
+            <span id="reviewsTotalCountText" class="text-xs font-mono text-neutral-400">0 تقييم</span>
+          </div>
+
+          <div id="reviewsAdminList" class="space-y-3 max-h-[540px] overflow-y-auto pr-1">
+            <!-- Populated dynamically via admin.js -->
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- ================= MODALS ================= -->
@@ -2758,6 +2937,6 @@
   </footer>
 
   <script src="../js/meta-pixel.js?v=1.0"></script>
-  <script src="js/admin.js?v=7.0"></script>
+  <script src="js/admin.js?v=8.0"></script>
 </body>
 </html>

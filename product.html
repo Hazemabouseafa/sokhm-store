@@ -288,11 +288,11 @@
               <!-- Hydrated dynamically -->
             </span>
 
-            <div class="flex items-center gap-1.5 text-xs text-neutral-400">
-              <span class="text-white">★★★★★</span>
-              <span id="productRatingText" class="font-bold text-neutral-300">4.98</span>
-              <span class="text-neutral-500">(164 Reviews)</span>
-            </div>
+            <a href="#productReviewsSection" class="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer">
+              <span class="text-amber-400">★★★★★</span>
+              <span id="productRatingText" class="font-bold text-neutral-300">5.0</span>
+              <span id="productReviewsCountText" class="text-neutral-500 underline">(تقييمات العملاء)</span>
+            </a>
           </div>
         </div>
 
@@ -417,6 +417,26 @@
       </div>
 
     </div>
+
+    <!-- ================= CUSTOMER REVIEWS ON PRODUCT PAGE ================= -->
+    <section id="productReviewsSection" class="mt-20 pt-10 border-t border-[#1A1A1A]" dir="rtl">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        <div>
+          <span class="text-[10px] font-mono font-semibold text-neutral-500 uppercase tracking-widest block">VERIFIED CUSTOMER REVIEWS // آراء العملاء</span>
+          <h3 class="font-heading font-extrabold text-2xl uppercase tracking-tight text-white mt-1">تقييمات وتجارب الشراء</h3>
+        </div>
+        <div class="flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-[#111] border border-[#222] text-xs font-mono self-start sm:self-auto">
+          <span class="text-amber-400 tracking-widest">★★★★★</span>
+          <span id="prodReviewsAvgBadge" class="font-bold text-white">5.0</span>
+          <span class="text-neutral-500">•</span>
+          <span id="prodReviewsTotalBadge" class="text-neutral-300 text-[11px]">عميل موثق</span>
+        </div>
+      </div>
+
+      <div id="productReviewsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Populated dynamically via js/product.js -->
+      </div>
+    </section>
 
     <!-- ================= RELATED PRODUCTS ("YOU MAY ALSO LIKE") ================= -->
     <section class="mt-20 pt-10 border-t border-[#1A1A1A]">
@@ -622,9 +642,9 @@
   <div id="toastContainer" class="fixed bottom-24 right-6 z-50 flex flex-col space-y-2 pointer-events-none font-mono"></div>
 
   <!-- SCRIPTS -->
-  <script src="js/store.js?v=5.0"></script>
+  <script src="js/store.js?v=8.0"></script>
   <script src="js/meta-pixel.js?v=1.0"></script>
-  <script src="js/checkout.js?v=7.0"></script>
-  <script src="js/product.js?v=7.0"></script>
+  <script src="js/checkout.js?v=8.0"></script>
+  <script src="js/product.js?v=8.0"></script>
 </body>
 </html>

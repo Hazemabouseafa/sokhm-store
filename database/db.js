@@ -172,6 +172,21 @@ function initSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_site_visits_created ON site_visits(created_at);
     CREATE INDEX IF NOT EXISTS idx_site_visits_vid ON site_visits(visitor_id);
+
+    -- Customer Reviews & Testimonials Table
+    CREATE TABLE IF NOT EXISTS reviews (
+      id TEXT PRIMARY KEY,
+      customer_name TEXT NOT NULL,
+      customer_location TEXT DEFAULT '',
+      rating INTEGER NOT NULL DEFAULT 5,
+      comment TEXT NOT NULL,
+      product_id TEXT DEFAULT 'all',
+      product_name TEXT DEFAULT '',
+      verified INTEGER DEFAULT 1,
+      show_on_homepage INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
   `);
 
   try {
@@ -419,6 +434,81 @@ function autoSeed() {
   if (visCount.count === 0) {
     db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('visibility', '{}', CURRENT_TIMESTAMP)").run();
   }
+
+  // Non-destructive initial reviews seed (only if never seeded and table is empty)
+  const reviewsSeeded = db.prepare("SELECT content_json FROM site_content WHERE section_key = '_reviews_seeded'").get();
+  if (!reviewsSeeded) {
+    const revCount = db.prepare('SELECT COUNT(*) AS count FROM reviews').get();
+    if (revCount && revCount.count === 0) {
+      const insertRev = db.prepare(`
+        INSERT OR IGNORE INTO reviews (id, customer_name, customer_location, rating, comment, product_id, product_name, verified, show_on_homepage, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', ?))
+      `);
+      const sampleReviews = [
+        ['rev-sokhm-01', 'عمر الشافعي', 'القاهرة • التجمع الخامس', 5, 'الخامة تقيلة جداً 500 GSM فعلاً والفينش والتفصيلة Oversized مظبوطة بالملي. من أحسن الهوديز اللي جبتها في مصر.', 'all', 'تشكيلة SOKHM الأساسية', 1, 1, '-5 days'],
+        ['rev-sokhm-02', 'يوسف عبد الرحمن', 'الإسكندرية • سموحة', 5, 'اللون على الطبيعة نفس الصور بالظبط والتقفيل عالمي، والتوصيل وصل في أقل من 24 ساعة.', 'all', 'تشكيلة SOKHM الأساسية', 1, 1, '-3 days'],
+        ['rev-sokhm-03', 'كريم طارق', 'الجيزة • الشيخ زايد', 5, 'القطن تقيل ومريح جداً ومبيوبرش مع الغسيل، المقاس مظبوط على جدول المقاسات. تجربة ممتازة.', 'all', 'تشكيلة SOKHM الأساسية', 1, 1, '-2 days'],
+        ['rev-sokhm-04', 'أحمد نبيل', 'المنصورة', 5, 'الباكدجينج فخم جداً والقطعة تقيلة وتستاهل كل جنيه. أكيد مش آخر تعامل مع SOKHM.', 'all', 'تشكيلة SOKHM الأساسية', 1, 1, '-1 day']
+      ];
+      for (const r of sampleReviews) {
+        insertRev.run(...r);
+      }
+    }
+    db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES ('_reviews_seeded', '{\"seeded\":true}')").run();
+  }
+}
+
+/**
+ * Automatic Base64-to-file externalizer:
+ * Converts any heavy inline data:image/*;base64 string (>2KB) into a persistent static file in uploads/
+ * so /api/products responses remain tiny (<5KB) and images are cached natively by browsers with zero lag.
+ */
+const persistentUploadsDir = storageRoot
+  ? path.join(storageRoot, 'uploads')
+  : path.join(__dirname, '..', 'assets', 'uploads');
+
+function externalizeBase64Image(imgStr) {
+  if (!imgStr || typeof imgStr !== 'string') return imgStr;
+  const trimmed = imgStr.trim();
+  if (!trimmed.startsWith('data:image/') || trimmed.length < 2048) return trimmed;
+  try {
+    const matches = trimmed.match(/^data:image\/([A-Za-z0-9+.-]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return trimmed;
+    const mimeSub = matches[1].toLowerCase();
+    const b64Data = matches[2];
+    let ext = '.jpg';
+    if (mimeSub.includes('webp')) ext = '.webp';
+    else if (mimeSub.includes('png')) ext = '.png';
+    const hash = crypto.createHash('sha1').update(b64Data).digest('hex').slice(0, 20);
+    const fileName = `sokhm_opt_${hash}${ext}`;
+    if (!fs.existsSync(persistentUploadsDir)) {
+      fs.mkdirSync(persistentUploadsDir, { recursive: true });
+    }
+    const destPath = path.join(persistentUploadsDir, fileName);
+    if (!fs.existsSync(destPath)) {
+      fs.writeFileSync(destPath, Buffer.from(b64Data, 'base64'));
+    }
+    return `assets/uploads/${fileName}`;
+  } catch (e) {
+    return trimmed;
+  }
+}
+
+function migrateInlineBase64Images() {
+  try {
+    const rows = db.prepare('SELECT id, images_json, colors_json FROM products').all();
+    const updateStmt = db.prepare('UPDATE products SET images_json = ?, colors_json = ? WHERE id = ?');
+    for (const r of rows) {
+      const hasInline = (r.images_json && r.images_json.includes('data:image/')) ||
+                        (r.colors_json && r.colors_json.includes('data:image/'));
+      if (hasInline) {
+        const norm = normalizeProductImagesAndColors(r.images_json, r.colors_json);
+        updateStmt.run(JSON.stringify(norm.images), JSON.stringify(norm.colors), r.id);
+      }
+    }
+  } catch (e) {
+    console.warn('Inline base64 image migration warning:', e.message);
+  }
 }
 
 // Execute initial setup
@@ -638,7 +728,7 @@ function normalizeProductImagesAndColors(rawImagesJson, rawColorsJson) {
   } catch (_) {
     rawImages = [];
   }
-  rawImages = rawImages.filter(Boolean);
+  rawImages = rawImages.filter(Boolean).map(externalizeBase64Image);
 
   let rawColors = [];
   try {
@@ -660,12 +750,13 @@ function normalizeProductImagesAndColors(rawImagesJson, rawColorsJson) {
     }
     const cObj = c || {};
     const cImgs = Array.isArray(cObj.images) && cObj.images.filter(Boolean).length > 0
-      ? cObj.images.filter(Boolean)
-      : (cObj.image ? [cObj.image] : [fallbackImg]);
+      ? cObj.images.filter(Boolean).map(externalizeBase64Image)
+      : (cObj.image ? [externalizeBase64Image(cObj.image)] : [fallbackImg]);
+    const primaryColImg = cImgs[0] || (cObj.image ? externalizeBase64Image(cObj.image) : fallbackImg);
     return {
       name: cObj.name || 'Standard',
       hex: cObj.hex || '#111111',
-      image: cImgs[0] || cObj.image || fallbackImg,
+      image: primaryColImg,
       images: cImgs,
       isMain: Boolean(cObj.isMain)
     };
@@ -698,6 +789,9 @@ function normalizeProductImagesAndColors(rawImagesJson, rawColorsJson) {
     colors
   };
 }
+
+// Run inline Base64 image externalization on boot (safe, non-destructive)
+migrateInlineBase64Images();
 
 /**
  * Products: Get all products
@@ -1376,20 +1470,75 @@ function recordVisit(data = {}) {
   }
 }
 
+function formatArabicDayLabel(yyyyMmDd) {
+  if (!yyyyMmDd) return '';
+  try {
+    const d = new Date(yyyyMmDd + 'T12:00:00Z');
+    if (isNaN(d.getTime())) return yyyyMmDd;
+    return d.toLocaleDateString('ar-EG-u-nu-latn', {
+      timeZone: 'Africa/Cairo',
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (_) {
+    return yyyyMmDd;
+  }
+}
+
 function getVisitStats() {
   try {
     const totalRow = db.prepare('SELECT COUNT(*) as count FROM site_visits').get();
-    const todayRow = db.prepare("SELECT COUNT(*) as count FROM site_visits WHERE date(created_at) = date('now')").get();
+    const todayRow = db.prepare("SELECT COUNT(*) as count FROM site_visits WHERE date(datetime(created_at, '+2 hours')) = date(datetime('now', '+2 hours'))").get();
     const uniqueRow = db.prepare('SELECT COUNT(DISTINCT visitor_id) as count FROM site_visits').get();
+
+    const dailyRows = db.prepare(`
+      SELECT
+        date(datetime(created_at, '+2 hours')) AS visit_date,
+        COUNT(*) AS total_visits,
+        COUNT(DISTINCT visitor_id) AS unique_visitors
+      FROM site_visits
+      GROUP BY date(datetime(created_at, '+2 hours'))
+      ORDER BY visit_date DESC
+      LIMIT 90
+    `).all();
+
+    const dailyHistory = dailyRows.map(r => ({
+      date: r.visit_date || '',
+      dateLabel: formatArabicDayLabel(r.visit_date),
+      visits: Number(r.total_visits || 0),
+      uniqueVisitors: Number(r.unique_visitors || 0)
+    }));
 
     return {
       totalVisits: Number(totalRow?.count || 0),
       todayVisits: Number(todayRow?.count || 0),
-      uniqueVisitors: Number(uniqueRow?.count || 0)
+      uniqueVisitors: Number(uniqueRow?.count || 0),
+      dailyHistory
     };
   } catch (err) {
     console.warn('SQLite getVisitStats error:', err.message);
-    return { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0 };
+    return { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0, dailyHistory: [] };
+  }
+}
+
+function resetVisits() {
+  try {
+    db.exec('DELETE FROM site_visits;');
+    try {
+      db.exec("DELETE FROM sqlite_sequence WHERE name = 'site_visits';");
+    } catch (_) {}
+    return {
+      success: true,
+      totalVisits: 0,
+      todayVisits: 0,
+      uniqueVisitors: 0,
+      dailyHistory: []
+    };
+  } catch (err) {
+    console.warn('SQLite resetVisits error:', err.message);
+    return { success: false, error: err.message };
   }
 }
 
@@ -1409,6 +1558,101 @@ function getRecentVisits(limit = 1000) {
   } catch (err) {
     return [];
   }
+}
+
+/**
+ * Customer Reviews & Testimonials CRUD
+ */
+function getReviews(filter = {}) {
+  try {
+    const rows = db.prepare('SELECT * FROM reviews ORDER BY created_at DESC, rowid DESC').all();
+    let list = rows.map(r => ({
+      id: r.id,
+      customerName: r.customer_name || 'عميل SOKHM',
+      customer_name: r.customer_name || 'عميل SOKHM',
+      customerLocation: r.customer_location || '',
+      customer_location: r.customer_location || '',
+      rating: Math.min(5, Math.max(1, parseInt(r.rating, 10) || 5)),
+      comment: r.comment || '',
+      productId: r.product_id || 'all',
+      product_id: r.product_id || 'all',
+      productName: r.product_name || '',
+      product_name: r.product_name || '',
+      verified: r.verified === undefined || r.verified === null ? true : Boolean(Number(r.verified)),
+      showOnHomepage: r.show_on_homepage === undefined || r.show_on_homepage === null ? true : Boolean(Number(r.show_on_homepage)),
+      show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null ? 1 : Number(r.show_on_homepage),
+      createdAt: normalizeUtcDate(r.created_at),
+      created_at: normalizeUtcDate(r.created_at),
+      created_at_cairo: formatCairoDateTime(r.created_at)
+    }));
+
+    if (filter.homepageOnly) {
+      list = list.filter(x => x.showOnHomepage);
+    }
+    if (filter.productId && filter.productId !== 'all') {
+      const pid = String(filter.productId).trim().toLowerCase();
+      list = list.filter(x => {
+        const rPid = String(x.productId || 'all').trim().toLowerCase();
+        return rPid === 'all' || rPid === '' || rPid === pid;
+      });
+    }
+    return list;
+  } catch (err) {
+    console.warn('SQLite getReviews error:', err.message);
+    return [];
+  }
+}
+
+function createReview(data = {}) {
+  const id = String(data.id || ('rev-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6))).trim();
+  const customerName = String(data.customerName || data.customer_name || '').trim();
+  const comment = String(data.comment || '').trim();
+  if (!customerName) throw new Error('يرجى إدخال اسم العميل');
+  if (!comment) throw new Error('يرجى إدخال نص التقييم');
+
+  const customerLocation = String(data.customerLocation || data.customer_location || '').trim();
+  const rating = Math.min(5, Math.max(1, parseInt(data.rating, 10) || 5));
+  const productId = String(data.productId || data.product_id || 'all').trim() || 'all';
+  let productName = String(data.productName || data.product_name || '').trim();
+  if (!productName && productId !== 'all') {
+    const p = getProductById(productId);
+    if (p) productName = p.name;
+  }
+  const verified = (data.verified === false || data.verified === 0 || data.verified === '0') ? 0 : 1;
+  const showOnHomepage = (data.showOnHomepage === false || data.show_on_homepage === false || data.show_on_homepage === 0 || data.show_on_homepage === '0') ? 0 : 1;
+
+  db.prepare(`
+    INSERT INTO reviews (id, customer_name, customer_location, rating, comment, product_id, product_name, verified, show_on_homepage, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      customer_name = excluded.customer_name,
+      customer_location = excluded.customer_location,
+      rating = excluded.rating,
+      comment = excluded.comment,
+      product_id = excluded.product_id,
+      product_name = excluded.product_name,
+      verified = excluded.verified,
+      show_on_homepage = excluded.show_on_homepage
+  `).run(id, customerName, customerLocation, rating, comment, productId, productName, verified, showOnHomepage);
+
+  const all = getReviews();
+  return all.find(r => r.id === id) || all[0];
+}
+
+function deleteReview(id) {
+  if (!id) throw new Error('Missing review id');
+  db.prepare('DELETE FROM reviews WHERE id = ?').run(String(id).trim());
+  return { success: true, id };
+}
+
+function toggleReviewHomepage(id) {
+  if (!id) throw new Error('Missing review id');
+  const sid = String(id).trim();
+  const row = db.prepare('SELECT show_on_homepage FROM reviews WHERE id = ?').get(sid);
+  if (!row) throw new Error('التقييم غير موجود');
+  const nextVal = Number(row.show_on_homepage) === 1 ? 0 : 1;
+  db.prepare('UPDATE reviews SET show_on_homepage = ? WHERE id = ?').run(nextVal, sid);
+  return { success: true, id: sid, show_on_homepage: nextVal, showOnHomepage: Boolean(nextVal) };
 }
 
 /**
@@ -1597,7 +1841,12 @@ module.exports = {
   getStats,
   recordVisit,
   getVisitStats,
+  resetVisits,
   getRecentVisits,
+  getReviews,
+  createReview,
+  deleteReview,
+  toggleReviewHomepage,
   dbPath,
   seedTursoDatabase: async () => ({ success: true, message: 'Native SQLite already initialized' }),
   verifyAdminCredentials,

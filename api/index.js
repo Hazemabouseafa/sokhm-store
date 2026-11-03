@@ -484,8 +484,62 @@ module.exports = async (req, res) => {
     }
 
     if ((pathname === '/api/visits' || pathname === '/api/visits/stats') && req.method === 'GET') {
-      const stats = db.getVisitStats ? await db.getVisitStats() : { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0 };
+      const stats = db.getVisitStats ? await db.getVisitStats() : { totalVisits: 0, todayVisits: 0, uniqueVisitors: 0, dailyHistory: [] };
       return sendJson(res, 200, stats);
+    }
+
+    if ((pathname === '/api/visits/reset' && req.method === 'POST') || (pathname === '/api/visits' && req.method === 'DELETE')) {
+      const token = getBearerToken(req);
+      const session = await db.validateSession(token);
+      if (!session) {
+        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لتصفير الزيارات' });
+      }
+      const cleared = db.resetVisits ? await db.resetVisits() : { success: true, totalVisits: 0, todayVisits: 0, uniqueVisitors: 0, dailyHistory: [] };
+      return sendJson(res, 200, cleared);
+    }
+
+    // 5.9 Customer Reviews & Testimonials
+    if (pathname === '/api/reviews' && req.method === 'GET') {
+      const productId = parsedUrl.searchParams.get('productId') || parsedUrl.searchParams.get('product_id') || '';
+      const homepageOnly = parsedUrl.searchParams.get('homepage') === '1' || parsedUrl.searchParams.get('homepage') === 'true';
+      const list = db.getReviews ? await db.getReviews({ productId, homepageOnly }) : [];
+      return sendJson(res, 200, list);
+    }
+
+    if (pathname === '/api/reviews' && req.method === 'POST') {
+      const token = getBearerToken(req);
+      const session = await db.validateSession(token);
+      if (!session) {
+        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لإضافة تقييم' });
+      }
+      const body = await parseBody(req);
+      const review = await db.createReview(body);
+      return sendJson(res, 201, { success: true, review });
+    }
+
+    const revToggleMatch = pathname.match(/^\/api\/reviews\/([^\/]+)\/toggle$/);
+    if (revToggleMatch && (req.method === 'POST' || req.method === 'PUT')) {
+      const token = getBearerToken(req);
+      const session = await db.validateSession(token);
+      if (!session) {
+        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول' });
+      }
+      const id = decodeURIComponent(revToggleMatch[1]);
+      const updated = await db.toggleReviewHomepage(id);
+      return sendJson(res, 200, updated);
+    }
+
+    const revMatch = pathname.match(/^\/api\/reviews\/([^\/]+)$/);
+    if ((pathname === '/api/reviews' || revMatch) && req.method === 'DELETE') {
+      const token = getBearerToken(req);
+      const session = await db.validateSession(token);
+      if (!session) {
+        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لحذف التقييم' });
+      }
+      const id = revMatch ? decodeURIComponent(revMatch[1]) : parsedUrl.searchParams.get('id');
+      if (!id) return sendJson(res, 400, { error: 'Missing review id' });
+      await db.deleteReview(id);
+      return sendJson(res, 200, { success: true, id });
     }
 
     // 6. Stats

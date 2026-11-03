@@ -341,16 +341,46 @@ async function generateCsvExport(db, type = 'orders', options = {}) {
     };
   }
 
+  if (exportType === 'reviews') {
+    const reviews = db.getReviews ? await db.getReviews() : [];
+    const headers = [
+      'معرف التقييم (ID)',
+      'اسم العميل (Customer Name)',
+      'المحافظة / الوصف (Location)',
+      'التقييم (Rating 1-5)',
+      'نص الرأي (Review Comment)',
+      'المنتج المرتبط (Product)',
+      'الظهور بالرئيسية (Show on Homepage)',
+      'تاريخ الإضافة (Created Date)'
+    ];
+    const rows = (Array.isArray(reviews) ? reviews : []).map(r => [
+      r.id || '',
+      r.customerName || r.customer_name || '',
+      r.customerLocation || r.customer_location || '',
+      r.rating || 5,
+      r.comment || '',
+      r.productName || r.product_name || (r.productId === 'all' ? 'جميع المنتجات' : r.productId),
+      r.showOnHomepage ? 'نعم' : 'لا',
+      r.created_at_cairo || r.createdAt || ''
+    ]);
+    return {
+      filename: `sokhm-reviews-${dateStamp}.csv`,
+      csv: toCsvString(headers, rows),
+      count: rows.length
+    };
+  }
+
   throw new Error('نوع التصدير غير مدعوم: ' + exportType);
 }
 
 async function generateFullJsonBackup(db) {
-  const [siteContent, products, categories, orders, discounts, stats] = await Promise.all([
+  const [siteContent, products, categories, orders, discounts, reviews, stats] = await Promise.all([
     db.getSiteContent(),
     db.getProducts(),
     db.getCategories(),
     db.getOrders('all'),
     db.getDiscounts(),
+    db.getReviews ? db.getReviews() : Promise.resolve([]),
     db.getStats()
   ]);
 
@@ -362,6 +392,7 @@ async function generateFullJsonBackup(db) {
     products,
     orders,
     discounts,
+    reviews,
     siteContent
   };
 }

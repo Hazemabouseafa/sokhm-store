@@ -458,7 +458,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    displayedProducts.forEach((prod) => {
+    const preloadedUrlSet = new Set();
+    displayedProducts.forEach((prod, cardIdx) => {
       const card = document.createElement('div');
       card.className = 'sokhm-card flex flex-col group cursor-pointer';
 
@@ -483,6 +484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hex = typeof col === 'object' ? (col.hex || '#111') : '#111';
         const name = typeof col === 'object' ? (col.name || 'Color') : col;
         const img = (typeof col === 'object' && col.image) ? col.image : mainImg;
+        if (img && img !== initialCardImg) preloadedUrlSet.add(img);
         const isActive = (idx === initialColorIdx);
         return `
         <button 
@@ -499,7 +501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       card.innerHTML = `
         <div class="sokhm-card-media relative">
-          <img src="${initialCardImg}" alt="${prod.name}" class="card-product-img" loading="lazy">
+          <img src="${initialCardImg}" alt="${prod.name}" class="card-product-img" loading="${cardIdx < 4 ? 'eager' : 'lazy'}" fetchpriority="${cardIdx < 2 ? 'high' : 'auto'}" decoding="async">
           
           <button type="button" class="wishlist-btn-dark" title="Add to Wishlist">
             <i data-lucide="heart" class="w-3.5 h-3.5 stroke-[1.8]"></i>
@@ -580,6 +582,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       noirBestSellersGrid.appendChild(card);
     });
+
+    // Preload variant images in idle time so color swatch clicks switch in 0ms
+    if (preloadedUrlSet.size > 0) {
+      const preloadFn = () => {
+        preloadedUrlSet.forEach(url => {
+          const im = new Image();
+          im.decoding = 'async';
+          im.src = url;
+        });
+      };
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(preloadFn, { timeout: 1200 });
+      } else {
+        setTimeout(preloadFn, 200);
+      }
+    }
 
     if (window.lucide) {
       window.lucide.createIcons();
@@ -1084,8 +1102,96 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('sokhm:content-updated', syncWhatsAppLinks);
 
+  // ================= 8.5. CUSTOMER REVIEWS SECTION (AFTER PRODUCTS) =================
+  function renderHomepageReviews(reviewsList) {
+    const reviewsSection = document.getElementById('reviewsSection');
+    const reviewsGrid = document.getElementById('homepageReviewsGrid');
+    const avgEl = document.getElementById('homeReviewsAvgRating');
+    const countEl = document.getElementById('homeReviewsTotalCount');
+    if (!reviewsGrid || !reviewsSection) return;
+
+    const list = Array.isArray(reviewsList) ? reviewsList : [];
+    if (list.length === 0) {
+      reviewsSection.classList.add('hidden');
+      return;
+    }
+    reviewsSection.classList.remove('hidden');
+
+    const totalRating = list.reduce((sum, r) => sum + (Number(r.rating) || 5), 0);
+    const avg = (totalRating / list.length).toFixed(2);
+    if (avgEl) avgEl.textContent = avg;
+    if (countEl) countEl.textContent = `${list.length} تقييم موثق`;
+
+    reviewsGrid.innerHTML = list.map((rev) => {
+      const rating = Math.min(5, Math.max(1, Number(rev.rating) || 5));
+      const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+      const name = String(rev.customerName || rev.customer_name || 'عميل SOKHM').replace(/</g, '&lt;');
+      const loc = String(rev.customerLocation || rev.customer_location || 'مصر').replace(/</g, '&lt;');
+      const comment = String(rev.comment || '').replace(/</g, '&lt;');
+      const prodBadge = String(rev.productName || rev.product_name || 'SOKHM Collection').replace(/</g, '&lt;');
+      const initial = name.trim().charAt(0) || 'S';
+
+      return `
+        <article class="sokhm-review-card">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <span class="text-amber-400 text-sm tracking-widest font-mono" aria-label="${rating} من 5 نجوم">${stars}</span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-[10px] font-bold">
+                <span>✓</span>
+                <span>عميل موثق</span>
+              </span>
+            </div>
+            <p class="text-xs sm:text-[13px] text-neutral-200 leading-relaxed font-sans mb-4">"${comment}"</p>
+          </div>
+          <div class="pt-3 border-t border-[#1D1D1D] flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                ${initial}
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-bold text-white truncate">${name}</h4>
+                <span class="text-[10px] text-neutral-400 block truncate">${loc}</span>
+              </div>
+            </div>
+            <span class="text-[9px] font-mono text-neutral-400 bg-[#161616] border border-[#262626] px-2 py-1 rounded truncate max-w-[120px]" title="${prodBadge}">
+              ${prodBadge}
+            </span>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  async function loadHomepageReviews() {
+    try {
+      const cached = localStorage.getItem('sokhm_reviews_cache_v1');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          renderHomepageReviews(parsed);
+        }
+      }
+    } catch (_) {}
+
+    try {
+      const res = await fetch('/api/reviews?homepage=1');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          renderHomepageReviews(data);
+          try {
+            localStorage.setItem('sokhm_reviews_cache_v1', JSON.stringify(data));
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
   // ================= 9. INITIALIZE =================
-  await loadProducts();
+  await Promise.all([
+    loadProducts(),
+    loadHomepageReviews()
+  ]);
   renderCart();
   syncWhatsAppLinks();
 
