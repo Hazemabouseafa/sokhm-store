@@ -184,10 +184,17 @@ function initSchema() {
       product_name TEXT DEFAULT '',
       verified INTEGER DEFAULT 1,
       show_on_homepage INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'approved',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
   `);
+
+  try {
+    db.exec("ALTER TABLE reviews ADD COLUMN status TEXT DEFAULT 'approved';");
+  } catch (e) {
+    // Column already exists
+  }
 
   try {
     db.exec('ALTER TABLE discount_codes ADD COLUMN max_uses INTEGER DEFAULT 0;');
@@ -435,26 +442,14 @@ function autoSeed() {
     db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('visibility', '{}', CURRENT_TIMESTAMP)").run();
   }
 
-  // Non-destructive initial reviews seed (only if never seeded and table is empty)
-  const reviewsSeeded = db.prepare("SELECT content_json FROM site_content WHERE section_key = '_reviews_seeded'").get();
-  if (!reviewsSeeded) {
-    const revCount = db.prepare('SELECT COUNT(*) AS count FROM reviews').get();
-    if (revCount && revCount.count === 0) {
-      const insertRev = db.prepare(`
-        INSERT OR IGNORE INTO reviews (id, customer_name, customer_location, rating, comment, product_id, product_name, verified, show_on_homepage, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', ?))
-      `);
-      const sampleReviews = [
-        ['rev-sokhm-01', 'عمر الشافعي', 'القاهرة • التجمع الخامس', 5, 'الخامة تقيلة جداً 500 GSM فعلاً والفينش والتفصيلة Oversized مظبوطة بالملي. من أحسن الهوديز اللي جبتها في مصر.', 'all', 'تشكيلة SOKHM الأساسية', 1, 1, '-5 days'],
-        ['rev-sokhm-02', 'يوسف عبد الرحمن', 'الإسكندرية • سموحة', 5, 'اللون على الطبيعة نفس الصور بالظبط والتقفيل عالمي، والتوصيل وصل في أقل من 24 ساعة.', 'all', 'تشكيلة SOKHM الأساسية', 1, 1, '-3 days'],
-        ['rev-sokhm-03', 'كريم طارق', 'الجيزة • الشيخ زايد', 5, 'القطن تقيل ومريح جداً ومبيوبرش مع الغسيل، المقاس مظبوط على جدول المقاسات. تجربة ممتازة.', 'all', 'تشكيلة SOKHM الأساسية', 1, 1, '-2 days'],
-        ['rev-sokhm-04', 'أحمد نبيل', 'المنصورة', 5, 'الباكدجينج فخم جداً والقطعة تقيلة وتستاهل كل جنيه. أكيد مش آخر تعامل مع SOKHM.', 'all', 'تشكيلة SOKHM الأساسية', 1, 1, '-1 day']
-      ];
-      for (const r of sampleReviews) {
-        insertRev.run(...r);
-      }
-    }
-    db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES ('_reviews_seeded', '{\"seeded\":true}')").run();
+  // Clean up any auto-seeded demo reviews (rev-sokhm-01..04) once so only real customer/admin reviews exist
+  const fakeCleaned = db.prepare("SELECT content_json FROM site_content WHERE section_key = '_fake_reviews_cleaned'").get();
+  if (!fakeCleaned) {
+    try {
+      db.prepare("DELETE FROM reviews WHERE id IN ('rev-sokhm-01', 'rev-sokhm-02', 'rev-sokhm-03', 'rev-sokhm-04')").run();
+      db.prepare("UPDATE reviews SET status = 'approved' WHERE status IS NULL OR status = ''").run();
+    } catch (_) {}
+    db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json) VALUES ('_fake_reviews_cleaned', '{\"cleaned\":true}')").run();
   }
 }
 
@@ -700,16 +695,16 @@ function saveSiteContent(content) {
     `).run(JSON.stringify(content.shipping));
   }
 
-  if (Array.isArray(content.categories)) {
-    // Upsert categories
+  if (Array.isArray(content.categories) && content.syncCategories === true) {
     const upsertCat = db.prepare(`
-      INSERT INTO categories (id, name, slug)
+      INSERT OR REPLACE INTO categories (id, name, slug)
       VALUES (?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET name=excluded.name, slug=excluded.slug
     `);
     for (const c of content.categories) {
-      const slug = c.slug || c.id;
-      upsertCat.run(slug, c.name, slug);
+      const slug = String(c.slug || c.id || '').trim();
+      if (slug && c.name) {
+        upsertCat.run(slug, c.name, slug);
+      }
     }
   }
 
@@ -794,6 +789,36 @@ function normalizeProductImagesAndColors(rawImagesJson, rawColorsJson) {
 migrateInlineBase64Images();
 
 /**
+ * Helper: Compute real approved review ratings per product (no fake stars)
+ */
+function getApprovedReviewStatsMap() {
+  const statsMap = new Map();
+  let generalSum = 0;
+  let generalCount = 0;
+  try {
+    const rows = db.prepare(`
+      SELECT LOWER(TRIM(COALESCE(product_id, 'all'))) AS pid, rating
+      FROM reviews
+      WHERE COALESCE(status, 'approved') = 'approved'
+    `).all();
+    for (const r of rows) {
+      const pid = r.pid || 'all';
+      const val = Math.min(5, Math.max(1, Number(r.rating) || 5));
+      if (pid === 'all' || pid === '') {
+        generalSum += val;
+        generalCount += 1;
+      } else {
+        const cur = statsMap.get(pid) || { sum: 0, count: 0 };
+        cur.sum += val;
+        cur.count += 1;
+        statsMap.set(pid, cur);
+      }
+    }
+  } catch (_) {}
+  return { statsMap, generalSum, generalCount };
+}
+
+/**
  * Products: Get all products
  */
 function getProducts() {
@@ -804,9 +829,16 @@ function getProducts() {
     rows = db.prepare("SELECT * FROM products ORDER BY created_at DESC").all();
   }
 
+  const { statsMap } = getApprovedReviewStatsMap();
+
   const list = rows.map(r => {
     const { mainImage, images, colors } = normalizeProductImagesAndColors(r.images_json, r.colors_json);
     const sizes = JSON.parse(r.sizes_json || '[]');
+    const pidKey = String(r.id || '').trim().toLowerCase();
+    const revStat = statsMap.get(pidKey) || { sum: 0, count: 0 };
+    const reviewsCount = revStat.count;
+    const rating = reviewsCount > 0 ? Number((revStat.sum / reviewsCount).toFixed(2)) : 0;
+
     return {
       id: r.id,
       name: r.name,
@@ -834,6 +866,9 @@ function getProducts() {
       model_info: r.model_info || '',
       stockStatus: r.stock_status || 'in_stock',
       stock_status: r.stock_status || 'in_stock',
+      rating,
+      reviewsCount,
+      reviews_count: reviewsCount,
       sortOrder: r.sort_order !== undefined ? r.sort_order : 0,
       sort_order: r.sort_order !== undefined ? r.sort_order : 0,
       show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
@@ -848,6 +883,7 @@ function getProducts() {
   });
 
   // Secondary check: if custom order is saved in site_content, enforce it
+  // Any newly created product not yet in orderMap gets position -1 so new items appear at the top!
   try {
     const orderRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'products_order'").get();
     if (orderRow && orderRow.content_json) {
@@ -858,8 +894,8 @@ function getProducts() {
         list.sort((a, b) => {
           const idA = String(a.id || a.slug || '').toLowerCase();
           const idB = String(b.id || b.slug || '').toLowerCase();
-          const posA = orderMap.has(idA) ? orderMap.get(idA) : 999999;
-          const posB = orderMap.has(idB) ? orderMap.get(idB) : 999999;
+          const posA = orderMap.has(idA) ? orderMap.get(idA) : -1;
+          const posB = orderMap.has(idB) ? orderMap.get(idB) : -1;
           if (posA !== posB) return posA - posB;
           return (a.sort_order || 0) - (b.sort_order || 0);
         });
@@ -879,6 +915,12 @@ function getProductById(id) {
   if (!r) return null;
   const { mainImage, images, colors } = normalizeProductImagesAndColors(r.images_json, r.colors_json);
   const sizes = JSON.parse(r.sizes_json || '[]');
+  const { statsMap } = getApprovedReviewStatsMap();
+  const pidKey = String(r.id || '').trim().toLowerCase();
+  const revStat = statsMap.get(pidKey) || { sum: 0, count: 0 };
+  const reviewsCount = revStat.count;
+  const rating = reviewsCount > 0 ? Number((revStat.sum / reviewsCount).toFixed(2)) : 0;
+
   return {
     id: r.id,
     name: r.name,
@@ -906,6 +948,9 @@ function getProductById(id) {
     model_info: r.model_info || '',
     stockStatus: r.stock_status || 'in_stock',
     stock_status: r.stock_status || 'in_stock',
+    rating,
+    reviewsCount,
+    reviews_count: reviewsCount,
     sortOrder: r.sort_order !== undefined ? r.sort_order : 0,
     sort_order: r.sort_order !== undefined ? r.sort_order : 0,
     show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null || r.show_on_homepage === 1 || r.show_on_homepage === '1',
@@ -1035,12 +1080,21 @@ function upsertProduct(p) {
   const fitAdvice = p.fitAdvice || p.fit_advice || '';
   const careAdvice = p.careAdvice || p.care_advice || '';
 
+  const existingProd = db.prepare("SELECT id, sort_order FROM products WHERE id = ? OR LOWER(id) = LOWER(?)").get(id, id);
+  let sortOrderVal = existingProd && existingProd.sort_order !== undefined ? Number(existingProd.sort_order) : 0;
+  if (!existingProd) {
+    try {
+      const minRow = db.prepare("SELECT MIN(sort_order) AS min_sort FROM products").get();
+      sortOrderVal = (minRow && minRow.min_sort !== null && minRow.min_sort !== undefined) ? (Number(minRow.min_sort) - 1) : 0;
+    } catch (_) {}
+  }
+
   const insert = db.prepare(`
     INSERT INTO products (
       id, name, subtitle, category_id, price, badge, badge_subtitle,
       images_json, sizes_json, short_desc, description,
-      fabric, fit_advice, care_advice, colors_json, model_info, stock_status, show_on_homepage, show_size_guide, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      fabric, fit_advice, care_advice, colors_json, model_info, stock_status, show_on_homepage, show_size_guide, sort_order, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       name=excluded.name,
       subtitle=excluded.subtitle,
@@ -1082,8 +1136,25 @@ function upsertProduct(p) {
     modelInfo,
     stockStatus,
     showOnHomepage,
-    showSizeGuide
+    showSizeGuide,
+    sortOrderVal
   );
+
+  // If this is a newly created product and products_order exists in site_content, prepend it so it shows first
+  if (!existingProd) {
+    try {
+      const orderRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'products_order'").get();
+      if (orderRow && orderRow.content_json) {
+        const orderIds = JSON.parse(orderRow.content_json);
+        if (Array.isArray(orderIds)) {
+          const lowerId = id.toLowerCase();
+          const filtered = orderIds.filter(x => String(x).toLowerCase() !== lowerId);
+          filtered.unshift(id);
+          db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('products_order', ?, CURRENT_TIMESTAMP)").run(JSON.stringify(filtered));
+        }
+      }
+    } catch (_) {}
+  }
 
   const updated = getProducts();
   syncJsonBackups(null, updated);
@@ -1096,6 +1167,17 @@ function upsertProduct(p) {
 function deleteProduct(id) {
   const sid = String(id).trim();
   db.prepare("DELETE FROM products WHERE id = ? OR LOWER(id) = LOWER(?)").run(sid, sid);
+  try {
+    const orderRow = db.prepare("SELECT content_json FROM site_content WHERE section_key = 'products_order'").get();
+    if (orderRow && orderRow.content_json) {
+      const orderIds = JSON.parse(orderRow.content_json);
+      if (Array.isArray(orderIds)) {
+        const lowerId = sid.toLowerCase();
+        const filtered = orderIds.filter(x => String(x).toLowerCase() !== lowerId);
+        db.prepare("INSERT OR REPLACE INTO site_content (section_key, content_json, updated_at) VALUES ('products_order', ?, CURRENT_TIMESTAMP)").run(JSON.stringify(filtered));
+      }
+    }
+  } catch (_) {}
   const updated = getProducts();
   syncJsonBackups(null, updated);
   return true;
@@ -1566,25 +1648,35 @@ function getRecentVisits(limit = 1000) {
 function getReviews(filter = {}) {
   try {
     const rows = db.prepare('SELECT * FROM reviews ORDER BY created_at DESC, rowid DESC').all();
-    let list = rows.map(r => ({
-      id: r.id,
-      customerName: r.customer_name || 'عميل SOKHM',
-      customer_name: r.customer_name || 'عميل SOKHM',
-      customerLocation: r.customer_location || '',
-      customer_location: r.customer_location || '',
-      rating: Math.min(5, Math.max(1, parseInt(r.rating, 10) || 5)),
-      comment: r.comment || '',
-      productId: r.product_id || 'all',
-      product_id: r.product_id || 'all',
-      productName: r.product_name || '',
-      product_name: r.product_name || '',
-      verified: r.verified === undefined || r.verified === null ? true : Boolean(Number(r.verified)),
-      showOnHomepage: r.show_on_homepage === undefined || r.show_on_homepage === null ? true : Boolean(Number(r.show_on_homepage)),
-      show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null ? 1 : Number(r.show_on_homepage),
-      createdAt: normalizeUtcDate(r.created_at),
-      created_at: normalizeUtcDate(r.created_at),
-      created_at_cairo: formatCairoDateTime(r.created_at)
-    }));
+    let list = rows.map(r => {
+      const status = (r.status && String(r.status).trim()) ? String(r.status).trim().toLowerCase() : 'approved';
+      return {
+        id: r.id,
+        customerName: r.customer_name || 'عميل SOKHM',
+        customer_name: r.customer_name || 'عميل SOKHM',
+        customerLocation: r.customer_location || '',
+        customer_location: r.customer_location || '',
+        rating: Math.min(5, Math.max(1, parseInt(r.rating, 10) || 5)),
+        comment: r.comment || '',
+        productId: r.product_id || 'all',
+        product_id: r.product_id || 'all',
+        productName: r.product_name || '',
+        product_name: r.product_name || '',
+        status,
+        isApproved: status === 'approved',
+        verified: r.verified === undefined || r.verified === null ? true : Boolean(Number(r.verified)),
+        showOnHomepage: r.show_on_homepage === undefined || r.show_on_homepage === null ? true : Boolean(Number(r.show_on_homepage)),
+        show_on_homepage: r.show_on_homepage === undefined || r.show_on_homepage === null ? 1 : Number(r.show_on_homepage),
+        createdAt: normalizeUtcDate(r.created_at),
+        created_at: normalizeUtcDate(r.created_at),
+        created_at_cairo: formatCairoDateTime(r.created_at)
+      };
+    });
+
+    // Only Admin with includePending=true sees unapproved reviews
+    if (!filter.includePending) {
+      list = list.filter(x => x.status === 'approved');
+    }
 
     if (filter.homepageOnly) {
       list = list.filter(x => x.showOnHomepage);
@@ -1593,7 +1685,10 @@ function getReviews(filter = {}) {
       const pid = String(filter.productId).trim().toLowerCase();
       list = list.filter(x => {
         const rPid = String(x.productId || 'all').trim().toLowerCase();
-        return rPid === 'all' || rPid === '' || rPid === pid;
+        if (filter.includeGeneral) {
+          return rPid === pid || rPid === 'all' || rPid === '';
+        }
+        return rPid === pid;
       });
     }
     return list;
@@ -1605,12 +1700,12 @@ function getReviews(filter = {}) {
 
 function createReview(data = {}) {
   const id = String(data.id || ('rev-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6))).trim();
-  const customerName = String(data.customerName || data.customer_name || '').trim();
-  const comment = String(data.comment || '').trim();
+  const customerName = String(data.customerName || data.customer_name || '').trim().slice(0, 120);
+  const comment = String(data.comment || '').trim().slice(0, 1500);
   if (!customerName) throw new Error('يرجى إدخال اسم العميل');
   if (!comment) throw new Error('يرجى إدخال نص التقييم');
 
-  const customerLocation = String(data.customerLocation || data.customer_location || '').trim();
+  const customerLocation = String(data.customerLocation || data.customer_location || '').trim().slice(0, 120);
   const rating = Math.min(5, Math.max(1, parseInt(data.rating, 10) || 5));
   const productId = String(data.productId || data.product_id || 'all').trim() || 'all';
   let productName = String(data.productName || data.product_name || '').trim();
@@ -1618,12 +1713,14 @@ function createReview(data = {}) {
     const p = getProductById(productId);
     if (p) productName = p.name;
   }
+  const isAdmin = Boolean(data.isAdmin);
+  const status = data.status ? String(data.status).trim().toLowerCase() : (isAdmin ? 'approved' : 'pending');
   const verified = (data.verified === false || data.verified === 0 || data.verified === '0') ? 0 : 1;
   const showOnHomepage = (data.showOnHomepage === false || data.show_on_homepage === false || data.show_on_homepage === 0 || data.show_on_homepage === '0') ? 0 : 1;
 
   db.prepare(`
-    INSERT INTO reviews (id, customer_name, customer_location, rating, comment, product_id, product_name, verified, show_on_homepage, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    INSERT INTO reviews (id, customer_name, customer_location, rating, comment, product_id, product_name, verified, show_on_homepage, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       customer_name = excluded.customer_name,
       customer_location = excluded.customer_location,
@@ -1632,11 +1729,22 @@ function createReview(data = {}) {
       product_id = excluded.product_id,
       product_name = excluded.product_name,
       verified = excluded.verified,
-      show_on_homepage = excluded.show_on_homepage
-  `).run(id, customerName, customerLocation, rating, comment, productId, productName, verified, showOnHomepage);
+      show_on_homepage = excluded.show_on_homepage,
+      status = excluded.status
+  `).run(id, customerName, customerLocation, rating, comment, productId, productName, verified, showOnHomepage, status);
 
-  const all = getReviews();
+  const all = getReviews({ includePending: true });
   return all.find(r => r.id === id) || all[0];
+}
+
+function approveReview(id) {
+  if (!id) throw new Error('Missing review id');
+  const sid = String(id).trim();
+  const row = db.prepare('SELECT id FROM reviews WHERE id = ?').get(sid);
+  if (!row) throw new Error('التقييم غير موجود');
+  db.prepare("UPDATE reviews SET status = 'approved', verified = 1 WHERE id = ?").run(sid);
+  const all = getReviews({ includePending: true });
+  return all.find(r => r.id === sid) || { id: sid, status: 'approved', isApproved: true };
 }
 
 function deleteReview(id) {
@@ -1845,6 +1953,7 @@ module.exports = {
   getRecentVisits,
   getReviews,
   createReview,
+  approveReview,
   deleteReview,
   toggleReviewHomepage,
   dbPath,

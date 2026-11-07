@@ -1642,12 +1642,7 @@ async function getVisitStats() {
   };
 }
 
-let fallbackReviews = [
-  { id: 'rev-sokhm-01', customerName: 'عمر الشافعي', customer_name: 'عمر الشافعي', customerLocation: 'القاهرة • التجمع الخامس', customer_location: 'القاهرة • التجمع الخامس', rating: 5, comment: 'الخامة تقيلة جداً 500 GSM فعلاً والفينش والتفصيلة Oversized مظبوطة بالملي. من أحسن الهوديز اللي جبتها في مصر.', productId: 'all', product_id: 'all', productName: 'تشكيلة SOKHM الأساسية', product_name: 'تشكيلة SOKHM الأساسية', verified: true, showOnHomepage: true, show_on_homepage: 1, createdAt: new Date().toISOString() },
-  { id: 'rev-sokhm-02', customerName: 'يوسف عبد الرحمن', customer_name: 'يوسف عبد الرحمن', customerLocation: 'الإسكندرية • سموحة', customer_location: 'الإسكندرية • سموحة', rating: 5, comment: 'اللون على الطبيعة نفس الصور بالظبط والتقفيل عالمي، والتوصيل وصل في أقل من 24 ساعة.', productId: 'all', product_id: 'all', productName: 'تشكيلة SOKHM الأساسية', product_name: 'تشكيلة SOKHM الأساسية', verified: true, showOnHomepage: true, show_on_homepage: 1, createdAt: new Date().toISOString() },
-  { id: 'rev-sokhm-03', customerName: 'كريم طارق', customer_name: 'كريم طارق', customerLocation: 'الجيزة • الشيخ زايد', customer_location: 'الجيزة • الشيخ زايد', rating: 5, comment: 'القطن تقيل ومريح جداً ومبيوبرش مع الغسيل، المقاس مظبوط على جدول المقاسات. تجربة ممتازة.', productId: 'all', product_id: 'all', productName: 'تشكيلة SOKHM الأساسية', product_name: 'تشكيلة SOKHM الأساسية', verified: true, showOnHomepage: true, show_on_homepage: 1, createdAt: new Date().toISOString() },
-  { id: 'rev-sokhm-04', customerName: 'أحمد نبيل', customer_name: 'أحمد نبيل', customerLocation: 'المنصورة', customer_location: 'المنصورة', rating: 5, comment: 'الباكدجينج فخم جداً والقطعة تقيلة وتستاهل كل جنيه. أكيد مش آخر تعامل مع SOKHM.', productId: 'all', product_id: 'all', productName: 'تشكيلة SOKHM الأساسية', product_name: 'تشكيلة SOKHM الأساسية', verified: true, showOnHomepage: true, show_on_homepage: 1, createdAt: new Date().toISOString() }
-];
+let fallbackReviews = [];
 
 async function resetVisits() {
   const c = getClient();
@@ -1660,16 +1655,24 @@ async function resetVisits() {
 
 async function getReviews(filter = {}) {
   let list = [...fallbackReviews];
+  if (!filter.includePending) {
+    list = list.filter(x => (x.status || 'approved') === 'approved');
+  }
   if (filter.homepageOnly) list = list.filter(x => x.showOnHomepage);
   if (filter.productId && filter.productId !== 'all') {
     const pid = String(filter.productId).toLowerCase();
-    list = list.filter(x => !x.productId || x.productId === 'all' || String(x.productId).toLowerCase() === pid);
+    list = list.filter(x => {
+      const rPid = String(x.productId || 'all').toLowerCase();
+      return filter.includeGeneral ? (rPid === pid || rPid === 'all' || rPid === '') : (rPid === pid);
+    });
   }
   return list;
 }
 
 async function createReview(data = {}) {
   const id = String(data.id || ('rev-' + Date.now()));
+  const isAdmin = Boolean(data.isAdmin);
+  const status = data.status ? String(data.status).trim().toLowerCase() : (isAdmin ? 'approved' : 'pending');
   const item = {
     id,
     customerName: String(data.customerName || data.customer_name || 'عميل SOKHM').trim(),
@@ -1682,6 +1685,8 @@ async function createReview(data = {}) {
     product_id: String(data.productId || data.product_id || 'all').trim() || 'all',
     productName: String(data.productName || data.product_name || '').trim(),
     product_name: String(data.productName || data.product_name || '').trim(),
+    status,
+    isApproved: status === 'approved',
     verified: true,
     showOnHomepage: data.showOnHomepage !== false && data.show_on_homepage !== false && data.show_on_homepage !== 0,
     show_on_homepage: (data.showOnHomepage !== false && data.show_on_homepage !== false && data.show_on_homepage !== 0) ? 1 : 0,
@@ -1692,6 +1697,16 @@ async function createReview(data = {}) {
   if (idx >= 0) fallbackReviews[idx] = item;
   else fallbackReviews.unshift(item);
   return item;
+}
+
+async function approveReview(id) {
+  const item = fallbackReviews.find(x => x.id === String(id));
+  if (item) {
+    item.status = 'approved';
+    item.isApproved = true;
+    item.verified = true;
+  }
+  return item || { id, status: 'approved', isApproved: true };
 }
 
 async function deleteReview(id) {
@@ -1799,6 +1814,7 @@ module.exports = {
   resetVisits,
   getReviews,
   createReview,
+  approveReview,
   deleteReview,
   toggleReviewHomepage,
   seedTursoDatabase,

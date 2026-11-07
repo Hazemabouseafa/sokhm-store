@@ -486,7 +486,14 @@ const server = http.createServer(async (req, res) => {
       try {
         const productId = parsedUrl.searchParams.get('productId') || parsedUrl.searchParams.get('product_id') || '';
         const homepageOnly = parsedUrl.searchParams.get('homepage') === '1' || parsedUrl.searchParams.get('homepage') === 'true';
-        const list = db.getReviews ? await db.getReviews({ productId, homepageOnly }) : [];
+        const wantsPending = parsedUrl.searchParams.get('includePending') === '1' || parsedUrl.searchParams.get('includePending') === 'true' || parsedUrl.searchParams.get('all') === '1';
+        let includePending = false;
+        if (wantsPending) {
+          const token = getBearerToken(req);
+          const session = token ? await db.validateSession(token) : null;
+          if (session) includePending = true;
+        }
+        const list = db.getReviews ? await db.getReviews({ productId, homepageOnly, includePending }) : [];
         return sendJson(res, 200, list);
       } catch (e) {
         return sendJson(res, 500, { error: e.message });
@@ -496,13 +503,39 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/reviews' && req.method === 'POST') {
       try {
         const token = getBearerToken(req);
+        const session = token ? await db.validateSession(token) : null;
+        const body = await readBody(req);
+        const isAdmin = Boolean(session);
+        const reviewPayload = {
+          ...body,
+          isAdmin,
+          status: isAdmin ? (body.status || 'approved') : 'pending'
+        };
+        const review = await db.createReview(reviewPayload);
+        return sendJson(res, 201, {
+          success: true,
+          pendingApproval: review.status === 'pending',
+          message: review.status === 'pending'
+            ? 'تم استلام تقييمك بنجاح وسيتم نشره فور مراجعته واعتماده من إدارة المتجر'
+            : 'تم إضافة ونشر التقييم بنجاح',
+          review
+        });
+      } catch (e) {
+        return sendJson(res, 400, { success: false, error: e.message });
+      }
+    }
+
+    const revApproveMatch = pathname.match(/^\/api\/reviews\/([^\/]+)\/approve$/);
+    if (revApproveMatch && (req.method === 'POST' || req.method === 'PUT')) {
+      try {
+        const token = getBearerToken(req);
         const session = await db.validateSession(token);
         if (!session) {
-          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لإضافة تقييم' });
+          return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لاعتماد التقييم' });
         }
-        const body = await readBody(req);
-        const review = await db.createReview(body);
-        return sendJson(res, 201, { success: true, review });
+        const id = decodeURIComponent(revApproveMatch[1]);
+        const review = db.approveReview ? await db.approveReview(id) : null;
+        return sendJson(res, 200, { success: true, review });
       } catch (e) {
         return sendJson(res, 400, { success: false, error: e.message });
       }

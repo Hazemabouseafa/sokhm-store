@@ -452,11 +452,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       const hImg = hoodie.image || (Array.isArray(hoodie.images) && hoodie.images[0]) || 'assets/sokhm-card-1.jpg';
       const hPrice = typeof hoodie.price === 'number' ? hoodie.price : (parseFloat(String(hoodie.price).replace(/[^0-9.]/g, '')) || 0);
 
+      const hRevCount = Number(hoodie.reviewsCount || hoodie.reviews_count || 0);
+      const hRatingVal = hRevCount > 0 ? Math.min(5, Math.max(1, Number(hoodie.rating) || 0)) : 0;
+      const hRounded = hRevCount > 0 ? Math.round(hRatingVal) : 0;
+      const hStars = '★'.repeat(hRounded) + '☆'.repeat(5 - hRounded);
+      const hRatingHtml = hRevCount > 0
+        ? `<div class="flex items-center gap-1.5 text-[10px] font-mono"><span class="text-amber-400 tracking-wider">${hStars}</span><span class="text-white font-bold">${hRatingVal.toFixed(1)}</span><span class="text-neutral-400">(${hRevCount})</span></div>`
+        : `<div class="flex items-center gap-1.5 text-[10px] font-mono"><span class="text-neutral-600 tracking-wider">☆☆☆☆☆</span><span class="text-neutral-500">(0 تقييم)</span></div>`;
+
       card.innerHTML = `
         <div class="sokhm-card-media">
           <img src="${hImg}" alt="${hoodie.name}" class="card-product-img" loading="lazy" onerror="this.src='assets/sokhm-card-1.jpg'">
         </div>
         <div class="pt-3 px-1 flex flex-col space-y-1 font-mono">
+          ${hRatingHtml}
           <h4 class="text-xs font-bold text-white group-hover:text-neutral-300 uppercase tracking-wider">${hoodie.name}</h4>
           <span class="text-[9px] text-neutral-400 uppercase tracking-widest">${hoodie.subtitle || hoodie.category || 'HOODIE'}</span>
           <p class="text-xs font-semibold text-neutral-300 pt-0.5">${hoodie.formattedPrice || (hPrice.toLocaleString('en-US') + ' EGP')}</p>
@@ -526,7 +535,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (productDescription) productDescription.textContent = prod.description || 'Premium architectural streetwear. Built different.';
     if (productCategoryKicker) productCategoryKicker.textContent = `✦ SOKHM ATELIER // ${prod.categoryLabel || prod.category || 'DROP 01'}`;
 
-    if (productRatingText) productRatingText.textContent = prod.rating || '4.98';
+    const topStarsEl = document.getElementById('productStarsIcons');
+    const topCountEl = document.getElementById('productReviewsCountText');
+    const pRevCount = Number(prod.reviewsCount || prod.reviews_count || 0);
+    const pRatingVal = pRevCount > 0 ? Math.min(5, Math.max(1, Number(prod.rating) || 0)) : 0;
+    const pRounded = pRevCount > 0 ? Math.round(pRatingVal) : 0;
+    if (topStarsEl) {
+      topStarsEl.textContent = '★'.repeat(pRounded) + '☆'.repeat(5 - pRounded);
+      topStarsEl.className = pRevCount > 0 ? 'text-amber-400 tracking-wider' : 'text-neutral-600 tracking-wider';
+    }
+    if (productRatingText) productRatingText.textContent = pRevCount > 0 ? pRatingVal.toFixed(1) : '0.0';
+    if (topCountEl) topCountEl.textContent = pRevCount > 0 ? `(${pRevCount} تقييم معتمد)` : '(0 تقييم — أضف تقييمك)';
+
     if (accordionFitText) accordionFitText.textContent = prod.fit || prod.fit_advice || prod.fitAdvice || 'Sculpted drop-shoulder oversized boxy drape. Forward-rotated sleeves.';
     if (accordionFabricText) accordionFabricText.textContent = prod.fabric || '500 GSM Heavyweight French Terry, 100% Long-Staple Egyptian Cotton.';
     if (accordionCareText) accordionCareText.textContent = prod.care || prod.care_advice || prod.careAdvice || 'Machine wash cold inside-out, hang dry.';
@@ -618,7 +638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Background fetch catalog for related products
   try {
-    const catRes = await fetch('/api/products');
+    const catRes = await fetch('/api/products?_t=' + Date.now(), { cache: 'no-store' });
     if (catRes.ok) {
       const allProds = await catRes.json();
       if (Array.isArray(allProds) && allProds.length > 0) {
@@ -1208,25 +1228,56 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderProductReviews(reviewsList) {
     const section = document.getElementById('productReviewsSection');
     const grid = document.getElementById('productReviewsGrid');
+    const starsBadge = document.getElementById('prodReviewsStarsBadge');
     const avgBadge = document.getElementById('prodReviewsAvgBadge');
     const totalBadge = document.getElementById('prodReviewsTotalBadge');
+    const topStarsEl = document.getElementById('productStarsIcons');
     const topRatingText = document.getElementById('productRatingText');
     const topCountText = document.getElementById('productReviewsCountText');
     if (!grid || !section) return;
 
-    const list = Array.isArray(reviewsList) ? reviewsList : [];
+    section.classList.remove('hidden');
+    const list = (Array.isArray(reviewsList) ? reviewsList : []).filter(r => (r.status || 'approved') === 'approved');
+
     if (list.length === 0) {
-      section.classList.add('hidden');
+      if (starsBadge) {
+        starsBadge.textContent = '☆☆☆☆☆';
+        starsBadge.className = 'text-neutral-600 tracking-widest';
+      }
+      if (avgBadge) avgBadge.textContent = '0.0';
+      if (totalBadge) totalBadge.textContent = '0 تقييم معتمد';
+      if (topStarsEl) {
+        topStarsEl.textContent = '☆☆☆☆☆';
+        topStarsEl.className = 'text-neutral-600 tracking-wider';
+      }
+      if (topRatingText) topRatingText.textContent = '0.0';
+      if (topCountText) topCountText.textContent = '(0 تقييم — أضف تقييمك)';
+      grid.innerHTML = `
+        <div class="col-span-full p-6 rounded-2xl bg-[#0B0B0B] border border-[#1B1B1B] text-center text-neutral-400 text-xs">
+          لا توجد تقييمات معتمدة لهذا المنتج حتى الآن — كن أول من يشارك تجربته من خلال النموذج بالأسفل!
+        </div>
+      `;
       return;
     }
-    section.classList.remove('hidden');
 
-    const totalRating = list.reduce((sum, r) => sum + (Number(r.rating) || 5), 0);
-    const avg = (totalRating / list.length).toFixed(2);
+    const totalRating = list.reduce((sum, r) => sum + Math.min(5, Math.max(1, Number(r.rating) || 5)), 0);
+    const avgNum = totalRating / list.length;
+    const avg = avgNum.toFixed(1);
+    const rounded = Math.min(5, Math.max(1, Math.round(avgNum)));
+    const realStars = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+
+    if (starsBadge) {
+      starsBadge.textContent = realStars;
+      starsBadge.className = 'text-amber-400 tracking-widest';
+    }
     if (avgBadge) avgBadge.textContent = avg;
-    if (totalBadge) totalBadge.textContent = `${list.length} تقييم موثق`;
+    if (totalBadge) totalBadge.textContent = `${list.length} تقييم معتمد`;
+    if (topStarsEl) {
+      topStarsEl.textContent = realStars;
+      topStarsEl.className = 'text-amber-400 tracking-wider';
+    }
     if (topRatingText) topRatingText.textContent = avg;
-    if (topCountText) topCountText.textContent = `(${list.length} تقييم)`;
+    if (topCountText) topCountText.textContent = `(${list.length} تقييم معتمد)`;
 
     grid.innerHTML = list.map((rev) => {
       const rating = Math.min(5, Math.max(1, Number(rev.rating) || 5));
@@ -1234,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const name = String(rev.customerName || rev.customer_name || 'عميل SOKHM').replace(/</g, '&lt;');
       const loc = String(rev.customerLocation || rev.customer_location || 'مصر').replace(/</g, '&lt;');
       const comment = String(rev.comment || '').replace(/</g, '&lt;');
-      const prodBadge = String(rev.productName || rev.product_name || 'SOKHM Collection').replace(/</g, '&lt;');
+      const prodBadge = String(rev.productName || rev.product_name || (currentProduct ? currentProduct.name : 'SOKHM Collection')).replace(/</g, '&lt;');
       const initial = name.trim().charAt(0) || 'S';
 
       return `
@@ -1244,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span class="text-amber-400 text-sm tracking-widest font-mono">${stars}</span>
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-[10px] font-bold">
                 <span>✓</span>
-                <span>عميل موثق</span>
+                <span>تقييم معتمد</span>
               </span>
             </div>
             <p class="text-xs sm:text-[13px] text-neutral-200 leading-relaxed font-sans mb-4">"${comment}"</p>
@@ -1269,21 +1320,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   let loadedReviewsForProduct = null;
-  async function loadProductReviews(prodId) {
-    if (!prodId || loadedReviewsForProduct === prodId) return;
+  async function loadProductReviews(prodId, forceRefresh = false) {
+    if (!prodId || (!forceRefresh && loadedReviewsForProduct === prodId)) return;
     loadedReviewsForProduct = prodId;
-    try {
-      const cached = localStorage.getItem('sokhm_reviews_cache_v1');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          renderProductReviews(parsed);
-        }
-      }
-    } catch (_) {}
 
     try {
-      const res = await fetch(`/api/reviews?productId=${encodeURIComponent(prodId)}`);
+      const res = await fetch(`/api/reviews?productId=${encodeURIComponent(prodId)}&_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -1292,6 +1334,127 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (_) {}
   }
+
+  // Interactive Customer Review Submission Form on Product Page
+  const custStarPicker = document.getElementById('custStarPicker');
+  const custReviewRatingInput = document.getElementById('custReviewRating');
+  const custStarLabel = document.getElementById('custStarLabel');
+  const customerWriteReviewForm = document.getElementById('customerWriteReviewForm');
+  const custReviewStatusMsg = document.getElementById('custReviewStatusMsg');
+  const custReviewSubmitBtn = document.getElementById('custReviewSubmitBtn');
+
+  const starLabelsMap = {
+    1: '1 / 5 — غير راضٍ',
+    2: '2 / 5 — مقبول',
+    3: '3 / 5 — جيد',
+    4: '4 / 5 — جيد جداً',
+    5: '5 / 5 — ممتاز جداً'
+  };
+
+  function updateCustStarUI(selectedVal) {
+    const val = Math.min(5, Math.max(1, parseInt(selectedVal, 10) || 5));
+    if (custReviewRatingInput) custReviewRatingInput.value = String(val);
+    if (custStarLabel) custStarLabel.textContent = starLabelsMap[val] || `${val} / 5`;
+    if (custStarPicker) {
+      custStarPicker.querySelectorAll('.cust-star-btn').forEach(btn => {
+        const bStar = parseInt(btn.getAttribute('data-star'), 10) || 1;
+        if (bStar <= val) {
+          btn.textContent = '★';
+          btn.className = 'cust-star-btn text-amber-400 hover:scale-110 transition-transform cursor-pointer';
+        } else {
+          btn.textContent = '☆';
+          btn.className = 'cust-star-btn text-neutral-600 hover:text-amber-300 hover:scale-110 transition-transform cursor-pointer';
+        }
+      });
+    }
+  }
+
+  if (custStarPicker) {
+    custStarPicker.querySelectorAll('.cust-star-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const starVal = parseInt(btn.getAttribute('data-star'), 10) || 5;
+        updateCustStarUI(starVal);
+      });
+    });
+  }
+
+  if (customerWriteReviewForm) {
+    customerWriteReviewForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nameEl = document.getElementById('custReviewName');
+      const locEl = document.getElementById('custReviewLocation');
+      const commentEl = document.getElementById('custReviewComment');
+
+      const customerName = nameEl ? nameEl.value.trim() : '';
+      const customerLocation = locEl ? locEl.value.trim() : '';
+      const comment = commentEl ? commentEl.value.trim() : '';
+      const rating = custReviewRatingInput ? (parseInt(custReviewRatingInput.value, 10) || 5) : 5;
+
+      if (!customerName || !comment) {
+        if (custReviewStatusMsg) {
+          custReviewStatusMsg.className = 'p-3.5 rounded-xl text-xs font-bold bg-red-950/70 border border-red-800 text-red-300';
+          custReviewStatusMsg.textContent = 'يرجى كتابة الاسم ورأيك في المنتج لإرسال التقييم.';
+          custReviewStatusMsg.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (custReviewSubmitBtn) {
+        custReviewSubmitBtn.disabled = true;
+        custReviewSubmitBtn.textContent = 'جاري الإرسال...';
+      }
+
+      try {
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: currentProduct ? currentProduct.id : targetId,
+            productName: currentProduct ? currentProduct.name : '',
+            customerName,
+            customerLocation,
+            rating,
+            comment
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          throw new Error(data.error || 'تعذر إرسال التقييم حالياً');
+        }
+
+        if (nameEl) nameEl.value = '';
+        if (locEl) locEl.value = '';
+        if (commentEl) commentEl.value = '';
+        updateCustStarUI(5);
+
+        if (custReviewStatusMsg) {
+          custReviewStatusMsg.className = 'p-3.5 rounded-xl text-xs font-bold bg-emerald-950/70 border border-emerald-800 text-emerald-300';
+          custReviewStatusMsg.textContent = '✓ تم إرسال تقييمك بنجاح! سيظهر تقييمك على المنتج فور مراجعته والموافقة عليه من إدارة المتجر.';
+          custReviewStatusMsg.classList.remove('hidden');
+        }
+        showToast('تم إرسال تقييمك للمراجعة بنجاح');
+      } catch (err) {
+        if (custReviewStatusMsg) {
+          custReviewStatusMsg.className = 'p-3.5 rounded-xl text-xs font-bold bg-red-950/70 border border-red-800 text-red-300';
+          custReviewStatusMsg.textContent = '⚠️ ' + (err.message || 'حدث خطأ أثناء إرسال التقييم');
+          custReviewStatusMsg.classList.remove('hidden');
+        }
+      } finally {
+        if (custReviewSubmitBtn) {
+          custReviewSubmitBtn.disabled = false;
+          custReviewSubmitBtn.textContent = 'إرسال التقييم للمراجعة';
+        }
+      }
+    });
+  }
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'sokhm_last_admin_update' || e.key === 'sokhm_reviews_cache_v1' || e.key === 'sokhm_products_cache_v1') {
+      if (currentProduct && currentProduct.id) {
+        loadProductReviews(currentProduct.id, true);
+      }
+    }
+  });
 
   window.addEventListener('sokhm:content-updated', () => {
     syncWhatsAppLinks();

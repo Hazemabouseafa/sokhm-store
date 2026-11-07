@@ -342,7 +342,7 @@ async function generateCsvExport(db, type = 'orders', options = {}) {
   }
 
   if (exportType === 'reviews') {
-    const reviews = db.getReviews ? await db.getReviews() : [];
+    const reviews = db.getReviews ? await db.getReviews({ includePending: true }) : [];
     const headers = [
       'معرف التقييم (ID)',
       'اسم العميل (Customer Name)',
@@ -350,6 +350,7 @@ async function generateCsvExport(db, type = 'orders', options = {}) {
       'التقييم (Rating 1-5)',
       'نص الرأي (Review Comment)',
       'المنتج المرتبط (Product)',
+      'الحالة (Approval Status)',
       'الظهور بالرئيسية (Show on Homepage)',
       'تاريخ الإضافة (Created Date)'
     ];
@@ -360,6 +361,7 @@ async function generateCsvExport(db, type = 'orders', options = {}) {
       r.rating || 5,
       r.comment || '',
       r.productName || r.product_name || (r.productId === 'all' ? 'جميع المنتجات' : r.productId),
+      (r.status === 'pending' || r.isApproved === false) ? 'بانتظار الموافقة (Pending)' : 'معتمد ومنشور (Approved)',
       r.showOnHomepage ? 'نعم' : 'لا',
       r.created_at_cairo || r.createdAt || ''
     ]);

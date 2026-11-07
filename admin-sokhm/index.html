@@ -2526,14 +2526,27 @@
           </button>
         </form>
 
-        <!-- قائمة التقييمات الحالية -->
+        <!-- قائمة التقييمات الحالية وطلبات الموافقة -->
         <div class="cms-card p-6 space-y-4 lg:col-span-7">
-          <div class="flex items-center justify-between pb-2 border-b border-[#1A1A1A]">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#1A1A1A]">
             <h3 class="font-bold text-sm text-white flex items-center gap-2">
               <i data-lucide="message-square-quote" class="w-4 h-4 text-emerald-400"></i>
-              <span>سجل التقييمات المنشورة في الموقع</span>
+              <span>سجل تقييمات العملاء وطلبات الاعتماد</span>
             </h3>
             <span id="reviewsTotalCountText" class="text-xs font-mono text-neutral-400">0 تقييم</span>
+          </div>
+
+          <!-- فلاتر التقييمات (الكل / بانتظار الموافقة / المعتمدة) -->
+          <div id="reviewsAdminFilterBar" class="flex items-center gap-2 flex-wrap text-xs">
+            <button type="button" data-rev-filter="all" class="rev-filter-btn px-3 py-1.5 rounded-lg bg-white text-black font-bold cursor-pointer transition-all">
+              الكل
+            </button>
+            <button type="button" data-rev-filter="pending" class="rev-filter-btn px-3 py-1.5 rounded-lg bg-[#141414] text-amber-400 border border-amber-500/30 hover:border-amber-400 font-bold cursor-pointer transition-all">
+              ⏳ بانتظار الموافقة (<span id="reviewsPendingFilterCount">0</span>)
+            </button>
+            <button type="button" data-rev-filter="approved" class="rev-filter-btn px-3 py-1.5 rounded-lg bg-[#141414] text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 font-bold cursor-pointer transition-all">
+              ✓ المعتمدة والمنشورة (<span id="reviewsApprovedFilterCount">0</span>)
+            </button>
           </div>
 
           <div id="reviewsAdminList" class="space-y-3 max-h-[540px] overflow-y-auto pr-1">

@@ -101,16 +101,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 1. FETCH SOKHM PRODUCTS =================
   async function loadProducts() {
     try {
-      // 1. Parallel fetch for products and categories (Edge CDN cached)
+      // 1. Parallel fetch for products and categories (always fresh, no stale cache)
+      const ts = Date.now();
       const [apiRes, catRes] = await Promise.all([
-        fetch('/api/products'),
-        fetch('/api/categories').catch(() => null)
+        fetch(`/api/products?_t=${ts}`, { cache: 'no-store' }),
+        fetch(`/api/categories?_t=${ts}`, { cache: 'no-store' }).catch(() => null)
       ]);
 
       if (catRes && catRes.ok) {
         try {
           const catsData = await catRes.json();
-          if (Array.isArray(catsData) && catsData.length > 0) {
+          if (Array.isArray(catsData)) {
             categories = catsData;
             renderCategoryFilters();
           }
@@ -119,7 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (apiRes && apiRes.ok) {
         const data = await apiRes.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           products = data;
           renderBestSellers();
 
@@ -134,6 +135,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               price: p.price,
               formattedPrice: p.formattedPrice,
               image: p.image,
+              rating: p.rating || 0,
+              reviewsCount: p.reviewsCount || p.reviews_count || 0,
+              reviews_count: p.reviewsCount || p.reviews_count || 0,
               show_on_homepage: p.show_on_homepage,
               showOnHomepage: p.showOnHomepage,
               slug: p.slug,
@@ -235,10 +239,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ================= 1.5 CATEGORY FILTERS & PRODUCTS DROPDOWN =================
   async function loadCategories() {
     try {
-      const res = await fetch('/api/categories');
+      const res = await fetch('/api/categories?_t=' + Date.now(), { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           categories = data;
         }
       }
@@ -499,6 +503,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
       }).join('');
 
+      const revCount = Number(prod.reviewsCount || prod.reviews_count || 0);
+      const ratingVal = revCount > 0 ? Math.min(5, Math.max(1, Number(prod.rating) || 0)) : 0;
+      const roundedStars = revCount > 0 ? Math.round(ratingVal) : 0;
+      const starsIcons = '★'.repeat(roundedStars) + '☆'.repeat(5 - roundedStars);
+      const cardRatingHtml = revCount > 0
+        ? `<div class="flex items-center gap-1.5 text-[10px] font-mono" title="${ratingVal.toFixed(1)} من 5 (${revCount} تقييم معتمد)">
+             <span class="text-amber-400 tracking-wider">${starsIcons}</span>
+             <span class="text-white font-bold">${ratingVal.toFixed(1)}</span>
+             <span class="text-neutral-400">(${revCount})</span>
+           </div>`
+        : `<div class="flex items-center gap-1.5 text-[10px] font-mono" title="لا توجد تقييمات معتمدة بعد">
+             <span class="text-neutral-600 tracking-wider">☆☆☆☆☆</span>
+             <span class="text-neutral-500">(0 تقييم)</span>
+           </div>`;
+
       card.innerHTML = `
         <div class="sokhm-card-media relative">
           <img src="${initialCardImg}" alt="${prod.name}" class="card-product-img" loading="${cardIdx < 4 ? 'eager' : 'lazy'}" fetchpriority="${cardIdx < 2 ? 'high' : 'auto'}" decoding="async">
@@ -514,6 +533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
 
         <div class="pt-2.5 px-1 flex flex-col space-y-1 font-mono">
+          ${cardRatingHtml}
           <h3 class="text-xs font-bold text-white group-hover:text-neutral-300 transition-colors uppercase tracking-wider">
             ${prod.name}
           </h3>
@@ -635,6 +655,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (modalImg) modalImg.src = (selectedModalColor && selectedModalColor.image) || pMainImg;
     if (modalKicker) modalKicker.textContent = prod.categoryLabel || prod.category || '✦ SOKHM ATELIER';
     if (modalTitle) modalTitle.textContent = prod.name;
+    const modalRatingRow = document.getElementById('modalRatingRow');
+    if (modalRatingRow) {
+      const mRevCount = Number(prod.reviewsCount || prod.reviews_count || 0);
+      const mRating = mRevCount > 0 ? Math.min(5, Math.max(1, Number(prod.rating) || 0)) : 0;
+      const mRounded = mRevCount > 0 ? Math.round(mRating) : 0;
+      const mStars = '★'.repeat(mRounded) + '☆'.repeat(5 - mRounded);
+      modalRatingRow.innerHTML = mRevCount > 0
+        ? `<span class="text-amber-400 tracking-wider">${mStars}</span><span class="text-white font-bold">${mRating.toFixed(1)}</span><span class="text-neutral-400">(${mRevCount} تقييم معتمد)</span>`
+        : `<span class="text-neutral-600 tracking-wider">☆☆☆☆☆</span><span class="text-neutral-500">(بدون تقييمات بعد)</span>`;
+    }
     const pNum = typeof prod.price === 'number' ? prod.price : (parseFloat(prod.price) || 0);
     if (modalPrice) modalPrice.textContent = prod.formattedPrice || `${pNum.toLocaleString('en-US')} EGP`;
     if (modalDesc) modalDesc.textContent = prod.description || '500 GSM architectural heavyweight combed cotton fleece. Built different.';
@@ -1010,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Cross-tab / Cross-page Cart Sync
+  // Cross-tab / Cross-page Cart & Admin Live Updates Sync
   window.addEventListener('storage', (e) => {
     if (e.key === 'sokhm_noir_cart_v1') {
       try {
@@ -1026,6 +1056,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         renderCart();
       } catch (err) {}
+    } else if (e.key === 'sokhm_last_admin_update' || e.key === 'sokhm_products_cache_v1' || e.key === 'sokhm_reviews_cache_v1') {
+      loadProducts();
+      loadHomepageReviews();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      loadProducts();
+      loadHomepageReviews();
+      if (window.sokhmContent && typeof window.sokhmContent.load === 'function') {
+        window.sokhmContent.load();
+      }
     }
   });
 
@@ -1102,25 +1145,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('sokhm:content-updated', syncWhatsAppLinks);
 
-  // ================= 8.5. CUSTOMER REVIEWS SECTION (AFTER PRODUCTS) =================
+  // ================= 8.5. CUSTOMER REVIEWS SECTION (ABOVE PRODUCTS) =================
   function renderHomepageReviews(reviewsList) {
     const reviewsSection = document.getElementById('reviewsSection');
     const reviewsGrid = document.getElementById('homepageReviewsGrid');
+    const starsEl = document.getElementById('homeReviewsStars');
     const avgEl = document.getElementById('homeReviewsAvgRating');
     const countEl = document.getElementById('homeReviewsTotalCount');
     if (!reviewsGrid || !reviewsSection) return;
 
-    const list = Array.isArray(reviewsList) ? reviewsList : [];
+    const list = (Array.isArray(reviewsList) ? reviewsList : []).filter(r => (r.status || 'approved') === 'approved');
     if (list.length === 0) {
       reviewsSection.classList.add('hidden');
+      if (starsEl) starsEl.textContent = '☆☆☆☆☆';
+      if (avgEl) avgEl.textContent = '0.0';
+      if (countEl) countEl.textContent = '0 تقييم معتمد';
+      reviewsGrid.innerHTML = '';
       return;
     }
     reviewsSection.classList.remove('hidden');
 
-    const totalRating = list.reduce((sum, r) => sum + (Number(r.rating) || 5), 0);
-    const avg = (totalRating / list.length).toFixed(2);
+    const totalRating = list.reduce((sum, r) => sum + Math.min(5, Math.max(1, Number(r.rating) || 5)), 0);
+    const avgNum = totalRating / list.length;
+    const avg = avgNum.toFixed(1);
+    const roundedAvg = Math.min(5, Math.max(1, Math.round(avgNum)));
+    if (starsEl) starsEl.textContent = '★'.repeat(roundedAvg) + '☆'.repeat(5 - roundedAvg);
     if (avgEl) avgEl.textContent = avg;
-    if (countEl) countEl.textContent = `${list.length} تقييم موثق`;
+    if (countEl) countEl.textContent = `${list.length} تقييم معتمد`;
 
     reviewsGrid.innerHTML = list.map((rev) => {
       const rating = Math.min(5, Math.max(1, Number(rev.rating) || 5));
@@ -1138,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span class="text-amber-400 text-sm tracking-widest font-mono" aria-label="${rating} من 5 نجوم">${stars}</span>
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-[10px] font-bold">
                 <span>✓</span>
-                <span>عميل موثق</span>
+                <span>تقييم معتمد</span>
               </span>
             </div>
             <p class="text-xs sm:text-[13px] text-neutral-200 leading-relaxed font-sans mb-4">"${comment}"</p>
@@ -1164,17 +1215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function loadHomepageReviews() {
     try {
-      const cached = localStorage.getItem('sokhm_reviews_cache_v1');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          renderHomepageReviews(parsed);
-        }
-      }
-    } catch (_) {}
-
-    try {
-      const res = await fetch('/api/reviews?homepage=1');
+      const res = await fetch('/api/reviews?homepage=1&_t=' + Date.now(), { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {

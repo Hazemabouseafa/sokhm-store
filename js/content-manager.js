@@ -44,9 +44,9 @@
       }
     } catch (e) {}
 
-    // 2. Fetch fresh from server
+    // 2. Fetch fresh from server (bypass browser cache so admin edits appear immediately)
     try {
-      const res = await fetch('/api/site-content');
+      const res = await fetch('/api/site-content?_t=' + Date.now(), { cache: 'no-store' });
       if (res.ok) {
         siteContent = await res.json();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(siteContent));
@@ -199,6 +199,13 @@
     },
     getCheckout: () => (siteContent && siteContent.checkout) || {}
   };
+
+  // Listen for cross-tab Admin updates so storefront updates live without reload
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY || e.key === 'sokhm_last_admin_update') {
+      loadContent();
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadContent);

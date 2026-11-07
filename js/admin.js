@@ -981,6 +981,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!Array.isArray(siteContent.categories)) siteContent.categories = [];
   }
 
+  function notifyStorefrontUpdate() {
+    try {
+      localStorage.removeItem('sokhm_products_cache_v1');
+      localStorage.removeItem('sokhm_reviews_cache_v1');
+      if (siteContent && typeof siteContent === 'object') {
+        localStorage.setItem('sokhm_site_content_v1', JSON.stringify(siteContent));
+      } else {
+        localStorage.removeItem('sokhm_site_content_v1');
+      }
+      localStorage.setItem('sokhm_last_admin_update', String(Date.now()));
+    } catch (_) {}
+  }
+
   async function saveSiteContent() {
     try {
       const res = await fetch('/api/site-content', {
@@ -991,6 +1004,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         body: JSON.stringify(siteContent)
       });
+      if (res.ok) {
+        notifyStorefrontUpdate();
+      }
       loadDbStats();
       return res.ok;
     } catch (err) {
@@ -2190,6 +2206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!res.ok) {
         throw new Error('فشل حفظ الترتيب في السيرفر');
       }
+      notifyStorefrontUpdate();
 
       if (statusBadge) {
         statusBadge.innerHTML = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i><span>تم حفظ ترتيب المنتجات بنجاح</span>';
@@ -2371,6 +2388,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
           if (res.ok) {
             products = products.filter(p => String(p.id).trim() !== String(id).trim() && String(p.slug || '').trim() !== String(id).trim());
+            notifyStorefrontUpdate();
             renderProductsTable();
             loadDbStats();
             showToast('تم حذف المنتج بنجاح من قاعدة البيانات');
@@ -3493,7 +3511,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
           }
 
+          notifyStorefrontUpdate();
           renderProductsTable();
+          populateReviewProductDropdown();
           loadDbStats();
           productModal.close();
           showToast(isEdit ? 'تم تحديث بيانات القطعة بنجاح' : 'تمت إضافة القطعة بنجاح إلى الكتالوج');
@@ -3597,6 +3617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (res.ok) {
             categories = categories.filter(c => (c.id || c.slug) !== id);
             siteContent.categories = categories;
+            notifyStorefrontUpdate();
             renderCategoriesList();
             populateCategoryDropdowns();
             renderProductsTable();
@@ -3635,6 +3656,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         categories.push({ id: slug, name, slug });
         siteContent.categories = categories;
+        notifyStorefrontUpdate();
         form.reset();
         renderCategoriesList();
         populateCategoryDropdowns();
@@ -4311,9 +4333,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ================= 12.5. إدارة آراء وتقييمات العملاء (CUSTOMER REVIEWS MANAGER) =================
+  let reviewAdminFilter = 'all';
+
   async function loadReviews() {
     try {
-      const res = await fetch('/api/reviews');
+      const res = await fetch('/api/reviews?includePending=1&_t=' + Date.now(), {
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'x-admin-token': token
+        },
+        cache: 'no-store'
+      });
       if (res.ok) {
         const data = await res.json();
         reviews = Array.isArray(data) ? data : [];
@@ -4322,8 +4352,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.warn('Failed to load reviews:', e);
     }
     if (!Array.isArray(reviews)) reviews = [];
+    updateReviewHeaderBadges();
+  }
+
+  function updateReviewHeaderBadges() {
     const headerBadge = document.getElementById('reviewsHeaderCountBadge');
-    if (headerBadge) headerBadge.textContent = reviews.length;
+    const pendingCountEl = document.getElementById('reviewsPendingFilterCount');
+    const approvedCountEl = document.getElementById('reviewsApprovedFilterCount');
+    const safeReviews = Array.isArray(reviews) ? reviews : [];
+    const pendingCount = safeReviews.filter(r => r.status === 'pending' || r.isApproved === false).length;
+    const approvedCount = safeReviews.length - pendingCount;
+
+    if (pendingCountEl) pendingCountEl.textContent = pendingCount;
+    if (approvedCountEl) approvedCountEl.textContent = approvedCount;
+
+    if (headerBadge) {
+      if (pendingCount > 0) {
+        headerBadge.textContent = `${pendingCount} بانتظار الموافقة`;
+        headerBadge.className = 'text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500 text-black font-mono font-extrabold animate-pulse';
+      } else {
+        headerBadge.textContent = safeReviews.length;
+        headerBadge.className = 'text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold';
+      }
+    }
   }
 
   function populateReviewProductDropdown() {
@@ -4339,34 +4390,66 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderReviewsAdmin() {
     const listContainer = document.getElementById('reviewsAdminList');
     const countText = document.getElementById('reviewsTotalCountText');
-    const headerBadge = document.getElementById('reviewsHeaderCountBadge');
-    if (headerBadge) headerBadge.textContent = reviews.length;
-    if (countText) countText.textContent = `${reviews.length} تقييم`;
+    updateReviewHeaderBadges();
+
+    const safeReviews = Array.isArray(reviews) ? reviews : [];
+    const pendingCount = safeReviews.filter(r => r.status === 'pending' || r.isApproved === false).length;
+    if (countText) {
+      countText.textContent = pendingCount > 0
+        ? `إجمالي ${safeReviews.length} تقييم (${pendingCount} بانتظار الموافقة)`
+        : `${safeReviews.length} تقييم معتمد`;
+    }
     if (!listContainer) return;
 
-    if (!Array.isArray(reviews) || reviews.length === 0) {
+    // Highlight active filter button
+    document.querySelectorAll('.rev-filter-btn').forEach(btn => {
+      const f = btn.getAttribute('data-rev-filter') || 'all';
+      if (f === reviewAdminFilter) {
+        btn.classList.add('ring-2', 'ring-white');
+      } else {
+        btn.classList.remove('ring-2', 'ring-white');
+      }
+    });
+
+    let filtered = safeReviews;
+    if (reviewAdminFilter === 'pending') {
+      filtered = safeReviews.filter(r => r.status === 'pending' || r.isApproved === false);
+    } else if (reviewAdminFilter === 'approved') {
+      filtered = safeReviews.filter(r => (r.status || 'approved') === 'approved' && r.isApproved !== false);
+    }
+
+    if (filtered.length === 0) {
       listContainer.innerHTML = `
-        <div class="p-8 text-center text-neutral-500 border border-dashed border-[#222] rounded-xl">
-          لا توجد تقييمات مضافة حالياً. استخدم النموذج لإضافة أول تقييم عميل!
+        <div class="p-8 text-center text-neutral-500 border border-dashed border-[#222] rounded-xl text-xs">
+          ${reviewAdminFilter === 'pending' ? 'لا توجد تقييمات بانتظار الموافقة حالياً.' : 'لا توجد تقييمات مضافة في هذا القسم حالياً.'}
         </div>
       `;
       return;
     }
 
-    listContainer.innerHTML = reviews.map(rev => {
+    listContainer.innerHTML = filtered.map(rev => {
       const rating = Math.min(5, Math.max(1, Number(rev.rating) || 5));
       const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+      const isPending = rev.status === 'pending' || rev.isApproved === false;
       const showHome = rev.showOnHomepage !== false && rev.show_on_homepage !== 0;
       const prodLabel = rev.productName || rev.product_name || 'جميع المنتجات';
       return `
-        <div class="p-4 rounded-xl bg-[#090909] border border-[#1E1E1E] hover:border-[#333] transition-all space-y-2.5">
+        <div class="p-4 rounded-xl ${isPending ? 'bg-amber-950/15 border-2 border-amber-500/50' : 'bg-[#090909] border border-[#1E1E1E]'} hover:border-[#333] transition-all space-y-2.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="font-bold text-white text-xs">${rev.customerName || rev.customer_name}</span>
               <span class="text-[10px] text-neutral-400">(${rev.customerLocation || rev.customer_location || 'مصر'})</span>
               <span class="text-amber-400 font-mono text-xs tracking-widest">${stars}</span>
+              ${isPending
+                ? '<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[10px] font-bold">⏳ بانتظار موافقة المدير</span>'
+                : '<span class="px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-[10px] font-bold">✓ معتمد ومنشور</span>'}
             </div>
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${isPending ? `
+                <button type="button" class="approve-review-btn px-3 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-500 hover:bg-emerald-400 text-black cursor-pointer transition-all shadow-md" data-review-id="${rev.id}" title="اعتماد ونشر التقييم في الموقع">
+                  ✓ موافقة ونشر التقييم
+                </button>
+              ` : ''}
               <button type="button" class="toggle-review-home-btn px-2.5 py-1 rounded-lg text-[10px] font-bold border cursor-pointer transition-all ${showHome ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60' : 'bg-neutral-900 text-neutral-400 border-neutral-800'}" data-review-id="${rev.id}" title="تبديل الظهور في الصفحة الرئيسية">
                 ${showHome ? '✓ معروض بالرئيسية' : 'مخفي من الرئيسية'}
               </button>
@@ -4386,6 +4469,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupLucide();
 
+    listContainer.querySelectorAll('.approve-review-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-review-id');
+        btn.disabled = true;
+        btn.textContent = 'جاري الاعتماد...';
+        try {
+          const res = await fetch(`/api/reviews/${encodeURIComponent(id)}/approve`, {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'x-admin-token': token
+            }
+          });
+          if (res.ok) {
+            await Promise.all([loadReviews(), loadProducts()]);
+            renderReviewsAdmin();
+            renderProductsTable();
+            notifyStorefrontUpdate();
+            showToast('✓ تم اعتماد ونشر تقييم العميل وتحديث نجوم المنتج بنجاح!');
+          } else {
+            alert('تعذر اعتماد التقييم');
+          }
+        } catch (err) {
+          alert('خطأ أثناء اعتماد التقييم: ' + err.message);
+        }
+      });
+    });
+
     listContainer.querySelectorAll('.toggle-review-home-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-review-id');
@@ -4400,7 +4511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (res.ok) {
             await loadReviews();
             renderReviewsAdmin();
-            try { localStorage.removeItem('sokhm_reviews_cache_v1'); } catch (_) {}
+            notifyStorefrontUpdate();
             showToast('تم تحديث حالة ظهور التقييم في الصفحة الرئيسية');
           }
         } catch (err) {
@@ -4422,10 +4533,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
           });
           if (res.ok) {
-            await loadReviews();
+            await Promise.all([loadReviews(), loadProducts()]);
             renderReviewsAdmin();
-            try { localStorage.removeItem('sokhm_reviews_cache_v1'); } catch (_) {}
-            showToast('تم حذف التقييم بنجاح');
+            renderProductsTable();
+            notifyStorefrontUpdate();
+            showToast('تم حذف التقييم وتحديث تقييمات المنتج بنجاح');
           }
         } catch (err) {
           alert('تعذر حذف التقييم');
@@ -4435,6 +4547,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function setupReviewsHandlers() {
+    document.querySelectorAll('.rev-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        reviewAdminFilter = btn.getAttribute('data-rev-filter') || 'all';
+        renderReviewsAdmin();
+      });
+    });
+
     const form = document.getElementById('createReviewForm');
     if (!form) return;
 
@@ -4473,7 +4592,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             productId,
             productName,
             comment,
-            showOnHomepage
+            showOnHomepage,
+            status: 'approved'
           })
         });
 
@@ -4481,9 +4601,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           form.reset();
           const showCb = document.getElementById('reviewShowOnHomepage');
           if (showCb) showCb.checked = true;
-          await loadReviews();
+          await Promise.all([loadReviews(), loadProducts()]);
           renderReviewsAdmin();
-          try { localStorage.removeItem('sokhm_reviews_cache_v1'); } catch (_) {}
+          renderProductsTable();
+          notifyStorefrontUpdate();
           showToast('تم إضافة ونشر تقييم العميل بنجاح ✦');
         } else {
           const errData = await res.json().catch(() => ({}));

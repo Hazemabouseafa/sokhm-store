@@ -226,7 +226,7 @@ module.exports = async (req, res) => {
     if (pathname === '/api/site-content') {
       if (req.method === 'GET') {
         const content = await db.getSiteContent();
-        return sendJson(res, 200, content, 'public, max-age=10, s-maxage=60, stale-while-revalidate=600');
+        return sendJson(res, 200, content);
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
@@ -252,7 +252,7 @@ module.exports = async (req, res) => {
         if (queryId) {
           const prod = await db.getProductById(queryId);
           if (!prod) return sendJson(res, 404, { success: false, error: 'المنتج غير موجود' });
-          return sendJson(res, 200, prod, 'public, max-age=0, s-maxage=15, stale-while-revalidate=60');
+          return sendJson(res, 200, prod);
         }
 
         const isFull = parsedUrl.searchParams.get('full') === '1' || parsedUrl.searchParams.get('full') === 'true';
@@ -282,7 +282,7 @@ module.exports = async (req, res) => {
           };
         });
 
-        return sendJson(res, 200, catalog, 'public, max-age=0, s-maxage=15, stale-while-revalidate=60');
+        return sendJson(res, 200, catalog);
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
@@ -312,7 +312,7 @@ module.exports = async (req, res) => {
       if (req.method === 'GET') {
         const prod = await db.getProductById(id);
         if (!prod) return sendJson(res, 404, { success: false, error: 'المنتج غير موجود' });
-        return sendJson(res, 200, prod, 'public, max-age=0, s-maxage=15, stale-while-revalidate=60');
+        return sendJson(res, 200, prod);
       }
       if (req.method === 'PUT') {
         const body = await parseBody(req);
@@ -330,7 +330,7 @@ module.exports = async (req, res) => {
     if (pathname === '/api/categories') {
       if (req.method === 'GET') {
         const cats = await db.getCategories();
-        return sendJson(res, 200, cats, 'public, max-age=30, s-maxage=120, stale-while-revalidate=600');
+        return sendJson(res, 200, cats);
       }
       if (req.method === 'POST') {
         const body = await parseBody(req);
@@ -502,19 +502,48 @@ module.exports = async (req, res) => {
     if (pathname === '/api/reviews' && req.method === 'GET') {
       const productId = parsedUrl.searchParams.get('productId') || parsedUrl.searchParams.get('product_id') || '';
       const homepageOnly = parsedUrl.searchParams.get('homepage') === '1' || parsedUrl.searchParams.get('homepage') === 'true';
-      const list = db.getReviews ? await db.getReviews({ productId, homepageOnly }) : [];
+      const wantsPending = parsedUrl.searchParams.get('includePending') === '1' || parsedUrl.searchParams.get('includePending') === 'true' || parsedUrl.searchParams.get('all') === '1';
+      let includePending = false;
+      if (wantsPending) {
+        const token = getBearerToken(req);
+        const session = token ? await db.validateSession(token) : null;
+        if (session) includePending = true;
+      }
+      const list = db.getReviews ? await db.getReviews({ productId, homepageOnly, includePending }) : [];
       return sendJson(res, 200, list);
     }
 
     if (pathname === '/api/reviews' && req.method === 'POST') {
       const token = getBearerToken(req);
+      const session = token ? await db.validateSession(token) : null;
+      const body = await parseBody(req);
+      const isAdmin = Boolean(session);
+      const reviewPayload = {
+        ...body,
+        isAdmin,
+        status: isAdmin ? (body.status || 'approved') : 'pending'
+      };
+      const review = await db.createReview(reviewPayload);
+      return sendJson(res, 201, {
+        success: true,
+        pendingApproval: review.status === 'pending',
+        message: review.status === 'pending'
+          ? 'تم استلام تقييمك بنجاح وسيتم نشره فور مراجعته واعتماده من إدارة المتجر'
+          : 'تم إضافة ونشر التقييم بنجاح',
+        review
+      });
+    }
+
+    const revApproveMatch = pathname.match(/^\/api\/reviews\/([^\/]+)\/approve$/);
+    if (revApproveMatch && (req.method === 'POST' || req.method === 'PUT')) {
+      const token = getBearerToken(req);
       const session = await db.validateSession(token);
       if (!session) {
-        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لإضافة تقييم' });
+        return sendJson(res, 401, { success: false, error: 'يجب تسجيل الدخول كمسؤول لاعتماد التقييم' });
       }
-      const body = await parseBody(req);
-      const review = await db.createReview(body);
-      return sendJson(res, 201, { success: true, review });
+      const id = decodeURIComponent(revApproveMatch[1]);
+      const review = db.approveReview ? await db.approveReview(id) : null;
+      return sendJson(res, 200, { success: true, review });
     }
 
     const revToggleMatch = pathname.match(/^\/api\/reviews\/([^\/]+)\/toggle$/);
